@@ -1,9 +1,22 @@
-"use client";
+import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } from "@/lib/uploads";
+import { PrivateSupportFormClient } from "@/components/forms/private-support-form-client";
 
 /**
- * PLATZHALTER – wird im Arbeitspaket "Öffentliche Formulare" vollständig umgesetzt.
- * Formular für Privatkunden: Problem schildern, Ticket wird angelegt, Status-Link per E-Mail.
+ * Hilfe-Formular für Privatkunden (eingebunden auf /privatkunden#hilfe-anfordern).
+ * Aus dem Formular entsteht ein Ticket; der Kunde bekommt eine Ticketnummer und einen persönlichen Status-Link.
+ *
+ * Server-Komponente, weil die Upload-Regeln aus @/lib/uploads (server-only) kommen.
+ * Bitte nur aus Server-Komponenten (z. B. einer page.tsx) rendern.
  */
 export function PrivateSupportForm() {
-  return <div className="rounded-2xl border border-dashed border-line-strong p-6 text-sm text-ink-muted">Formular folgt.</div>;
+  return (
+    <PrivateSupportFormClient
+      uploadRules={{
+        accept: ACCEPT_ATTRIBUTE,
+        maxFiles: MAX_FILES,
+        maxFileSize: MAX_FILE_SIZE,
+        allowedLabel: ALLOWED_EXTENSIONS_LABEL,
+      }}
+    />
+  );
 }
