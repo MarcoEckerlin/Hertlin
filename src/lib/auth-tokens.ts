@@ -34,12 +34,17 @@ export async function findValidAuthToken(token: string) {
           email: true,
           role: true,
           active: true,
-          company: { select: { id: true, name: true, slug: true, parentId: true, parent: { select: { slug: true } } } },
+          company: {
+            select: { id: true, name: true, slug: true, parentId: true, active: true, parent: { select: { slug: true, active: true } } },
+          },
         },
       },
     },
   });
   if (!record || record.usedAt || record.expiresAt.getTime() < Date.now() || !record.user.active) return null;
+  // Gesperrte Firmen (oder deren Firmenkunde) können keine Einladungen/Passwort-Links einlösen
+  const company = record.user.company;
+  if (company && (!company.active || company.parent?.active === false)) return null;
   return record;
 }
 

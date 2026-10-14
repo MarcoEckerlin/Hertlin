@@ -70,6 +70,20 @@ export async function notifyStaffCustomerReply(ticket: TicketInfo & { body: stri
   });
 }
 
+/** Kunde hat im Portal „Problem ist gelöst“ oder „Wieder öffnen“ gewählt. */
+export async function notifyStaffCustomerStatusChange(ticket: TicketInfo & { actorName: string; statusLabel: string }) {
+  if (isStaffWatchingTicket(ticket.id)) return;
+  await sendMail({
+    to: await staffNotificationAddress(),
+    subject: `[${formatTicketNumber(ticket.id)}] ${ticket.actorName}: „${ticket.statusLabel}“ – ${ticket.subject}`,
+    text: [
+      `${ticket.actorName} hat das Ticket im Kundenportal auf „${ticket.statusLabel}“ gesetzt${ticket.companyName ? ` (${ticket.companyName})` : ""}.`,
+      "",
+      `Ticket öffnen: ${mainUrl(`/admin/tickets/${ticket.id}`)}`,
+    ].join("\n"),
+  });
+}
+
 export async function notifyStaffNewInquiry(inquiry: {
   id: number;
   customerType: string;

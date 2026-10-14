@@ -59,7 +59,7 @@ export function SectionHeading({
       <h2
         id={id}
         className={cn(
-          "text-3xl font-bold tracking-tight text-ink hyphens-auto sm:text-4xl sm:hyphens-manual",
+          "text-3xl font-bold tracking-tight break-words text-ink hyphens-auto sm:text-4xl sm:hyphens-manual",
           eyebrow ? "mt-3" : undefined,
         )}
       >
@@ -88,13 +88,13 @@ export function PageHero({
     <section className="bg-brand-50">
       <Container
         className={cn(
-          "grid gap-10 py-14 sm:py-16 lg:py-24",
+          "grid grid-cols-1 gap-10 py-14 sm:py-16 lg:py-24",
           aside ? "lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-center lg:gap-16" : undefined,
         )}
       >
         <div className="max-w-2xl">
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-ink hyphens-auto sm:text-5xl sm:hyphens-manual">
+          <h1 className="mt-3 text-[2rem] leading-tight font-bold tracking-tight break-words text-ink hyphens-auto sm:text-5xl sm:hyphens-manual">
             {title}
           </h1>
           {children ? <div className="mt-5 max-w-xl space-y-4 text-lg leading-relaxed text-ink-soft">{children}</div> : null}

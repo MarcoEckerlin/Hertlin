@@ -1,0 +1,257 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import type { Prisma } from "@prisma/client";
+import { ButtonLink } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Pagination, parsePage } from "@/components/ui/pagination";
+import { TD, TH, THead, TR, Table } from "@/components/ui/table";
+import { FilterPill, SearchForm, firstParam } from "@/components/admin/companies/list-tools";
+import { CompanyActiveBadge } from "@/components/admin/companies/status-badges";
+import { requireStaff } from "@/lib/auth";
+import { CUSTOMER_ROLES, OPEN_STATUSES } from "@/lib/constants";
+import { db } from "@/lib/db";
+import { portalHost, portalUrl } from "@/lib/hosts";
+
+export const metadata: Metadata = { title: "Kunden" };
+
+const PAGE_SIZE = 50;
+
+const STATUS_FILTERS = [
+  { key: "", label: "Alle" },
+  { key: "aktiv", label: "Aktiv" },
+  { key: "deaktiviert", label: "Deaktiviert" },
+] as const;
+type StatusKey = (typeof STATUS_FILTERS)[number]["key"];
+
+type Filters = { status: StatusKey; q: string };
+
+function filterHref(filters: Filters, change: Partial<Filters>): string {
+  const f = { ...filters, ...change };
+  const params = new URLSearchParams();
+  if (f.status) params.set("status", f.status);
+  if (f.q) params.set("q", f.q);
+  const s = params.toString();
+  return s ? `/admin/kunden?${s}` : "/admin/kunden";
+}
+
+function Count({ value }: { value: number }) {
+  return <span className={value === 0 ? "text-ink-muted" : "font-semibold text-ink"}>{value}</span>;
+}
+
+export default async function CompaniesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const user = await requireStaff();
+  const isAdmin = user.role === "ADMIN";
+  const sp = await searchParams;
+
+  const statusParam = firstParam(sp.status);
+  const filters: Filters = {
+    status: STATUS_FILTERS.find((f) => f.key === statusParam)?.key ?? "",
+    q: firstParam(sp.q).slice(0, 80),
+  };
+  const page = parsePage(sp.seite);
+
+  const and: Prisma.CompanyWhereInput[] = [{ parentId: null }];
+  if (filters.status === "aktiv") and.push({ active: true });
+  if (filters.status === "deaktiviert") and.push({ active: false });
+  if (filters.q) {
+    and.push({
+      OR: [
+        { name: { contains: filters.q } },
+        { customerNumber: { contains: filters.q } },
+        { slug: { contains: filters.q.toLowerCase() } },
+        { city: { contains: filters.q } },
+        { email: { contains: filters.q } },
+        // Treffer in Unterkunden zeigen den Firmenkunden
+        { children: { some: { name: { contains: filters.q } } } },
+        { children: { some: { customerNumber: { contains: filters.q } } } },
+      ],
+    });
+  }
+  const where: Prisma.CompanyWhereInput = { AND: and };
+
+  const [total, companies, anyCompany] = await Promise.all([
+    db.company.count({ where }),
+    db.company.findMany({
+      where,
+      orderBy: { name: "asc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        customerNumber: true,
+        city: true,
+        active: true,
+        children: { select: { id: true } },
+      },
+    }),
+    db.company.count({ where: { parentId: null }, take: 1 }),
+  ]);
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Zahlen je Firmenkunde inkl. Unterkunden
+  const rootOf = new Map<string, string>();
+  for (const c of companies) {
+    rootOf.set(c.id, c.id);
+    for (const child of c.children) rootOf.set(child.id, c.id);
+  }
+  const companyIds = [...rootOf.keys()];
+  const [userGroups, ticketGroups] = companyIds.length
+    ? await Promise.all([
+        db.user.groupBy({
+          by: ["companyId"],
+          where: { companyId: { in: companyIds }, active: true, role: { in: [...CUSTOMER_ROLES] } },
+          _count: { _all: true },
+        }),
+        db.ticket.groupBy({
+          by: ["companyId"],
+          where: { companyId: { in: companyIds }, status: { in: [...OPEN_STATUSES] } },
+          _count: { _all: true },
+        }),
+      ])
+    : [[], []];
+  const activeUsers = new Map<string, number>();
+  const openTickets = new Map<string, number>();
+  for (const g of userGroups) {
+    const root = g.companyId ? rootOf.get(g.companyId) : undefined;
+    if (root) activeUsers.set(root, (activeUsers.get(root) ?? 0) + g._count._all);
+  }
+  for (const g of ticketGroups) {
+    const root = g.companyId ? rootOf.get(g.companyId) : undefined;
+    if (root) openTickets.set(root, (openTickets.get(root) ?? 0) + g._count._all);
+  }
+
+  const filtered = filters.status !== "" || filters.q !== "";
+
+  return (
+    <div>
+      <PageHeader
+        title="Kunden"
+        description="Firmenkunden mit eigenem Kundenportal. Unterkunden und Benutzer finden Sie beim jeweiligen Kunden."
+        actions={isAdmin ? <ButtonLink href="/admin/kunden/neu">Firmenkunde anlegen</ButtonLink> : null}
+      />
+
+      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <nav aria-label="Filter" className="flex flex-wrap items-center gap-2">
+          {STATUS_FILTERS.map((f) => (
+            <FilterPill key={f.key || "alle"} href={filterHref(filters, { status: f.key })} active={filters.status === f.key}>
+              {f.label}
+            </FilterPill>
+          ))}
+        </nav>
+        <SearchForm
+          action="/admin/kunden"
+          id="kunden-suche"
+          value={filters.q}
+          label="Kunden durchsuchen"
+          placeholder="Name, Kundennummer, Kürzel oder Ort"
+          keep={{ status: filters.status || undefined }}
+        />
+      </div>
+
+      {companies.length === 0 ? (
+        anyCompany === 0 ? (
+          <EmptyState
+            title="Noch keine Firmenkunden"
+            action={isAdmin ? <ButtonLink href="/admin/kunden/neu">Ersten Firmenkunden anlegen</ButtonLink> : null}
+          >
+            {isAdmin
+              ? "Legen Sie einen Firmenkunden an. Er bekommt eine eigene Portal-Adresse, unter der sich seine Mitarbeiter anmelden."
+              : "Firmenkunden legt ein Administrator an."}
+          </EmptyState>
+        ) : (
+          <EmptyState
+            title="Keine Kunden für diese Auswahl"
+            action={
+              filtered ? (
+                <ButtonLink href="/admin/kunden" variant="secondary">
+                  Alle Kunden anzeigen
+                </ButtonLink>
+              ) : null
+            }
+          >
+            {filters.q ? `Zu „${filters.q}“ gibt es keinen Kunden. Prüfen Sie die Schreibweise.` : "Ändern Sie den Filter oben."}
+          </EmptyState>
+        )
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-ink-muted">{total === 1 ? "1 Firmenkunde" : `${total} Firmenkunden`}</p>
+          <Table>
+            <THead>
+              <tr>
+                <TH>Firmenkunde</TH>
+                <TH>Kundennr.</TH>
+                <TH>Portal-Adresse</TH>
+                <TH className="text-right">Unterkunden</TH>
+                <TH className="text-right">Aktive Benutzer</TH>
+                <TH className="text-right">Offene Tickets</TH>
+                <TH>Status</TH>
+              </tr>
+            </THead>
+            <tbody>
+              {companies.map((c) => (
+                <TR key={c.id} className={c.active ? undefined : "bg-mist/60"}>
+                  <TD className="min-w-[14rem]">
+                    <Link href={`/admin/kunden/${c.id}`} className="font-semibold break-words text-ink hover:underline">
+                      {c.name}
+                    </Link>
+                    {c.city ? <p className="text-xs text-ink-muted">{c.city}</p> : null}
+                  </TD>
+                  <TD className="whitespace-nowrap">{c.customerNumber ?? <span className="text-ink-muted">–</span>}</TD>
+                  <TD className="whitespace-nowrap">
+                    {c.slug ? (
+                      <a
+                        href={portalUrl(c.slug, "/login")}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-700 hover:underline"
+                      >
+                        {portalHost(c.slug)}
+                      </a>
+                    ) : (
+                      <span className="text-ink-muted">–</span>
+                    )}
+                  </TD>
+                  <TD className="text-right tabular-nums">
+                    <Count value={c.children.length} />
+                  </TD>
+                  <TD className="text-right tabular-nums">
+                    <Count value={activeUsers.get(c.id) ?? 0} />
+                  </TD>
+                  <TD className="text-right tabular-nums">
+                    {(openTickets.get(c.id) ?? 0) > 0 ? (
+                      <Link
+                        href={`/admin/tickets?kunde=${c.id}`}
+                        className="font-semibold text-brand-700 hover:underline"
+                        aria-label={`Offene Tickets von ${c.name}`}
+                      >
+                        {openTickets.get(c.id)}
+                      </Link>
+                    ) : (
+                      <Count value={0} />
+                    )}
+                  </TD>
+                  <TD>
+                    <CompanyActiveBadge active={c.active} />
+                  </TD>
+                </TR>
+              ))}
+            </tbody>
+          </Table>
+          <Pagination
+            page={Math.min(page, pageCount)}
+            pageCount={pageCount}
+            basePath="/admin/kunden"
+            baseQuery={{ status: filters.status || undefined, q: filters.q || undefined }}
+          />
+        </>
+      )}
+    </div>
+  );
+}

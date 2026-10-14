@@ -51,14 +51,14 @@ export default async function HomePage() {
           <Container className="grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:py-24">
             <div className="max-w-2xl">
               <p className="text-sm font-bold tracking-wider text-brand-800 uppercase">Für Firmen und Privatkunden</p>
-              <h1 className="mt-4 text-4xl font-bold tracking-tight text-ink hyphens-auto sm:text-5xl sm:hyphens-manual lg:text-[3.5rem] lg:leading-[1.08]">
+              <h1 className="mt-4 text-[2.125rem] leading-tight font-bold tracking-tight break-words text-ink hyphens-auto sm:text-5xl sm:hyphens-manual lg:text-[3.5rem] lg:leading-[1.08]">
                 IT-Service, bei dem Sie wissen, woran Sie sind.
               </h1>
-              <p className="mt-6 text-lg leading-relaxed text-ink-soft sm:text-xl sm:leading-relaxed">
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-ink-soft sm:text-xl sm:leading-relaxed">
                 Wir betreuen die IT kleiner und mittlerer Unternehmen – vom Arbeitsplatz über das Netzwerk bis zu Microsoft 365.
                 Privatkunden helfen wir, wenn zu Hause der Laptop, das WLAN oder der Drucker nicht mitspielt.
               </p>
-              <p className="mt-4 text-lg leading-relaxed text-ink-soft">
+              <p className="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">
                 Jede Störung bekommt ein Ticket. Darin sehen Sie, wer sich darum kümmert und was gemacht wurde.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">

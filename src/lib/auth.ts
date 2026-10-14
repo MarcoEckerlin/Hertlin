@@ -19,6 +19,7 @@ const sessionUserSelect = {
   position: true,
   role: true,
   active: true,
+  language: true,
   companyId: true,
   company: {
     select: {

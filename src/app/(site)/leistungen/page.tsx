@@ -70,8 +70,8 @@ export default function LeistungenPage() {
         }
       >
         <p>
-          Wir kümmern uns um alles, was in einem Büro oder zu Hause mit Computern, Netzwerk und Telefon zu tun hat. Manche
-          Kunden rufen uns nur, wenn etwas kaputt ist. Andere geben uns die komplette Betreuung ihrer IT.
+          Wir kümmern uns um Computer, Netzwerk und Telefon – im Büro und zu Hause. Manche Kunden rufen uns nur, wenn etwas
+          kaputt ist. Andere geben uns die komplette Betreuung ihrer IT.
         </p>
         <p>Hier steht, was wir in den einzelnen Bereichen konkret tun.</p>
       </PageHero>
@@ -147,7 +147,7 @@ export default function LeistungenPage() {
 
       <CtaBand
         title="Nicht sicher, ob wir das machen?"
-        text="Fragen Sie einfach. Beschreiben Sie kurz, worum es geht, und wir sagen Ihnen ehrlich, ob wir helfen können und was ungefähr auf Sie zukommt."
+        text="Fragen Sie einfach. Beschreiben Sie kurz, worum es geht. Wir sagen Ihnen, ob wir helfen können und was ungefähr auf Sie zukommt."
       />
     </>
   );

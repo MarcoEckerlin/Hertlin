@@ -41,10 +41,10 @@ export function LegalPage({
         <Container className="py-12 sm:py-16">
           <div className="max-w-3xl">
             <Eyebrow>{eyebrow}</Eyebrow>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink hyphens-auto sm:text-5xl sm:hyphens-manual">
+            <h1 className="mt-3 text-3xl font-bold tracking-tight break-words text-ink hyphens-auto sm:text-5xl sm:hyphens-manual">
               {title}
             </h1>
-            {intro ? <div className="mt-4 text-lg leading-relaxed text-ink-soft">{intro}</div> : null}
+            {intro ? <div className="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">{intro}</div> : null}
           </div>
         </Container>
       </section>

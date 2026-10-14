@@ -27,7 +27,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Gemeinsame API-Routen (z. B. Website-Übersetzer) gelten auf allen Hosts
-  if (pathname.startsWith("/api/")) return NextResponse.next();
+  if (pathname.startsWith("/api/") || pathname.startsWith("/medien/")) return NextResponse.next();
 
   url.pathname = `/portal/${info.slug}${pathname === "/" ? "" : pathname}`;
   return NextResponse.rewrite(url);

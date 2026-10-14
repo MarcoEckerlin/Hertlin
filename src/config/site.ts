@@ -30,6 +30,9 @@ export const site = {
     { priority: "NORMAL", label: "Normal – einzelner Arbeitsplatz", time: "am nächsten Werktag" },
     { priority: "LOW", label: "Niedrig – Frage oder Wunsch", time: "innerhalb von 3 Werktagen" },
   ],
+  /** Für die Datenschutzerklärung */
+  hostingProvider: "TODO Name und Anschrift des Hosting-Anbieters",
+  logRetentionDays: 14,
   /** Link zum Fernwartungs-Programm (z. B. TeamViewer QuickSupport oder AnyDesk) */
   remoteSupportUrl: "https://get.teamviewer.com/", // TODO: eigenen QuickSupport-Link eintragen
 } as const;

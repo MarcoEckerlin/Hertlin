@@ -30,6 +30,8 @@ export const siteSettingsSchema = z.object({
   openingHours: z.array(openingHourSchema).max(10),
   responseTimes: z.array(responseTimeSchema).max(8),
   remoteSupportUrl: z.string().max(300),
+  hostingProvider: z.string().max(300),
+  logRetentionDays: z.number().int().min(1).max(365),
 });
 
 export type SiteSettings = z.infer<typeof siteSettingsSchema>;
@@ -52,6 +54,8 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   openingHours: defaults.openingHours.map((o) => ({ ...o })),
   responseTimes: defaults.responseTimes.map((r) => ({ ...r })),
   remoteSupportUrl: defaults.remoteSupportUrl,
+  hostingProvider: defaults.hostingProvider,
+  logRetentionDays: defaults.logRetentionDays,
 };
 
 const SETTINGS_KEY = "company";

@@ -5,12 +5,12 @@ import { cn } from "@/lib/cn";
 import { Container } from "@/components/site/sections/layout";
 
 /** Servicezeiten aus der Firmenkonfiguration. */
-export function OpeningHours({ className, tone = "default" }: { className?: string; tone?: "default" | "onBrand" }) {
+export function OpeningHours({ className }: { className?: string }) {
   return (
     <dl className={cn("space-y-1.5 text-[0.9375rem]", className)}>
       {site.openingHours.map((o) => (
         <div key={o.days} className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
-          <dt className={tone === "onBrand" ? "text-ink" : "text-ink-soft"}>{o.days}</dt>
+          <dt className="text-ink-soft">{o.days}</dt>
           <dd className="text-right font-semibold whitespace-nowrap text-ink">{o.hours}</dd>
         </div>
       ))}

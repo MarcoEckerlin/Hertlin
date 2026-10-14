@@ -22,7 +22,7 @@ function noticeHref(n: StaffNotice): string | null {
     case "inquiry.message":
       return `/admin/anfragen/${n.inquiryId}`;
     case "call.incoming":
-      return `/admin/anrufe`;
+      return `/admin/anrufe/${n.callId}`;
     default:
       return null;
   }
@@ -58,6 +58,8 @@ export function StaffLiveFeed() {
     if (n.kind === "ticket.created" || n.kind === "inquiry.created") router.refresh();
 
     if (n.kind === "call.updated") {
+      // Zähler „verpasste Anrufe“ in der Navigation aktualisieren
+      if (n.status === "MISSED") router.refresh();
       // Angenommene oder beendete Anrufe aus der Anzeige nehmen
       if (n.status !== "RINGING") {
         setToasts((t) => t.filter((x) => !(x.notice.kind === "call.incoming" && x.notice.callId === n.callId)));
@@ -93,7 +95,7 @@ export function StaffLiveFeed() {
           case "call.incoming":
             icon = <Phone className="size-4" aria-hidden />;
             title = "Eingehender Anruf";
-            body = n.callerLabel ? `${n.callerLabel} · ${n.from}` : `${n.from} (unbekannt)`;
+            body = n.callerLabel ? `${n.callerLabel} · ${n.from}` : n.from;
             extra = (
               <div className="mt-2 flex flex-wrap gap-2">
                 {n.companyId ? (
@@ -102,11 +104,7 @@ export function StaffLiveFeed() {
                   </Link>
                 ) : null}
                 <Link
-                  href={`/admin/tickets/neu?${new URLSearchParams({
-                    ...(n.companyId ? { firma: n.companyId } : {}),
-                    kontaktTelefon: n.from,
-                    betreff: "Telefonat",
-                  }).toString()}`}
+                  href={`/admin/anrufe/${n.callId}#ticket-anlegen`}
                   className="rounded-full bg-brand-400 px-3 py-1 text-xs font-semibold text-ink hover:bg-brand-300"
                 >
                   Ticket anlegen

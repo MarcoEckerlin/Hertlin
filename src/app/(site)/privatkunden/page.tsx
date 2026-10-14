@@ -90,8 +90,8 @@ export default function PrivatkundenPage() {
       <Section labelledBy="hilfe-titel">
         <SectionHeading id="hilfe-titel" eyebrow="Wobei wir helfen" title="Typische Probleme, die wir lösen">
           <p>
-            Die Liste ist nicht vollständig. Wenn Ihr Problem nicht dabei ist, beschreiben Sie es trotzdem – wir sagen Ihnen
-            ehrlich, ob wir helfen können.
+            Die Liste ist nicht vollständig. Wenn Ihr Problem nicht dabei ist, beschreiben Sie es trotzdem – wir sagen Ihnen,
+            ob wir helfen können.
           </p>
         </SectionHeading>
         <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -124,6 +124,16 @@ export function statusAfterStaffReply(status: string): TicketStatus {
   return status as TicketStatus;
 }
 
+/** Grobe Formprüfung eines Status-Links, bevor die Datenbank gefragt wird. */
+export function isPlausibleGuestToken(token: string): boolean {
+  return /^[A-Za-z0-9_-]{20,100}$/.test(token);
+}
+
+/** Bedingung für Privatkunden-Tickets per Status-Link. */
+export function guestTicketWhere(token: string) {
+  return { guestToken: token, companyId: null } as const;
+}
+
 export function canCustomerReply(status: string): boolean {
   return status !== "CLOSED";
 }

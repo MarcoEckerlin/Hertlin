@@ -28,11 +28,11 @@ const careItems = [
     text: "Updates für Windows, Server und Programme spielen wir geplant ein. Muss neu gestartet werden, dann außerhalb Ihrer Kernarbeitszeit.",
   },
   {
-    title: "Kommen und Gehen",
+    title: "Neue und ausscheidende Mitarbeiter",
     text: "Neue Mitarbeiter bekommen pünktlich ihren Arbeitsplatz und ihre Zugänge. Wer das Unternehmen verlässt, wird am letzten Tag überall gesperrt.",
   },
   {
-    title: "Ein Ansprechpartner für alles",
+    title: "Wir telefonieren für Sie",
     text: "Wir sprechen für Sie mit dem Internetanbieter, dem Kopierer-Service oder dem Hersteller Ihrer Branchensoftware.",
   },
   {
