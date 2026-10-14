@@ -1,0 +1,12 @@
+services:
+  hertlin:
+    build: .
+    restart: unless-stopped
+    env_file: .env.production
+    volumes:
+      - hertlin-data:/data
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  hertlin-data:

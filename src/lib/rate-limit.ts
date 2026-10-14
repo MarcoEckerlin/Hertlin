@@ -26,6 +26,10 @@ export function resetRateLimit(key: string): void {
   buckets.delete(key);
 }
 
+/**
+ * IP-Adresse des Besuchers. Hinter einem Reverse Proxy muss dieser X-Forwarded-For
+ * selbst setzen (nicht vom Client übernehmen), siehe README.
+ */
 export async function clientIp(): Promise<string> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
