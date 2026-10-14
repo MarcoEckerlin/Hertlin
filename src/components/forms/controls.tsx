@@ -84,7 +84,7 @@ export function SegmentedControl<T extends string>({
       <div
         className={cn(
           "grid gap-1 rounded-full bg-mist p-1 ring-1 ring-inset",
-          error ? "ring-red-300" : "ring-line-strong",
+          error ? "ring-danger-line" : "ring-line-strong",
         )}
         style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
       >
@@ -98,7 +98,7 @@ export function SegmentedControl<T extends string>({
               onChange={onChange ? () => onChange(option.value) : undefined}
               className="peer sr-only"
             />
-            <span className="flex min-h-10 items-center justify-center rounded-full px-3 py-2 text-center text-sm leading-tight font-semibold text-ink-soft transition-colors peer-checked:bg-white peer-checked:text-ink peer-checked:shadow-card peer-checked:ring-1 peer-checked:ring-brand-300 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-600 hover:text-ink">
+            <span className="flex min-h-10 items-center justify-center rounded-full px-3 py-2 text-center text-sm leading-tight font-semibold text-ink-soft transition-colors peer-checked:bg-primary peer-checked:text-on-primary peer-checked:shadow-card peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-600 peer-[:not(:checked)]:hover:text-ink">
               {option.label}
             </span>
           </label>

@@ -279,7 +279,7 @@ function InquirySuccess({
       ) : null}
 
       {chatHref ? (
-        <div className="mt-6 rounded-2xl border border-line bg-white p-5">
+        <div className="mt-6 rounded-2xl border border-line bg-surface p-5">
           <p className="flex items-center gap-2 font-semibold text-ink">
             <MessagesSquare className="size-4 shrink-0 text-brand-700" aria-hidden />
             Ihr persönlicher Chat zur Anfrage
@@ -345,7 +345,7 @@ function InquirySuccess({
 function StepNumber({ n }: { n: number }) {
   return (
     <span
-      className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-white text-xs font-bold text-brand-700 ring-1 ring-brand-200"
+      className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-surface text-xs font-bold text-brand-700 ring-1 ring-brand-200"
       aria-hidden
     >
       {n}

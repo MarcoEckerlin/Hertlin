@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Phone } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ButtonLink } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { PageTranslator } from "@/components/translate/page-translator";
 import { DesktopNav } from "@/components/site/desktop-nav";
 import { MobileNav } from "@/components/site/mobile-nav";
@@ -14,6 +15,9 @@ import { telHref, type SiteContact, type SiteNavLink } from "@/components/site/n
  * Menü-Knopf): Er merkt sich die gewählte Sprache und beobachtet die Seite – zwei Instanzen würden sich
  * gegenseitig überschreiben. Der Kopf hat bewusst keinen backdrop-filter, sonst würde der fest positionierte
  * Hinweis „Maschinell übersetzt“ am Kopf statt am Fenster ausgerichtet.
+ *
+ * Hell/Dunkel: ab xl-Breite als kleiner Umschalter neben dem Übersetzer; zwischen lg und xl reicht der Platz
+ * in der Kopfzeile nicht, dort steht er in der Servicezeile darüber. Unter lg sitzt er im aufklappbaren Menü.
  */
 export function SiteHeader({
   nav,
@@ -63,28 +67,43 @@ export function SiteHeader({
                 )}
               </li>
             ) : null}
+            <li className="xl:hidden">
+              <ThemeToggle compact />
+            </li>
           </ul>
         </div>
       </div>
 
-      <header className="sticky top-0 z-40 border-b border-line/80 bg-white">
-        <div className="relative mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <header className="sticky top-0 z-40 border-b border-line/80 bg-surface">
+        <div className="relative mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between gap-3 px-4 sm:px-6 lg:gap-4 lg:px-8">
           {/* Kein aria-label: Der zugängliche Name soll den sichtbaren Logo-Text enthalten (Sprachsteuerung) */}
           <Link href="/" className="shrink-0">
             <Logo subtitle="IT-Service" />
             <span className="sr-only"> – zur Startseite</span>
           </Link>
           <DesktopNav items={nav} />
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <div className="hidden xl:block">
               <ButtonLink href="/login" variant="ghost">
                 Kundenportal
               </ButtonLink>
             </div>
             <PageTranslator enabled={translationEnabled} compact />
-            <div className="hidden md:block">
-              <ButtonLink href="/kontakt">Anfrage stellen</ButtonLink>
+            <div className="hidden xl:block">
+              <ThemeToggle compact />
             </div>
+            <div className="hidden md:block">
+              <ButtonLink href="/kontakt#anfrage">Anfrage stellen</ButtonLink>
+            </div>
+            {tel ? (
+              <a
+                href={tel}
+                aria-label={`Anrufen: ${contact.phone}`}
+                className="grid size-10 place-items-center rounded-full text-ink transition-colors hover:bg-brand-50 lg:hidden"
+              >
+                <Phone className="size-[1.125rem]" aria-hidden />
+              </a>
+            ) : null}
             <MobileNav items={nav} phone={contact.phone} phoneHref={contact.phoneHref} />
           </div>
         </div>

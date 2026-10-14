@@ -22,3 +22,16 @@ export function inquiryDefaults(
     customerTypeFromQuery(firstParam(ctx.searchParams.typ)) ?? (defaultTopic === "PRIVAT_HILFE" ? "PRIVATE" : fallback);
   return { defaultType, defaultTopic };
 }
+
+/**
+ * Einleitung aufteilen: Was vor der ersten Zwischenüberschrift steht (z. B. kurze Hinweise für Bestandskunden),
+ * kommt über das Formular; ab der ersten Zwischenüberschrift (z. B. „So geht es weiter“) steht der Text
+ * am Desktop links neben dem Formular und auf dem Handy darunter.
+ */
+export function splitIntro(text: string | null | undefined): { lead: string; rest: string } {
+  if (!text) return { lead: "", rest: "" };
+  const lines = text.replace(/\r\n?/g, "\n").split("\n");
+  const index = lines.findIndex((line) => /^\s*#{1,3}\s+\S/.test(line));
+  if (index <= 0) return index === 0 ? { lead: "", rest: text } : { lead: text, rest: "" };
+  return { lead: lines.slice(0, index).join("\n").trim(), rest: lines.slice(index).join("\n").trim() };
+}

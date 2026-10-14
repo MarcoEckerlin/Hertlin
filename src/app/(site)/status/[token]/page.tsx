@@ -23,6 +23,8 @@ import { LiveConversation } from "@/components/realtime/live-conversation";
 import { TranslatedBody } from "@/components/translate/translated-body";
 import { ChatLanguageSelect } from "@/components/inquiry-chat/language-select";
 import { LiveTimeline } from "@/components/portal/live-timeline";
+import { PhoneLink } from "@/components/site/sections/contact";
+import { Eyebrow } from "@/components/site/sections/layout";
 import {
   guestMessageTranslations,
   guestViewerLanguage,
@@ -58,13 +60,11 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
     <>
       <section className="border-b border-line bg-brand-50">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
-          <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">
-            Ihr Ticket {formatTicketNumber(ticket.id)}
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight break-words text-ink sm:text-4xl">{ticket.subject}</h1>
+          <Eyebrow>Ihr Ticket {formatTicketNumber(ticket.id)}</Eyebrow>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight break-words text-ink sm:text-4xl">{ticket.subject}</h1>
           <p className="mt-2 text-ink-soft">{categoryLabel}</p>
 
-          <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-line bg-white p-5 shadow-card sm:grid-cols-4 sm:p-6">
+          <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-line bg-surface p-5 shadow-card sm:grid-cols-4 sm:p-6">
             <div>
               <dt className="text-xs font-semibold text-ink-muted">Status</dt>
               <dd className="mt-1.5">
@@ -95,7 +95,7 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
         <StatusNotice ticket={ticket} />
 
         {enabled ? (
-          <div className="rounded-2xl border border-line bg-white px-4 py-4 shadow-card sm:px-6">
+          <div className="rounded-2xl border border-line bg-surface px-4 py-4 shadow-card sm:px-6">
             <ChatLanguageSelect
               action={guestTicketLanguageAction}
               hidden={{ token }}
@@ -199,9 +199,7 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
         <p className="border-t border-line pt-6 text-sm leading-relaxed text-ink-muted">
           Diese Seite ist nur über Ihren persönlichen Link erreichbar. Bitte geben Sie ihn nicht weiter. Fragen beantworten
           wir auch gern am Telefon unter{" "}
-          <a href={`tel:${site.phoneHref}`} className="font-semibold whitespace-nowrap text-brand-700 hover:underline">
-            {site.phone}
-          </a>
+          <PhoneLink phone={site.phone} phoneHref={site.phoneHref} className="font-semibold whitespace-nowrap text-brand-700" />
           . Bitte nennen Sie dabei Ihre Ticketnummer {formatTicketNumber(ticket.id)}.
         </p>
       </div>
@@ -305,7 +303,7 @@ function MessageItem({
       <article
         className={cn(
           "w-full max-w-2xl rounded-2xl border p-4 sm:p-5",
-          fromStaff ? "border-line bg-white shadow-card sm:mr-10" : "border-brand-200 bg-brand-50 sm:ml-10",
+          fromStaff ? "border-line bg-surface shadow-card sm:mr-10" : "border-brand-200 bg-brand-50 sm:ml-10",
         )}
         aria-label={fromStaff ? `Nachricht von ${companyName}` : "Ihre Nachricht"}
       >
@@ -338,7 +336,7 @@ function MessageItem({
                   href={`/status/${token}/dateien/${attachment.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex max-w-full items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line ring-inset hover:bg-brand-50 hover:ring-brand-300"
+                  className="inline-flex max-w-full items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line ring-inset hover:bg-brand-50 hover:ring-brand-300"
                 >
                   <Paperclip className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
                   <span className="truncate">{attachment.fileName}</span>
@@ -357,8 +355,8 @@ function InvalidLink({ site }: { site: SiteSettings }) {
   return (
     <section className="bg-brand-50">
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 sm:py-28">
-        <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">Status-Link</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Dieser Link funktioniert leider nicht</h1>
+        <Eyebrow className="justify-center">Status-Link</Eyebrow>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Dieser Link funktioniert leider nicht</h1>
         <p className="mt-4 text-lg leading-relaxed text-ink-soft">
           Vielleicht wurde er beim Kopieren abgeschnitten. Am sichersten öffnen Sie ihn direkt aus unserer E-Mail. Finden Sie
           die E-Mail nicht mehr, schicken wir Ihnen den Link gern noch einmal.
@@ -371,9 +369,7 @@ function InvalidLink({ site }: { site: SiteSettings }) {
         </div>
         <p className="mt-8 text-sm text-ink-muted">
           Oder rufen Sie uns an:{" "}
-          <a href={`tel:${site.phoneHref}`} className="font-semibold text-brand-700 hover:underline">
-            {site.phone}
-          </a>
+          <PhoneLink phone={site.phone} phoneHref={site.phoneHref} className="font-semibold text-brand-700" />
           {" · "}
           <Link href="/kontakt" className="font-semibold text-brand-700 hover:underline">
             Kontakt

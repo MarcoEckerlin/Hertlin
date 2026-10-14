@@ -21,11 +21,16 @@ import {
   parseBlocks,
   type Block,
 } from "@/cms/schema";
-import { computeLayouts, planBlocks } from "@/cms/blocks/layout";
+import { computeLayouts, endsWithRule, planBlocks } from "@/cms/blocks/layout";
 import type { BlockContext } from "@/cms/blocks/shared";
 import { TextBlock } from "@/cms/blocks/text";
+import { StepsBlock } from "@/cms/blocks/steps";
+import { CardsBlock } from "@/cms/blocks/cards";
+import { CtaBlock } from "@/cms/blocks/cta";
+import { ContactLines } from "@/cms/blocks/contact";
 import { CompanyInfoBlock } from "@/cms/blocks/company-info";
-import { inquiryDefaults } from "@/cms/blocks/inquiry-defaults";
+import { inquiryDefaults, splitIntro } from "@/cms/blocks/inquiry-defaults";
+import { ANCHOR_NAV_MIN, anchorNavItems } from "@/cms/blocks/anchors";
 import type { SiteSettings } from "@/lib/settings";
 
 /* ------------------------------------------------------------------ */
@@ -385,13 +390,37 @@ describe("Standardinhalte der Kernseiten", () => {
 
   it("enthält die geforderten Module", () => {
     const types = (slug: string) => DEFAULT_PAGES[slug].blocks.map((b) => b.type);
-    expect(types("kontakt")).toEqual(expect.arrayContaining(["inquiryForm", "contact"]));
+    // Telefon und E-Mail stehen auf der Kontaktseite direkt am Formular (siehe ContactLines unten)
+    expect(types("kontakt")).toEqual(expect.arrayContaining(["inquiryForm", "locations"]));
+    expect(types("kontakt")[1]).toBe("inquiryForm");
     expect(types("privatkunden")).toContain("privateSupportForm");
     expect(anchorsOf("privatkunden")).toContain("hilfe-anfordern");
     expect(types("impressum")).toContain("companyInfo");
     expect(types("")[0]).toBe("hero");
     expect(DEFAULT_PAGES[""].blocks[0]).toMatchObject({ visual: "portal" });
     expect(hrefs(DEFAULT_PAGE_SOURCES.support)).toContain("{fernwartung}");
+  });
+
+  it("hält die Seiten kurz und die wichtigste Aktion oben", () => {
+    const types = (slug: string) => DEFAULT_PAGES[slug].blocks.map((b) => b.type);
+    // Startseite: Einstieg, zwei Wege, Leistungen, Ablauf, Abschluss – ohne doppelte Portal- und Reaktionszeit-Abschnitte
+    expect(types("")).toEqual(["hero", "split", "cards", "steps", "cta"]);
+    // Support: Der Download-Knopf steht direkt unter der Überschrift der Fernwartung, nicht in einem Kasten danach
+    const fernwartung = DEFAULT_PAGES.support.blocks.find((b) => b.anchor === "fernwartung");
+    expect(fernwartung).toMatchObject({ type: "steps", cta: { href: "{fernwartung}" } });
+    expect(types("support")).not.toContain("cta");
+    // Kontakt: Das Formular folgt direkt auf den Seitenkopf
+    expect(types("kontakt").slice(0, 2)).toEqual(["hero", "inquiryForm"]);
+    // Leistungen: Sprungleiste statt Linkliste im Seitenkopf
+    expect(anchorNavItems(DEFAULT_PAGES.leistungen.blocks, blockCtx).map((i) => i.id)).toEqual([
+      "arbeitsplaetze",
+      "netzwerk",
+      "microsoft-365",
+      "server-backup",
+      "sicherheit",
+      "telefonie",
+      "abrechnung",
+    ]);
   });
 
   it("stellt bei den AGB den Muster-Hinweis an den Anfang", () => {
@@ -521,6 +550,33 @@ describe("Anordnung der Module", () => {
     expect(w).toMatchObject({ joinTop: false });
   });
 
+  it("setzt keine zweite Linie unter Module, die schon mit einer Linie enden", () => {
+    const rows = block({ id: "r", type: "cards", layout: "rows", title: "Zeilen", items: [{ title: "a" }], tone: "white" });
+    const steps = block({ id: "s", type: "steps", layout: "list", title: "Ablauf", items: [{ title: "a" }], tone: "white" });
+    const faq = block({ id: "f", type: "faq", title: "Fragen", items: [{ question: "a?", answer: "b" }], tone: "white" });
+    const tiles = block({ id: "k", type: "cards", layout: "tiles", title: "Kacheln", items: [{ title: "a" }], tone: "white" });
+    for (const prev of [rows, steps, faq]) {
+      expect(endsWithRule(prev), prev.id).toBe(true);
+      const [, next] = computeLayouts([prev, textA]);
+      expect(next, prev.id).toMatchObject({ joinTop: true, separator: false });
+    }
+    // Ohne Linie am Ende bleibt die Trennlinie
+    expect(endsWithRule(tiles)).toBe(false);
+    expect(computeLayouts([tiles, textA])[1]).toMatchObject({ joinTop: true, separator: true });
+  });
+
+  it("zeigt die Leiste „Auf dieser Seite“ erst ab mehreren Abschnitten mit Anker", () => {
+    const sections = Array.from({ length: ANCHOR_NAV_MIN }, (_, i) =>
+      block({ id: `t${i}`, type: "text", anchor: `teil-${i}`, title: `Teil {firma} ${i}`, body: "x", tone: "white" }),
+    );
+    const items = anchorNavItems([hero, ...sections, cta], blockCtx);
+    expect(items).toHaveLength(ANCHOR_NAV_MIN);
+    expect(items[0]).toEqual({ id: "teil-0", label: "Teil Hertlin 0" });
+    expect(anchorNavItems([hero, ...sections.slice(1)], blockCtx)).toEqual([]);
+    // Ausgeblendete Abschnitte zählen nicht
+    expect(anchorNavItems([{ ...sections[0], hidden: true }, ...sections.slice(1)], blockCtx)).toEqual([]);
+  });
+
   it("erzeugt sichere, eindeutige DOM-ids", () => {
     const odd = block({ id: 'x"><script>', type: "text", body: "x", tone: "white" });
     const [layout] = computeLayouts([odd]);
@@ -594,6 +650,70 @@ describe("Module", () => {
     expect(html).toContain("1. Verantwortlicher");
     expect(html).toContain(SETTINGS.legalName);
     expect(html).not.toContain(SETTINGS.vatId);
+  });
+
+  it("stellt im Ablauf den Button samt Hinweis direkt unter die Überschrift", () => {
+    const b = block({
+      id: "f",
+      type: "steps",
+      layout: "list",
+      anchor: "fernwartung",
+      title: "So funktioniert die Fernwartung",
+      cta: { label: "Fernwartung herunterladen", href: "{fernwartung}" },
+      note: "**Nur nach Absprache am Telefon.**",
+      items: [{ title: "Anrufen", text: "x" }],
+      tone: "white",
+    }) as Extract<Block, { type: "steps" }>;
+    const [layout] = computeLayouts([b]);
+    const html = renderToStaticMarkup(createElement(StepsBlock, { block: b, ctx: blockCtx, layout }));
+    expect(html).toContain('href="https://get.teamviewer.com/hertlin"');
+    expect(html).toContain("Nur nach Absprache am Telefon.");
+    // Button und Hinweis stehen vor der Liste der Schritte
+    expect(html.indexOf("Fernwartung herunterladen")).toBeLessThan(html.indexOf("<ol"));
+  });
+
+  it("macht verlinkte Kacheln als Ganzes klickbar", () => {
+    const b = block({
+      id: "c",
+      type: "cards",
+      layout: "columns",
+      title: "Leistungen",
+      items: [{ title: "Netzwerk", text: "Mehr im [Plan](/leistungen#netzwerk)", link: { label: "Mehr", href: "/leistungen" } }],
+      tone: "white",
+    }) as Extract<Block, { type: "cards" }>;
+    const [layout] = computeLayouts([b]);
+    const html = renderToStaticMarkup(createElement(CardsBlock, { block: b, ctx: blockCtx, layout }));
+    expect(html).toMatch(/<a[^>]*class="[^"]*after:absolute after:inset-0[^"]*"[^>]*href="\/leistungen"|<a[^>]*href="\/leistungen"[^>]*class="[^"]*after:absolute after:inset-0/);
+    // Links im Text liegen über der Klickfläche
+    expect(html).toContain("[&amp;_a]:z-10");
+  });
+
+  it("zeigt die Handlungsaufforderung in Hell und Dunkel gleich (Insel)", () => {
+    const blue = block({ id: "c", type: "cta", title: "Los", tone: "blue" }) as Extract<Block, { type: "cta" }>;
+    const dark = block({ id: "d", type: "cta", title: "Los", tone: "dark" }) as Extract<Block, { type: "cta" }>;
+    const [layout] = computeLayouts([blue]);
+    expect(renderToStaticMarkup(createElement(CtaBlock, { block: blue, ctx: blockCtx, layout }))).toContain('data-theme="light"');
+    expect(renderToStaticMarkup(createElement(CtaBlock, { block: dark, ctx: blockCtx, layout }))).toContain('data-theme="dark"');
+  });
+
+  it("zeigt am Anfrageformular Telefon, E-Mail und Servicezeiten", () => {
+    const html = renderToStaticMarkup(createElement(ContactLines, { settings: SETTINGS }));
+    expect(html).toContain('href="tel:+49711123456"');
+    expect(html).toContain('href="mailto:info@hertlin.de"');
+    expect(html).toContain("Montag bis Freitag 8:00 – 17:00 Uhr");
+    expect(renderToStaticMarkup(createElement(ContactLines, { settings: { ...SETTINGS, phone: "", email: "" } }))).toBe("");
+  });
+
+  it("teilt die Einleitung des Anfrageformulars an der ersten Zwischenüberschrift", () => {
+    expect(splitIntro("Hinweis oben\n\n## So geht es weiter\n1. a")).toEqual({
+      lead: "Hinweis oben",
+      rest: "## So geht es weiter\n1. a",
+    });
+    expect(splitIntro("Nur Text")).toEqual({ lead: "Nur Text", rest: "" });
+    expect(splitIntro("## Gleich eine Überschrift\nText")).toEqual({ lead: "", rest: "## Gleich eine Überschrift\nText" });
+    expect(splitIntro(undefined)).toEqual({ lead: "", rest: "" });
+    const kontakt = DEFAULT_PAGES.kontakt.blocks.find((b) => b.type === "inquiryForm");
+    expect(splitIntro(kontakt && "intro" in kontakt ? kontakt.intro : "").lead).toContain("Schon Firmenkunde?");
   });
 
   it("übernimmt ?typ= und ?thema= für das Anfrageformular", () => {

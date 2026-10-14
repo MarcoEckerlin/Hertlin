@@ -6,7 +6,7 @@ import { ChatScroller } from "@/components/inquiry-chat/chat-scroller";
 
 /**
  * Chat-Verlauf einer Anfrage, gemeinsam für Interessent und Verwaltung.
- * Farben: Hertlin hellblau, Interessent weiß. Eigene Nachrichten stehen rechts.
+ * Farben: Hertlin hellblau, Interessent auf der Grundfläche (hell weiß). Eigene Nachrichten stehen rechts.
  */
 
 export type ChatTranslations = Record<string, { text: string; from: string | null }>;
@@ -119,7 +119,7 @@ function ChatEntryItem({
         <article
           className={cn(
             "max-w-[88%] min-w-0 rounded-2xl px-4 pt-2.5 pb-2 ring-1 ring-inset sm:max-w-[78%]",
-            entry.fromStaff ? "bg-brand-100 ring-brand-200" : "bg-white shadow-card ring-line",
+            entry.fromStaff ? "bg-brand-100 ring-brand-200" : "bg-surface shadow-card ring-line",
             mine ? "rounded-br-md" : "rounded-bl-md",
           )}
         >

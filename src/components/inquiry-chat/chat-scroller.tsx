@@ -84,7 +84,7 @@ export function ChatScroller({
         <button
           type="button"
           onClick={jumpToEnd}
-          className="absolute bottom-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-sm font-semibold text-white shadow-lift hover:bg-brand-900"
+          className="absolute bottom-3 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-sm font-semibold text-on-ink shadow-lift hover:bg-brand-900"
         >
           <ArrowDown className="size-4" aria-hidden />
           Neue Nachricht

@@ -303,7 +303,7 @@ function PrivateSupportSuccess({
       )}
 
       {data.statusUrl && data.statusPath ? (
-        <div className="mt-6 rounded-2xl border border-line bg-white p-5">
+        <div className="mt-6 rounded-2xl border border-line bg-surface p-5">
           <p className="font-semibold text-ink">Ihr persönlicher Status-Link</p>
           <p className="mt-1 text-sm leading-relaxed text-ink-soft">
             Darüber sehen Sie jederzeit, wie weit wir sind, können uns antworten und Fotos nachreichen. Speichern Sie ihn

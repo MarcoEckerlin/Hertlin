@@ -383,7 +383,7 @@ export function PageTranslator({ enabled, className, compact = false }: { enable
         {busy ? <span className="size-3 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden /> : null}
       </button>
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-white p-1.5 shadow-lift">
+        <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-line bg-surface-raised p-1.5 shadow-lift transition-[opacity,translate] duration-150 ease-out starting:-translate-y-1 starting:opacity-0">
           <div ref={listRef} role="listbox" aria-label="Sprache wählen" className="max-h-72 overflow-y-auto" onKeyDown={onListKeyDown}>
             {LANGUAGES.map((l) => (
               <button
@@ -411,7 +411,7 @@ export function PageTranslator({ enabled, className, compact = false }: { enable
       {/* Live-Region immer vorhanden, damit Screenreader den Hinweis beim Einblenden vorlesen */}
       <div role="status" className="pointer-events-none fixed bottom-4 left-4 z-40 max-sm:right-4 max-sm:bottom-2">
         {showNotice ? (
-          <div className="pointer-events-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full border border-line bg-white px-4 py-2 text-xs text-ink-soft shadow-lift max-sm:justify-center">
+          <div className="pointer-events-auto flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-full border border-line bg-surface-raised px-4 py-2 text-xs text-ink-soft shadow-lift max-sm:justify-center">
             <Languages className="size-3.5 text-brand-700" aria-hidden />
             {busy
               ? "Seite wird übersetzt …"

@@ -112,6 +112,10 @@ export const blockSchema = z.discriminatedUnion("type", [
     /** list = schlichte nummerierte Liste, cards = Kacheln nebeneinander (sparsam einsetzen) */
     layout: z.enum(["list", "cards"]).default("list"),
     items: z.array(z.object({ title: short(120).min(1), text: long(1500).default("") })).max(12),
+    /** optionaler Button direkt unter der Überschrift, z. B. „Fernwartung herunterladen“ */
+    cta: ctaSchema.optional(),
+    /** optionaler Hinweis neben dem Button (Markdown), z. B. „Nur nach Absprache am Telefon“ */
+    note: long(600).optional(),
     tone: toneSchema,
   }),
   z.object({
@@ -265,6 +269,11 @@ export const RESERVED_PAGE_SLUGS = new Set([
 ]);
 
 export const PAGE_SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/;
+
+/** Kann unter dieser Adresse eine Seite aus dem Website-Editor liegen? (gültig und nicht reserviert) */
+export function isPublicPageSlug(slug: string): boolean {
+  return PAGE_SLUG_PATTERN.test(slug) && !RESERVED_PAGE_SLUGS.has(slug);
+}
 
 /** Kernseiten, die es immer gibt (nicht löschbar, Adresse fest). "" = Startseite */
 export const SYSTEM_PAGE_SLUGS = [

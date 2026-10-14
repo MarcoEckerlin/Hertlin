@@ -53,7 +53,7 @@ export async function InquiryChatPanel({
   const headingId = `anfrage-chat-${chat.id}`;
 
   return (
-    <section aria-labelledby={headingId} className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+    <section aria-labelledby={headingId} className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
         <div className="min-w-0">
           <h2 id={headingId} className="text-base font-bold text-ink">

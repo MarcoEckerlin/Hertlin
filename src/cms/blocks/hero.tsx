@@ -30,7 +30,7 @@ export function HeroBlock({ block, ctx, layout }: BlockProps<"hero">) {
       <section
         id={block.anchor}
         aria-labelledby={titleId}
-        className={cn("scroll-mt-24 bg-white", boxed && "px-2 pt-2 sm:px-4 sm:pt-4")}
+        className={cn("scroll-mt-24 bg-surface", boxed && "px-2 pt-2 sm:px-4 sm:pt-4")}
       >
         <div className={cn("mx-auto max-w-[90rem] overflow-hidden", boxed && "rounded-3xl bg-brand-100")}>
           <Container className="grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:py-24">

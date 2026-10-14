@@ -5,9 +5,11 @@ import { Markdown } from "@/cms/markdown";
 import { CtaButton, hasText, plain, sectionPadding, toneBg, type BlockProps } from "@/cms/blocks/shared";
 
 /**
- * Abschluss einer Seite: Fläche in Hellblau (brand-400) oder Dunkelblau mit Buttons und – wenn gewünscht –
+ * Abschluss einer Seite: Fläche in Hellblau (primary) oder Dunkelblau (navy) mit Buttons und – wenn gewünscht –
  * Telefonnummer und Servicezeiten aus den Firmendaten. Die Telefonangaben stehen ohne eigenen Kasten
  * rechts neben einer feinen Linie.
+ * Die Fläche sieht in Hell und Dunkel gleich aus: Die hellblaue ist eine „helle Insel“ (data-theme="light"),
+ * die dunkelblaue eine dunkle – Text und Buttons darin nehmen die passenden Farben.
  * Der Hintergrund rund um die Fläche wechselt automatisch zum vorherigen Abschnitt (siehe layout.ts).
  */
 export function CtaBlock({ block, ctx, layout }: BlockProps<"cta">) {
@@ -26,9 +28,10 @@ export function CtaBlock({ block, ctx, layout }: BlockProps<"cta">) {
     >
       <Container>
         <div
+          data-theme={dark ? "dark" : "light"}
           className={cn(
             "grid gap-10 rounded-3xl px-6 py-10 sm:px-10 sm:py-12 lg:gap-16 lg:px-14 lg:py-14",
-            dark ? "bg-ink" : "bg-brand-400",
+            dark ? "bg-navy" : "bg-primary",
             showPhone && "lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-center",
           )}
         >

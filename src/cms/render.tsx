@@ -4,8 +4,10 @@ import { portalHost } from "@/lib/hosts";
 import type { SiteSettings } from "@/lib/settings";
 import type { Block } from "@/cms/schema";
 import { Container } from "@/components/site/sections/layout";
+import { AnchorNav } from "@/components/site/sections/anchor-nav";
 import { buildPlaceholderContext, replacePlaceholders } from "@/cms/placeholders";
 import type { BlockContext, BlockLayout } from "@/cms/blocks/shared";
+import { anchorNavItems } from "@/cms/blocks/anchors";
 import { planBlocks } from "@/cms/blocks/layout";
 import { HeroBlock } from "@/cms/blocks/hero";
 import { TextBlock } from "@/cms/blocks/text";
@@ -88,7 +90,7 @@ function HiddenInPreview({ children }: { children: ReactNode }) {
       </div>
       <p
         data-no-translate
-        className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1 text-xs font-semibold text-white shadow-card sm:left-6"
+        className="absolute top-3 left-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1 text-xs font-semibold text-on-ink shadow-card sm:left-6"
       >
         <EyeOff className="size-3.5" aria-hidden />
         ausgeblendet
@@ -101,14 +103,23 @@ function HiddenInPreview({ children }: { children: ReactNode }) {
  * Stellt die Module einer Seite dar.
  * Auf der Website sind ausgeblendete Module bereits entfernt; in der Vorschau (ctx.preview) werden sie
  * halbtransparent mit dem Hinweis „ausgeblendet“ gezeigt.
+ * afterHero: erscheint direkt nach dem ersten sichtbaren Kopfbereich (z. B. die Leiste „Auf dieser Seite“).
  */
-export function RenderBlocks({ blocks, ctx }: { blocks: Block[]; ctx: BlockContext }) {
+export function RenderBlocks({ blocks, ctx, afterHero }: { blocks: Block[]; ctx: BlockContext; afterHero?: ReactNode }) {
+  const planned = planBlocks(blocks, ctx.preview);
+  const heroIndex = planned.findIndex((p) => !p.hidden && p.block.type === "hero");
   return (
     <>
-      {planBlocks(blocks, ctx.preview).map(({ block, layout, hidden }, i) => {
+      {heroIndex < 0 ? afterHero : null}
+      {planned.map(({ block, layout, hidden }, i) => {
         const key = `${i}-${block.id}`;
         if (hidden) return <HiddenInPreview key={key}>{renderBlock(block, ctx, layout)}</HiddenInPreview>;
-        return <Fragment key={key}>{renderBlock(block, ctx, layout)}</Fragment>;
+        return (
+          <Fragment key={key}>
+            {renderBlock(block, ctx, layout)}
+            {i === heroIndex ? afterHero : null}
+          </Fragment>
+        );
       })}
     </>
   );
@@ -141,10 +152,20 @@ export function PageBlocks({ title, blocks, ctx }: { title: string; blocks: Bloc
   }
 
   const hasHero = visible.some((b) => b.type === "hero");
+  const anchors = anchorNavItems(visible, ctx);
+  if (anchors.length === 0) {
+    return (
+      <>
+        {hasHero ? null : <h1 className="sr-only">{heading}</h1>}
+        <RenderBlocks blocks={blocks} ctx={ctx} />
+      </>
+    );
+  }
+  // Mit der Leiste „Auf dieser Seite“ landen Sprünge etwas tiefer, damit die Überschrift nicht darunter verschwindet
   return (
-    <>
+    <div className="[&_section[id]]:scroll-mt-36">
       {hasHero ? null : <h1 className="sr-only">{heading}</h1>}
-      <RenderBlocks blocks={blocks} ctx={ctx} />
-    </>
+      <RenderBlocks blocks={blocks} ctx={ctx} afterHero={<AnchorNav items={anchors} />} />
+    </div>
   );
 }
