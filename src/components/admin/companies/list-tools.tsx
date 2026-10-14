@@ -21,7 +21,10 @@ export function FilterPill({ href, active, children }: { href: string; active: b
   );
 }
 
-/** Suchfeld als GET-Formular; übrige Filter bleiben als versteckte Felder erhalten. */
+/**
+ * Suchfeld als GET-Formular; übrige Filter bleiben als versteckte Felder erhalten.
+ * extra: weitere Felder im selben Formular (z. B. Auswahl des Standorts), stehen vor dem Suchfeld.
+ */
 export function SearchForm({
   action,
   id,
@@ -29,6 +32,7 @@ export function SearchForm({
   label,
   placeholder,
   keep = {},
+  extra,
 }: {
   action: string;
   id: string;
@@ -36,18 +40,22 @@ export function SearchForm({
   label: string;
   placeholder: string;
   keep?: Record<string, string | undefined>;
+  extra?: ReactNode;
 }) {
   return (
-    <form action={action} method="get" role="search" className="flex w-full gap-2 lg:w-auto">
+    <form action={action} method="get" role="search" className="flex w-full flex-wrap gap-2 sm:flex-nowrap lg:w-auto">
       {Object.entries(keep).map(([name, v]) => (v ? <input key={name} type="hidden" name={name} value={v} /> : null))}
-      <label htmlFor={id} className="sr-only">
-        {label}
-      </label>
-      <Input id={id} name="q" type="search" defaultValue={value} placeholder={placeholder} className="h-9 lg:w-72" />
-      <Button type="submit" variant="secondary" size="sm" className="h-9">
-        <Search className="size-4" aria-hidden />
-        Suchen
-      </Button>
+      {extra}
+      <div className="flex min-w-0 flex-1 gap-2">
+        <label htmlFor={id} className="sr-only">
+          {label}
+        </label>
+        <Input id={id} name="q" type="search" defaultValue={value} placeholder={placeholder} className="h-9 lg:w-72" />
+        <Button type="submit" variant="secondary" size="sm" className="h-9">
+          <Search className="size-4" aria-hidden />
+          Suchen
+        </Button>
+      </div>
     </form>
   );
 }

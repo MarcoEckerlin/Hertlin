@@ -401,6 +401,16 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
     { kind: "checkbox", name: "showHours", label: "Öffnungszeiten anzeigen" },
     toneField,
   ],
+  locations: [
+    ...headingFields({ titleHint: "Z. B. „Unsere Standorte“ oder „So finden Sie uns“." }),
+    {
+      kind: "info",
+      text: "Das Modul zeigt alle aktiven Standorte mit dem Haken „Auf der Website zeigen“ – mit Anschrift, Telefon, E-Mail, Öffnungszeiten, Hinweis und einem Link „Route planen“ (OpenStreetMap). Gibt es keinen solchen Standort, bleibt das Modul unsichtbar.",
+      href: "/admin/standorte",
+      linkLabel: "Standorte verwalten",
+    },
+    toneField,
+  ],
   inquiryForm: [
     ...headingFields(),
     {
@@ -451,7 +461,7 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
 /** Gruppen für die Auswahl „Modul hinzufügen“ */
 export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
   { label: "Inhalte", types: ["hero", "text", "imageText", "cards", "steps", "split", "checklist", "faq", "cta"] },
-  { label: "Aus den Firmendaten", types: ["contact", "responseTimes", "companyInfo"] },
+  { label: "Aus Firmendaten und Standorten", types: ["contact", "locations", "responseTimes", "companyInfo"] },
   { label: "Formulare", types: ["inquiryForm", "privateSupportForm"] },
 ];
 
@@ -522,6 +532,8 @@ export function newBlock(type: BlockType): Block {
       };
     case "contact":
       return { id, type, title: "Kontakt", showAddress: true, showHours: true, tone: "white" };
+    case "locations":
+      return { id, type, title: "Unsere Standorte", tone: "white" };
     case "inquiryForm":
       return { id, type, title: "Anfrage stellen", defaultType: "BUSINESS", tone: "white" };
     case "privateSupportForm":

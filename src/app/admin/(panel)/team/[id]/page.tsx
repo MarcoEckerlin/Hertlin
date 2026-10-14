@@ -14,6 +14,7 @@ import { getStaffUser, requireAdmin } from "@/lib/auth";
 import { OPEN_STATUSES, STAFF_ROLES } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { locationOptions } from "@/lib/locations";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const me = await getStaffUser();
@@ -42,11 +43,12 @@ export default async function StaffMemberPage({ params }: { params: Promise<{ id
       active: true,
       lastLoginAt: true,
       createdAt: true,
+      location: { select: { id: true, name: true, city: true, active: true } },
     },
   });
   if (!user) notFound();
 
-  const [pending, openInvite, assignedOpen] = await Promise.all([
+  const [pending, openInvite, assignedOpen, activeLocations] = await Promise.all([
     db.user.count({ where: { id: user.id, passwordHash: null } }),
     db.authToken.findFirst({
       where: { userId: user.id, purpose: "INVITE", usedAt: null, expiresAt: { gt: new Date() } },
@@ -54,7 +56,13 @@ export default async function StaffMemberPage({ params }: { params: Promise<{ id
       select: { expiresAt: true },
     }),
     db.ticket.count({ where: { assigneeId: user.id, status: { in: [...OPEN_STATUSES] } } }),
+    locationOptions(),
   ]);
+  // Ein inzwischen deaktivierter Standort bleibt auswählbar, solange er eingetragen ist
+  const locations =
+    user.location && !user.location.active
+      ? [...activeLocations, { value: user.location.id, label: `${user.location.name} (deaktiviert)` }]
+      : activeLocations;
   const invited = pending > 0;
   const isSelf = user.id === me.id;
 
@@ -88,7 +96,9 @@ export default async function StaffMemberPage({ params }: { params: Promise<{ id
                   position: user.position ?? "",
                   role: user.role === "ADMIN" ? "ADMIN" : "TECHNICIAN",
                   active: user.active,
+                  locationId: user.location?.id ?? "",
                 }}
+                locations={locations}
               />
             </CardBody>
           </Card>

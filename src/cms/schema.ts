@@ -184,6 +184,12 @@ export const blockSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     ...base,
+    type: z.literal("locations"),
+    ...heading,
+    tone: toneSchema,
+  }),
+  z.object({
+    ...base,
     type: z.literal("inquiryForm"),
     ...heading,
     /** Vorauswahl, falls die Seite nicht per ?typ= aufgerufen wird */
@@ -228,6 +234,10 @@ export const BLOCK_LABELS: Record<BlockType, { label: string; description: strin
   imageText: { label: "Bild und Text", description: "Bild aus der Mediathek neben einem Text" },
   cta: { label: "Handlungsaufforderung", description: "Auffälliger Kasten mit Buttons und Telefonnummer" },
   contact: { label: "Kontaktangaben", description: "Telefon, E-Mail, Adresse und Öffnungszeiten aus den Firmendaten" },
+  locations: {
+    label: "Standorte",
+    description: "Alle Standorte mit Anschrift, Telefon, Öffnungszeiten und Link zum Routenplaner",
+  },
   inquiryForm: { label: "Anfrageformular", description: "Formular für Neukunden (landet unter Anfragen)" },
   privateSupportForm: { label: "Hilfe-Formular Privatkunden", description: "Erstellt ein Ticket mit persönlichem Status-Link" },
   companyInfo: { label: "Firmenangaben", description: "Angaben für das Impressum aus den Firmendaten" },

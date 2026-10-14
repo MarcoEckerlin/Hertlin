@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, MapPin } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatMoney, formatRelative, formatTicketNumber } from "@/lib/format";
 import { PriorityBadge, StatusBadge } from "@/components/ui/badge";
@@ -26,6 +26,18 @@ function AssigneeName({ ticket, currentUserId }: { ticket: StaffTicketRow; curre
   );
 }
 
+/** Standort unaufdringlich hinter dem Kunden */
+function LocationTag({ ticket }: { ticket: StaffTicketRow }) {
+  if (!ticket.location) return null;
+  return (
+    <span className="inline-flex max-w-[12rem] shrink-0 items-center gap-1" title={`Standort: ${ticket.location.name}`}>
+      <MapPin className="size-3 shrink-0" aria-hidden />
+      <span className="sr-only">Standort: </span>
+      <span className="truncate">{ticket.location.name}</span>
+    </span>
+  );
+}
+
 function CostCell({ sums }: { sums: { total: number; open: number } | undefined }) {
   if (!sums || sums.total === 0) return <span className="text-ink-muted">–</span>;
   return (
@@ -45,17 +57,22 @@ function CostCell({ sums }: { sums: { total: number; open: number } | undefined 
 /**
  * Ticketliste der Verwaltung: Tabelle ab md, darunter als Kartenliste.
  * costs: NUR für Administratoren übergeben – ohne diesen Wert gibt es keine Kostenspalte.
+ * showLocation: Standort hinter dem Kunden zeigen (sinnvoll erst ab mehreren Standorten).
  */
 export function StaffTicketTable({
   tickets,
   currentUserId,
   costs,
+  showLocation = false,
 }: {
   tickets: StaffTicketRow[];
   currentUserId: string;
   costs?: CostSums;
+  showLocation?: boolean;
 }) {
   const showCosts = costs !== undefined;
+  // Mit Kostenspalte wird es eng: Betreff erst auf großen Bildschirmen in voller Breite
+  const subjectWidth = showCosts ? "max-w-[17rem] 2xl:max-w-[24rem]" : "max-w-[24rem]";
   return (
     <>
       <div className="hidden md:block">
@@ -79,12 +96,15 @@ export function StaffTicketTable({
                   <Link
                     href={`/admin/tickets/${ticket.id}`}
                     title={ticket.subject}
-                    className="block max-w-[24rem] truncate font-semibold text-ink hover:text-brand-700 hover:underline"
+                    className={cn("block truncate font-semibold text-ink hover:text-brand-700 hover:underline", subjectWidth)}
                   >
                     {ticket.subject}
                   </Link>
-                  <span className="mt-0.5 block max-w-[24rem] truncate text-xs text-ink-muted" title={customerLabel(ticket)}>
-                    {customerLabel(ticket)}
+                  <span className={cn("mt-0.5 flex items-center gap-2 text-xs text-ink-muted", subjectWidth)}>
+                    <span className="min-w-0 truncate" title={customerLabel(ticket)}>
+                      {customerLabel(ticket)}
+                    </span>
+                    {showLocation ? <LocationTag ticket={ticket} /> : null}
                   </span>
                 </TD>
                 <TD>
@@ -125,6 +145,11 @@ export function StaffTicketTable({
                 </div>
                 <p className="mt-2 font-semibold break-words text-ink">{ticket.subject}</p>
                 <p className="mt-1 text-sm break-words text-ink-muted">{customerLabel(ticket)}</p>
+                {showLocation && ticket.location ? (
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    <LocationTag ticket={ticket} />
+                  </p>
+                ) : null}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-ink-muted">
                   <span className="flex items-center gap-2">
                     <PriorityBadge priority={ticket.priority} />

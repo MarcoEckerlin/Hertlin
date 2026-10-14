@@ -15,17 +15,29 @@ export const metadata: Metadata = { title: "Team" };
 export default async function TeamPage() {
   const me = await requireAdmin();
 
-  const [staff, invitedIds] = await Promise.all([
+  const [staff, invitedIds, locationCount] = await Promise.all([
     db.user.findMany({
       where: { role: { in: [...STAFF_ROLES] } },
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: { id: true, name: true, email: true, phone: true, position: true, role: true, active: true, lastLoginAt: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        position: true,
+        role: true,
+        active: true,
+        lastLoginAt: true,
+        location: { select: { name: true, active: true } },
+      },
     }),
     db.user.findMany({ where: { role: { in: [...STAFF_ROLES] }, passwordHash: null }, select: { id: true } }),
+    db.location.count(),
   ]);
   const invited = new Set(invitedIds.map((u) => u.id));
   const admins = staff.filter((u) => u.active && u.role === "ADMIN").length;
   const technicians = staff.filter((u) => u.active && u.role === "TECHNICIAN").length;
+  const showLocation = locationCount > 0;
 
   return (
     <div>
@@ -46,6 +58,7 @@ export default async function TeamPage() {
           <tr>
             <TH>Name</TH>
             <TH>Kontakt</TH>
+            {showLocation ? <TH>Standort</TH> : null}
             <TH>Rolle</TH>
             <TH>Zugang</TH>
             <TH className="text-right">Letzte Anmeldung</TH>
@@ -67,6 +80,18 @@ export default async function TeamPage() {
                 </a>
                 {u.phone ? <p className="text-xs">{u.phone}</p> : null}
               </TD>
+              {showLocation ? (
+                <TD className="min-w-[8rem]">
+                  {u.location ? (
+                    <span className={u.location.active ? "text-ink" : "text-ink-muted"}>
+                      {u.location.name}
+                      {u.location.active ? null : " (deaktiviert)"}
+                    </span>
+                  ) : (
+                    <span className="text-ink-muted">–</span>
+                  )}
+                </TD>
+              ) : null}
               <TD>
                 <RoleBadge role={u.role} />
               </TD>

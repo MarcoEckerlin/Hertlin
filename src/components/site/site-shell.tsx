@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Navigation } from "@/cms/store";
+import { listWebsiteLocations } from "@/lib/locations";
 import { getSiteSettings, type SiteSettings } from "@/lib/settings";
 import { translationEnabled } from "@/lib/translate";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -22,7 +23,7 @@ export function siteContact(s: SiteSettings): SiteContact {
 
 /** Rahmen der Website: Sprunglink, Kopfzeile, Inhalt und Fußzeile. Auch für die Vorschau in der Verwaltung. */
 export async function SiteShell({ nav, children, banner }: { nav: Navigation; children: ReactNode; banner?: ReactNode }) {
-  const settings = await getSiteSettings();
+  const [settings, locations] = await Promise.all([getSiteSettings(), listWebsiteLocations()]);
   const contact = siteContact(settings);
 
   return (
@@ -38,7 +39,7 @@ export async function SiteShell({ nav, children, banner }: { nav: Navigation; ch
       <main id="inhalt" className="flex-1">
         {children}
       </main>
-      <SiteFooter main={nav.main} footer={nav.footer} contact={contact} />
+      <SiteFooter main={nav.main} footer={nav.footer} contact={contact} locations={locations} />
     </div>
   );
 }

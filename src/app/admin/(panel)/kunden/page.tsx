@@ -6,8 +6,9 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination, parsePage } from "@/components/ui/pagination";
 import { TD, TH, THead, TR, Table } from "@/components/ui/table";
-import { FilterPill, SearchForm, firstParam } from "@/components/admin/companies/list-tools";
+import { FilterPill, SearchForm, cleanId, firstParam } from "@/components/admin/companies/list-tools";
 import { CompanyActiveBadge } from "@/components/admin/companies/status-badges";
+import { AutoSubmitSelect } from "@/components/admin/locations/auto-submit-select";
 import { requireStaff } from "@/lib/auth";
 import { CUSTOMER_ROLES, OPEN_STATUSES } from "@/lib/constants";
 import { db } from "@/lib/db";
@@ -24,15 +25,44 @@ const STATUS_FILTERS = [
 ] as const;
 type StatusKey = (typeof STATUS_FILTERS)[number]["key"];
 
-type Filters = { status: StatusKey; q: string };
+/** Filterwert „ohne Standort“ (Query-Parameter standort) */
+const NO_LOCATION = "ohne";
+
+/** standort: "" = alle, "ohne" oder die ID eines Standorts */
+type Filters = { status: StatusKey; q: string; standort: string };
 
 function filterHref(filters: Filters, change: Partial<Filters>): string {
   const f = { ...filters, ...change };
   const params = new URLSearchParams();
   if (f.status) params.set("status", f.status);
+  if (f.standort) params.set("standort", f.standort);
   if (f.q) params.set("q", f.q);
   const s = params.toString();
   return s ? `/admin/kunden?${s}` : "/admin/kunden";
+}
+
+type LocationRef = { id: string; name: string } | null;
+
+/** Standort des Firmenkunden, darunter abweichende Standorte seiner Unterkunden. */
+function LocationCell({ company }: { company: { location: LocationRef; children: { location: LocationRef }[] } }) {
+  const others = [
+    ...new Map(
+      company.children
+        .map((child) => child.location)
+        .filter((l): l is { id: string; name: string } => l !== null && l.id !== company.location?.id)
+        .map((l) => [l.id, l.name]),
+    ).values(),
+  ];
+  return (
+    <>
+      {company.location ? (
+        <span className="text-ink">{company.location.name}</span>
+      ) : (
+        <span className="text-ink-muted">–</span>
+      )}
+      {others.length > 0 ? <p className="text-xs text-ink-muted">Unterkunden: {others.join(", ")}</p> : null}
+    </>
+  );
 }
 
 function Count({ value }: { value: number }) {
@@ -49,15 +79,22 @@ export default async function CompaniesPage({
   const sp = await searchParams;
 
   const statusParam = firstParam(sp.status);
+  const standortParam = firstParam(sp.standort);
   const filters: Filters = {
     status: STATUS_FILTERS.find((f) => f.key === statusParam)?.key ?? "",
     q: firstParam(sp.q).slice(0, 80),
+    standort: standortParam === NO_LOCATION ? NO_LOCATION : (cleanId(standortParam) ?? ""),
   };
   const page = parsePage(sp.seite);
 
   const and: Prisma.CompanyWhereInput[] = [{ parentId: null }];
   if (filters.status === "aktiv") and.push({ active: true });
   if (filters.status === "deaktiviert") and.push({ active: false });
+  // Ein Firmenkunde zählt zu einem Standort, wenn er selbst oder eine seiner Unterkunden dort betreut wird
+  if (filters.standort === NO_LOCATION) and.push({ locationId: null });
+  else if (filters.standort) {
+    and.push({ OR: [{ locationId: filters.standort }, { children: { some: { locationId: filters.standort } } }] });
+  }
   if (filters.q) {
     and.push({
       OR: [
@@ -74,7 +111,7 @@ export default async function CompaniesPage({
   }
   const where: Prisma.CompanyWhereInput = { AND: and };
 
-  const [total, companies, anyCompany] = await Promise.all([
+  const [total, companies, anyCompany, locations] = await Promise.all([
     db.company.count({ where }),
     db.company.findMany({
       where,
@@ -88,10 +125,15 @@ export default async function CompaniesPage({
         customerNumber: true,
         city: true,
         active: true,
-        children: { select: { id: true } },
+        location: { select: { id: true, name: true } },
+        children: { select: { id: true, location: { select: { id: true, name: true } } } },
       },
     }),
     db.company.count({ where: { parentId: null }, take: 1 }),
+    db.location.findMany({
+      orderBy: [{ active: "desc" }, { isMain: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, active: true },
+    }),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -127,7 +169,9 @@ export default async function CompaniesPage({
     if (root) openTickets.set(root, (openTickets.get(root) ?? 0) + g._count._all);
   }
 
-  const filtered = filters.status !== "" || filters.q !== "";
+  const filtered = filters.status !== "" || filters.q !== "" || filters.standort !== "";
+  // Standortspalte und -filter erst ab mehreren Standorten (oder wenn ein Standortfilter in der Adresse steht)
+  const showLocations = locations.length > 1 || filters.standort !== "";
 
   return (
     <div>
@@ -152,6 +196,24 @@ export default async function CompaniesPage({
           label="Kunden durchsuchen"
           placeholder="Name, Kundennummer, Kürzel oder Ort"
           keep={{ status: filters.status || undefined }}
+          extra={
+            showLocations ? (
+              <div className="w-full sm:w-52">
+                <label htmlFor="kunden-standort" className="sr-only">
+                  Standort
+                </label>
+                <AutoSubmitSelect id="kunden-standort" name="standort" defaultValue={filters.standort} className="h-9 text-sm">
+                  <option value="">Alle Standorte</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.active ? l.name : `${l.name} (deaktiviert)`}
+                    </option>
+                  ))}
+                  <option value={NO_LOCATION}>Ohne Standort</option>
+                </AutoSubmitSelect>
+              </div>
+            ) : null
+          }
         />
       </div>
 
@@ -188,6 +250,7 @@ export default async function CompaniesPage({
                 <TH>Firmenkunde</TH>
                 <TH>Kundennr.</TH>
                 <TH>Portal-Adresse</TH>
+                {showLocations ? <TH>Standort</TH> : null}
                 <TH className="text-right">Unterkunden</TH>
                 <TH className="text-right">Aktive Benutzer</TH>
                 <TH className="text-right">Offene Tickets</TH>
@@ -197,7 +260,7 @@ export default async function CompaniesPage({
             <tbody>
               {companies.map((c) => (
                 <TR key={c.id} className={c.active ? undefined : "bg-mist/60"}>
-                  <TD className="min-w-[14rem]">
+                  <TD className={showLocations ? "min-w-[12rem]" : "min-w-[14rem]"}>
                     <Link href={`/admin/kunden/${c.id}`} className="font-semibold break-words text-ink hover:underline">
                       {c.name}
                     </Link>
@@ -218,6 +281,11 @@ export default async function CompaniesPage({
                       <span className="text-ink-muted">–</span>
                     )}
                   </TD>
+                  {showLocations ? (
+                    <TD className="min-w-[9rem]">
+                      <LocationCell company={c} />
+                    </TD>
+                  ) : null}
                   <TD className="text-right tabular-nums">
                     <Count value={c.children.length} />
                   </TD>
@@ -248,7 +316,7 @@ export default async function CompaniesPage({
             page={Math.min(page, pageCount)}
             pageCount={pageCount}
             basePath="/admin/kunden"
-            baseQuery={{ status: filters.status || undefined, q: filters.q || undefined }}
+            baseQuery={{ status: filters.status || undefined, standort: filters.standort || undefined, q: filters.q || undefined }}
           />
         </>
       )}

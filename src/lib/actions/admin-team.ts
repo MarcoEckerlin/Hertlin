@@ -9,6 +9,7 @@ import { STAFF_ROLES } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { errorState, fromZodError, successState, type FormState } from "@/lib/forms";
 import { mainUrl } from "@/lib/hosts";
+import { parseLocationId } from "@/lib/locations";
 import { sendInviteMail, sendPasswordResetMail } from "@/lib/notifications";
 import { checkbox, email as emailSchema, optionalText, phone as phoneSchema, requiredText } from "@/lib/validation";
 
@@ -76,6 +77,20 @@ function revalidateTeam() {
 
 class LastAdminError extends Error {}
 
+const LOCATION_ERROR = { locationId: "Bitte einen Standort aus der Liste wählen." };
+
+/**
+ * Standort aus dem Formular. Der bisherige Standort darf bleiben, auch wenn er inzwischen deaktiviert ist;
+ * fehlt das Feld (es gibt keine Standorte), bleibt ebenfalls alles beim Alten.
+ * undefined = ungültige Auswahl.
+ */
+async function readLocationId(formData: FormData, current: string | null = null): Promise<string | null | undefined> {
+  if (!formData.has("locationId")) return current;
+  const value = formData.get("locationId");
+  if (current && value === current) return current;
+  return parseLocationId(value);
+}
+
 const LAST_ADMIN =
   "Es muss mindestens ein aktiver Administrator mit eigenem Passwort bleiben. Ernennen Sie zuerst jemand anderen zum Administrator.";
 
@@ -87,6 +102,9 @@ export async function createStaffAction(_prev: FormState, formData: FormData): P
   const parsed = staffSchema.safeParse(readStaff(formData));
   if (!parsed.success) return fromZodError(parsed.error, formData);
   const data = parsed.data;
+
+  const locationId = await readLocationId(formData);
+  if (locationId === undefined) return errorState("Bitte prüfen Sie den Standort.", formData, LOCATION_ERROR);
 
   const mailError = await emailTaken(data.email);
   if (mailError) return errorState("Bitte prüfen Sie die E-Mail-Adresse.", formData, { email: mailError });
@@ -101,6 +119,7 @@ export async function createStaffAction(_prev: FormState, formData: FormData): P
         position: data.position ?? null,
         role: data.role,
         companyId: null,
+        locationId,
       },
       select: { id: true, name: true, email: true },
     });
@@ -127,7 +146,7 @@ export async function updateStaffAction(_prev: FormState, formData: FormData): P
   const existing = id
     ? await db.user.findFirst({
         where: { id, role: { in: [...STAFF_ROLES] } },
-        select: { id: true, name: true, email: true, role: true, active: true, passwordHash: true },
+        select: { id: true, name: true, email: true, role: true, active: true, passwordHash: true, locationId: true },
       })
     : null;
   if (!existing) return errorState("Dieses Teammitglied gibt es nicht mehr. Bitte laden Sie die Seite neu.");
@@ -145,6 +164,9 @@ export async function updateStaffAction(_prev: FormState, formData: FormData): P
   if (isSelf && (data.role !== "ADMIN" || !data.active)) {
     return errorState("Ihre eigene Rolle und Ihren eigenen Zugang können Sie nicht ändern.", formData);
   }
+
+  const locationId = await readLocationId(formData, existing.locationId);
+  if (locationId === undefined) return errorState("Bitte prüfen Sie den Standort.", formData, LOCATION_ERROR);
 
   const emailChanged = data.email !== existing.email;
   if (emailChanged) {
@@ -172,6 +194,7 @@ export async function updateStaffAction(_prev: FormState, formData: FormData): P
           role: data.role,
           active: data.active,
           companyId: null,
+          locationId,
         },
       });
     });
