@@ -9,6 +9,7 @@ import { SubmitButton } from "@/components/ui/submit-button";
 import { FormSection } from "@/components/admin/companies/company-fields";
 import { fieldProps, useFormFocus } from "@/components/admin/companies/form-helpers";
 import { InviteLinkBox } from "@/components/admin/companies/invite-link-box";
+import { LocationSelect } from "@/components/admin/location-select";
 import { createStaffAction, updateStaffAction } from "@/lib/actions/admin-team";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/cn";
@@ -22,7 +23,14 @@ export type StaffValues = {
   position: string;
   role: "ADMIN" | "TECHNICIAN";
   active: boolean;
+  /** "" = kein Standort */
+  locationId: string;
 };
+
+/** Auswahl der Standorte (aus locationOptions(), ggf. ergänzt um den bisherigen, inzwischen deaktivierten Standort) */
+export type StaffLocationOption = { value: string; label: string };
+
+const LOCATION_HINT = "Wo die Person in der Regel arbeitet. Hilft beim Verteilen von Tickets und Einsätzen.";
 
 const STAFF_ROLE_OPTIONS = ["TECHNICIAN", "ADMIN"] as const;
 
@@ -125,12 +133,12 @@ function StaffContactFields({ values, errors }: { values: Partial<Record<string,
 
 /* ------------------------------------------------------------------ */
 
-export function StaffCreate() {
+export function StaffCreate({ locations = [] }: { locations?: StaffLocationOption[] }) {
   const [round, setRound] = useState(0);
-  return <StaffCreateForm key={round} onAgain={() => setRound((r) => r + 1)} />;
+  return <StaffCreateForm key={round} locations={locations} onAgain={() => setRound((r) => r + 1)} />;
 }
 
-function StaffCreateForm({ onAgain }: { onAgain: () => void }) {
+function StaffCreateForm({ locations, onAgain }: { locations: StaffLocationOption[]; onAgain: () => void }) {
   const [state, formAction] = useActionState(createStaffAction, initialFormState);
   const formRef = useFormFocus(state);
   const errors = state.fieldErrors ?? {};
@@ -158,6 +166,13 @@ function StaffCreateForm({ onAgain }: { onAgain: () => void }) {
       <FormMessage state={state} />
       <FormSection title="Person">
         <StaffContactFields values={values} errors={errors} />
+        <LocationSelect
+          label="Standort"
+          options={locations}
+          defaultValue={values.locationId}
+          error={errors.locationId}
+          hint={LOCATION_HINT}
+        />
       </FormSection>
       <FormSection title="Zugang">
         <StaffRoleChoice value={values.role ?? "TECHNICIAN"} error={errors.role} />
@@ -178,7 +193,17 @@ function StaffCreateForm({ onAgain }: { onAgain: () => void }) {
 
 /* ------------------------------------------------------------------ */
 
-export function StaffEditForm({ user, isSelf, invited }: { user: StaffValues; isSelf: boolean; invited: boolean }) {
+export function StaffEditForm({
+  user,
+  isSelf,
+  invited,
+  locations = [],
+}: {
+  user: StaffValues;
+  isSelf: boolean;
+  invited: boolean;
+  locations?: StaffLocationOption[];
+}) {
   const [state, formAction] = useActionState(updateStaffAction, initialFormState);
   const formRef = useFormFocus(state);
   const errors = state.fieldErrors ?? {};
@@ -188,12 +213,12 @@ export function StaffEditForm({ user, isSelf, invited }: { user: StaffValues; is
     phone: user.phone,
     position: user.position,
     role: user.role,
+    locationId: user.locationId,
   };
   const active = isSelf ? true : state.values ? state.values.active === "on" : user.active;
 
   return (
     <form ref={formRef} action={formAction} noValidate className="space-y-6">
-      <input type="hidden" name="id" value={user.id} />
       <FormMessage state={state} />
       {state.status === "success" && state.data?.inviteLink ? (
         <InviteLinkBox link={state.data.inviteLink} name={state.data.name ?? user.name} />
@@ -206,6 +231,13 @@ export function StaffEditForm({ user, isSelf, invited }: { user: StaffValues; is
             Die Einladung ist noch offen. Ändern Sie die E-Mail-Adresse, geht automatisch eine neue Einladung an die neue Adresse.
           </p>
         ) : null}
+        <LocationSelect
+          label="Standort"
+          options={locations}
+          defaultValue={values.locationId}
+          error={errors.locationId}
+          hint={LOCATION_HINT}
+        />
       </FormSection>
 
       <FormSection title="Zugang">
@@ -232,6 +264,8 @@ export function StaffEditForm({ user, isSelf, invited }: { user: StaffValues; is
       </FormSection>
 
       <div className="border-t border-line pt-6">
+        {/* Verstecktes Feld am Ende, damit der erste Abschnitt ohne Trennlinie beginnt */}
+        <input type="hidden" name="id" value={user.id} />
         <SubmitButton pendingText="Wird gespeichert …">Änderungen speichern</SubmitButton>
       </div>
     </form>

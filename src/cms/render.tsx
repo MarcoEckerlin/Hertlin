@@ -18,6 +18,7 @@ import { ResponseTimesBlock } from "@/cms/blocks/response-times";
 import { ImageTextBlock } from "@/cms/blocks/image-text";
 import { CtaBlock } from "@/cms/blocks/cta";
 import { ContactBlock } from "@/cms/blocks/contact";
+import { LocationsBlock } from "@/cms/blocks/locations";
 import { InquiryFormBlock } from "@/cms/blocks/inquiry-form";
 import { PrivateSupportFormBlock } from "@/cms/blocks/private-support-form";
 import { CompanyInfoBlock } from "@/cms/blocks/company-info";
@@ -67,6 +68,8 @@ function renderBlock(block: Block, ctx: BlockContext, layout: BlockLayout): Reac
       return <CtaBlock block={block} ctx={ctx} layout={layout} />;
     case "contact":
       return <ContactBlock block={block} ctx={ctx} layout={layout} />;
+    case "locations":
+      return <LocationsBlock block={block} ctx={ctx} layout={layout} />;
     case "inquiryForm":
       return <InquiryFormBlock block={block} ctx={ctx} layout={layout} />;
     case "privateSupportForm":

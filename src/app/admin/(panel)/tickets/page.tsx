@@ -38,10 +38,15 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
   const filters = parseTicketListFilters(await searchParams);
   const where = ticketListWhere(filters, user.id);
 
-  const [result, staff, customers, viewCounts] = await Promise.all([
+  const [result, staff, customers, locations, viewCounts] = await Promise.all([
     findTicketPage({ where, sort: filters.sortierung, page: filters.seite, pageSize: PAGE_SIZE, select: staffTicketRowSelect }),
     loadStaffOptions({ includeInactive: true }),
     loadCustomerGroups({ activeOnly: false, withUsers: false }),
+    // Auch deaktivierte Standorte, damit ältere Tickets auffindbar bleiben
+    db.location.findMany({
+      orderBy: [{ active: "desc" }, { isMain: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, active: true },
+    }),
     // Zahlen an den Reitern: gleiche Filter, nur ohne Einzelstatus
     Promise.all(
       TICKET_VIEWS.map((view) =>
@@ -53,6 +58,8 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
   // Kosten nur für Administratoren laden – Techniker bekommen keine Spalte und keine Daten
   const costs = isAdmin(user) ? await loadCostSums(result.rows.map((t) => t.id)) : undefined;
   const filtered = hasActiveFilters(filters);
+  // Standort erst zeigen, wenn es mehr als einen gibt – sonst steht überall dasselbe
+  const showLocation = locations.length > 1;
 
   return (
     <>
@@ -97,6 +104,7 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
           active: c.active,
           children: c.children.map((child) => ({ id: child.id, name: child.name, active: child.active })),
         }))}
+        locations={showLocation || filters.standort ? locations : []}
       />
 
       <div className="mt-6">
@@ -106,7 +114,7 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
               {result.total === 1 ? "1 Ticket" : `${result.total} Tickets`}
               {filters.suche ? ` für „${filters.suche}“` : null}
             </p>
-            <StaffTicketTable tickets={result.rows} currentUserId={user.id} costs={costs} />
+            <StaffTicketTable tickets={result.rows} currentUserId={user.id} costs={costs} showLocation={showLocation} />
             <Pagination
               page={result.page}
               pageCount={result.pageCount}

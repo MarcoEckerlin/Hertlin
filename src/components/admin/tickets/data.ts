@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { CUSTOMER_ROLES, STAFF_ROLES } from "@/lib/constants";
 import { parseTicketNumber } from "@/lib/format";
-import { PRIVATE_CUSTOMER, VIEW_STATUSES, type TicketListFilters, type TicketSort } from "@/components/admin/tickets/filters";
+import { NO_LOCATION, PRIVATE_CUSTOMER, VIEW_STATUSES, type TicketListFilters, type TicketSort } from "@/components/admin/tickets/filters";
 
 /**
  * Abfragen für die Ticketseiten der Verwaltung.
@@ -29,6 +29,7 @@ export const staffTicketRowSelect = {
   company: { select: { id: true, name: true, parent: { select: { id: true, name: true } } } },
   assignee: { select: { id: true, name: true } },
   createdBy: { select: { name: true } },
+  location: { select: { id: true, name: true } },
 } satisfies Prisma.TicketSelect;
 
 export type StaffTicketRow = Prisma.TicketGetPayload<{ select: typeof staffTicketRowSelect }>;
@@ -55,6 +56,9 @@ export function ticketListWhere(filters: TicketListFilters, userId: string): Pri
 
   if (filters.prioritaet) and.push({ priority: filters.prioritaet });
   if (filters.art) and.push({ type: filters.art });
+
+  if (filters.standort === NO_LOCATION) and.push({ locationId: null });
+  else if (filters.standort) and.push({ locationId: filters.standort });
 
   if (filters.bearbeiter === "mir") and.push({ assigneeId: userId });
   else if (filters.bearbeiter === "keiner") and.push({ assigneeId: null });
