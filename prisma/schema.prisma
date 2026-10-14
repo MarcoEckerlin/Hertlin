@@ -1,0 +1,241 @@
+// Datenmodell für Website, Kundenportal und Ticketsystem von Hertlin.
+// SQLite für den Start; für größere Installationen kann der Provider auf
+// "postgresql" umgestellt werden (Status- und Rollenfelder sind bewusst Strings).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Firmenkunde (parentId = null) oder Unterkunde eines Firmenkunden (parentId gesetzt).
+/// Nur Firmenkunden haben eine eigene Subdomain (slug). Unterkunden nutzen das Portal ihres Firmenkunden.
+model Company {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String?   @unique
+  parentId String?
+  parent   Company?  @relation("SubCustomers", fields: [parentId], references: [id], onDelete: Restrict)
+  children Company[] @relation("SubCustomers")
+
+  customerNumber String?  @unique
+  street         String?
+  zip            String?
+  city           String?
+  phone          String?
+  email          String?
+  /// Nur für Hertlin-Mitarbeiter sichtbar
+  internalNote   String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  users     User[]
+  tickets   Ticket[]
+  inquiries Inquiry[]
+
+  @@index([parentId])
+}
+
+/// role: ADMIN | TECHNICIAN (Hertlin-Mitarbeiter, companyId = null)
+///       CUSTOMER_ADMIN | CUSTOMER_USER (Kundenkonten, companyId gesetzt)
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  phone        String?
+  position     String?
+  passwordHash String?
+  role         String
+  companyId    String?
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions        Session[]
+  tokens          AuthToken[]
+  ticketsCreated  Ticket[]        @relation("TicketCreatedBy")
+  ticketsAssigned Ticket[]        @relation("TicketAssignee")
+  messages        TicketMessage[]
+  costEntries     CostEntry[]
+  ticketEvents    TicketEvent[]
+
+  @@index([companyId])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Host, auf dem die Sitzung erstellt wurde (z. B. "muster.hertlin.de")
+  host       String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+
+  @@index([userId])
+}
+
+/// purpose: INVITE | RESET
+model AuthToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// type:     STOERUNG | ANFRAGE
+/// status:   NEW | IN_PROGRESS | WAITING_CUSTOMER | RESOLVED | CLOSED
+/// priority: LOW | NORMAL | HIGH | CRITICAL
+/// source:   PORTAL | PRIVATE_FORM | STAFF
+model Ticket {
+  id       Int    @id @default(autoincrement())
+  subject  String
+  type     String @default("STOERUNG")
+  category String @default("SONSTIGES")
+  priority String @default("NORMAL")
+  status   String @default("NEW")
+  source   String @default("PORTAL")
+
+  /// Firmenkunde oder Unterkunde; null bei Privatkunden
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdById String?
+  createdBy   User?    @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  assignee    User?    @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  /// Kontaktdaten (Pflicht bei Privatkunden, optional abweichender Ansprechpartner sonst)
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  /// Anschrift für Vor-Ort-Termine bei Privatkunden
+  contactAddress String?
+  /// Geheimer Schlüssel im Status-Link für Privatkunden (/status/<token>)
+  guestToken     String? @unique
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+  closedAt   DateTime?
+
+  messages TicketMessage[]
+  costs    CostEntry[]
+  events   TicketEvent[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([contactEmail])
+}
+
+/// internal = true: interne Notiz, nur für Hertlin-Mitarbeiter sichtbar
+model TicketMessage {
+  id         String   @id @default(cuid())
+  ticketId   Int
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  /// Anzeigename, falls kein Benutzerkonto (Privatkunde)
+  authorName String?
+  fromStaff  Boolean  @default(false)
+  body       String
+  internal   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  attachments Attachment[]
+
+  @@index([ticketId])
+}
+
+model Attachment {
+  id         String        @id @default(cuid())
+  messageId  String
+  message    TicketMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName   String
+  storedName String        @unique
+  mimeType   String
+  size       Int
+  createdAt  DateTime      @default(now())
+
+  @@index([messageId])
+}
+
+/// Protokoll von Statuswechseln, Zuweisungen usw.
+/// type: CREATED | STATUS | PRIORITY | ASSIGNEE | COMPANY
+model TicketEvent {
+  id        String   @id @default(cuid())
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  type      String
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+/// Kosten zu einem Ticket. Ausschließlich für Benutzer mit Rolle ADMIN sichtbar.
+/// kind: LABOR | TRAVEL | MATERIAL | FLAT
+model CostEntry {
+  id                 String    @id @default(cuid())
+  ticketId           Int
+  ticket             Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  kind               String
+  description        String
+  /// Menge in Hundertsteln (1,25 Std. = 125), um Rundungsfehler zu vermeiden
+  quantityHundredths Int
+  unit               String
+  unitPriceCents     Int
+  totalCents         Int
+  performedAt        DateTime
+  billed             Boolean   @default(false)
+  billedAt           DateTime?
+  createdById        String?
+  createdBy          User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([ticketId])
+  @@index([performedAt])
+}
+
+/// Anfrage von Interessenten (Neukunden) über die Website.
+/// customerType: PRIVATE | BUSINESS
+/// status: NEW | CONTACTED | OFFER_SENT | WON | LOST
+model Inquiry {
+  id               Int      @id @default(autoincrement())
+  customerType     String
+  name             String
+  companyName      String?
+  email            String
+  phone            String?
+  zipCity          String?
+  topic            String
+  workplaces       String?
+  message          String
+  preferredContact String?
+  status           String   @default("NEW")
+  internalNote     String?
+  companyId        String?
+  company          Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([status])
+}
