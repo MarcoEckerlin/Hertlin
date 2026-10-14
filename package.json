@@ -20,6 +20,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@prisma/client": "^6.19.3",
     "lucide-react": "^1.57.0",

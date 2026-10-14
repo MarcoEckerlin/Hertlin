@@ -1,5 +1,5 @@
 import "server-only";
-import { site } from "@/config/site";
+import { getSiteSettings } from "@/lib/settings";
 import { sendMail, staffNotificationAddress } from "@/lib/mail";
 import { formatInquiryNumber, formatTicketNumber } from "@/lib/format";
 import { mainUrl, portalUrl } from "@/lib/hosts";
@@ -37,7 +37,7 @@ function excerpt(text: string, max = 600): string {
 export async function notifyStaffNewTicket(ticket: TicketInfo & { body: string; createdByName?: string | null }) {
   const from = [ticket.companyName, ticket.createdByName ?? ticket.contactName].filter(Boolean).join(" – ");
   await sendMail({
-    to: staffNotificationAddress(),
+    to: await staffNotificationAddress(),
     subject: `[${formatTicketNumber(ticket.id)}] ${labelOf(PRIORITY_LABELS, ticket.priority)}: ${ticket.subject}`,
     text: [
       `Neues Ticket von ${from || "unbekannt"}`,
@@ -55,7 +55,7 @@ export async function notifyStaffNewTicket(ticket: TicketInfo & { body: string; 
 
 export async function notifyStaffCustomerReply(ticket: TicketInfo & { body: string; authorName: string }) {
   await sendMail({
-    to: staffNotificationAddress(),
+    to: await staffNotificationAddress(),
     subject: `[${formatTicketNumber(ticket.id)}] Antwort von ${ticket.authorName}: ${ticket.subject}`,
     text: [
       `${ticket.authorName} hat auf das Ticket geantwortet${ticket.companyName ? ` (${ticket.companyName})` : ""}:`,
@@ -78,7 +78,7 @@ export async function notifyStaffNewInquiry(inquiry: {
   message: string;
 }) {
   await sendMail({
-    to: staffNotificationAddress(),
+    to: await staffNotificationAddress(),
     replyTo: inquiry.email,
     subject: `[${formatInquiryNumber(inquiry.id)}] Neue Anfrage: ${inquiry.companyName || inquiry.name}`,
     text: [
@@ -106,6 +106,7 @@ export async function sendPortalTicketConfirmation(opts: {
   subject: string;
   slug: string;
 }) {
+  const site = await getSiteSettings();
   await sendMail({
     to: opts.to,
     subject: `Ihr Ticket ${formatTicketNumber(opts.ticketId)} ist eingegangen`,
@@ -197,6 +198,7 @@ export async function notifyCustomerStatusChange(opts: {
 }
 
 export async function sendInquiryConfirmation(inquiry: { id: number; name: string; email: string; customerType: string }) {
+  const site = await getSiteSettings();
   await sendMail({
     to: inquiry.email,
     subject: `Ihre Anfrage bei ${site.name} (${formatInquiryNumber(inquiry.id)})`,
@@ -221,6 +223,7 @@ export async function sendInviteMail(opts: {
   invitedBy?: string | null;
   isStaff?: boolean;
 }) {
+  const site = await getSiteSettings();
   const where = opts.isStaff ? `die Verwaltung von ${site.name}` : `das Kundenportal${opts.companyName ? ` von ${opts.companyName}` : ""}`;
   await sendMail({
     to: opts.to,
@@ -238,6 +241,7 @@ export async function sendInviteMail(opts: {
 }
 
 export async function sendPasswordResetMail(opts: { to: string; name: string; link: string }) {
+  const site = await getSiteSettings();
   await sendMail({
     to: opts.to,
     subject: `Passwort zurücksetzen – ${site.name}`,

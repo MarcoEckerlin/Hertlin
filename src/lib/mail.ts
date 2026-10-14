@@ -2,7 +2,7 @@ import "server-only";
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import nodemailer, { type Transporter } from "nodemailer";
-import { site } from "@/config/site";
+import { getSiteSettings } from "@/lib/settings";
 
 export type MailMessage = {
   to: string | string[];
@@ -27,8 +27,6 @@ function getTransporter(): Transporter | null {
   return transporter;
 }
 
-const SIGNATURE = `\n\n-- \n${site.legalName}\n${site.phone} · ${site.email}`;
-
 /**
  * Verschickt eine E-Mail. Fehler werden protokolliert, aber nicht geworfen,
  * damit z. B. ein Ticket auch dann angelegt wird, wenn der Mailserver hakt.
@@ -37,7 +35,8 @@ const SIGNATURE = `\n\n-- \n${site.legalName}\n${site.phone} · ${site.email}`;
 export async function sendMail(message: MailMessage): Promise<void> {
   const to = Array.isArray(message.to) ? message.to.filter(Boolean) : [message.to].filter(Boolean);
   if (to.length === 0) return;
-  const text = message.text + SIGNATURE;
+  const site = await getSiteSettings();
+  const text = `${message.text}\n\n-- \n${site.legalName}\n${site.phone} · ${site.email}`;
   const from = process.env.MAIL_FROM || `${site.name} <${site.supportEmail}>`;
 
   const t = getTransporter();
@@ -62,6 +61,6 @@ export async function sendMail(message: MailMessage): Promise<void> {
 }
 
 /** Empfänger für interne Benachrichtigungen (neue Tickets, Anfragen). */
-export function staffNotificationAddress(): string {
-  return process.env.STAFF_NOTIFY_EMAIL || site.supportEmail;
+export async function staffNotificationAddress(): Promise<string> {
+  return process.env.STAFF_NOTIFY_EMAIL || (await getSiteSettings()).supportEmail;
 }
