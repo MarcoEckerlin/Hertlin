@@ -1,12 +1,44 @@
+# Hertlin auf einem Docker-Server – Anleitung: DOCKER.md
+#
+#   Test im Heimnetz (ohne eigene Domain, ohne HTTPS):
+#     cp docker.env.example docker.env   # Werte anpassen
+#     docker compose up -d --build
+#
+#   Produktion mit eigener Domain und automatischem HTTPS (Caddy): zusätzlich eine Datei .env
+#   neben dieser Datei anlegen (wird von docker compose selbst gelesen):
+#     COMPOSE_PROFILES=https
+#     HERTLIN_PUBLISH=127.0.0.1:3000
+#   und dann wie oben: docker compose up -d --build
+
 services:
   hertlin:
     build: .
+    image: hertlin:latest
     restart: unless-stopped
-    env_file: .env.production
+    init: true
+    env_file: docker.env
     volumes:
       - hertlin-data:/data
     ports:
-      - "127.0.0.1:3000:3000"
+      # Test: im Netz auf Port 3000 erreichbar. Mit Caddy oder anderem Reverse Proxy davor
+      # HERTLIN_PUBLISH=127.0.0.1:3000 in .env setzen, damit niemand am Proxy vorbei zugreift.
+      - "${HERTLIN_PUBLISH:-3000}:3000"
+
+  caddy:
+    image: caddy:2.10
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on:
+      - hertlin
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   hertlin-data:
+  caddy-data:
+  caddy-config:

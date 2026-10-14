@@ -1,0 +1,28 @@
+# Reverse Proxy mit automatischem HTTPS für die Hauptdomain UND jede Kunden-Subdomain.
+# „On-Demand TLS“: Caddy holt das Zertifikat beim ersten Aufruf einer Subdomain bei Let's Encrypt.
+# Vorher fragt Caddy die App (/api/tls-check), ob es diese Subdomain wirklich gibt.
+# Voraussetzung: DNS-Einträge für ROOT_DOMAIN und *.ROOT_DOMAIN zeigen auf diesen Server, Ports 80/443 offen.
+{
+	on_demand_tls {
+		ask http://hertlin:3000/api/tls-check
+	}
+}
+
+https:// {
+	tls {
+		on_demand
+	}
+
+	# Interne Endpunkte nicht nach außen geben
+	@intern path /api/tls-check /api/health
+	respond @intern 404
+
+	encode zstd gzip
+
+	# Caddy reicht Host, X-Forwarded-For/-Host/-Proto und WebSockets (/_ws) automatisch weiter
+	reverse_proxy hertlin:3000
+}
+
+http:// {
+	redir https://{host}{uri} permanent
+}

@@ -4,7 +4,7 @@
  */
 import { createServer } from "node:http";
 import next from "next";
-import { nextInternalHostname } from "@/lib/hosts";
+import { appProtocol, nextInternalHostname, rootDomain } from "@/lib/hosts";
 import { attachRealtime } from "@/realtime/ws-server";
 
 const port = Number.parseInt(process.env.PORT || "3000", 10);
@@ -22,6 +22,7 @@ app.prepare().then(() => {
   });
   attachRealtime(server, dev ? app.getUpgradeHandler() : undefined);
   server.listen(port, hostname, () => {
-    console.log(`> Hertlin läuft auf http://localhost:${port} (${dev ? "Entwicklung" : "Produktion"})`);
+    // Adresse aus ROOT_DOMAIN: im Container bzw. hinter einem Proxy weicht sie vom internen Port ab
+    console.log(`> Hertlin läuft (${dev ? "Entwicklung" : "Produktion"}, Port ${port}): ${appProtocol()}://${rootDomain()}`);
   });
 });
