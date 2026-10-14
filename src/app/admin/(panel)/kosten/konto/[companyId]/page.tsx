@@ -5,11 +5,19 @@ import { ButtonLink, buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { CostAccountView } from "@/components/admin/costs/cost-account-view";
 import { cleanId } from "@/components/admin/companies/list-tools";
-import { requireAdmin } from "@/lib/auth";
+import { getStaffUser, requireAdmin } from "@/lib/auth";
 import { costFilterParams, parseCostFilter, resolveCostAccount, withCostFilter } from "@/lib/costs";
 import { db } from "@/lib/db";
 
-export const metadata: Metadata = { title: "Kosten eines Kunden" };
+export async function generateMetadata({ params }: { params: Promise<{ companyId: string }> }): Promise<Metadata> {
+  const me = await getStaffUser();
+  const companyId = cleanId((await params).companyId);
+  const company =
+    me?.role === "ADMIN" && companyId
+      ? await db.company.findUnique({ where: { id: companyId }, select: { name: true } })
+      : null;
+  return { title: company ? `Kosten: ${company.name}` : "Kosten eines Kunden" };
+}
 
 export default async function CompanyCostsPage({
   params,

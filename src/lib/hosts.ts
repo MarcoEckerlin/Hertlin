@@ -78,6 +78,20 @@ export function safeLocalPath(value: unknown, fallback: string): string {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+/** Request-Header, in den der Proxy den angefragten Pfad samt Query schreibt (im Portal ohne /portal/<kuerzel>). */
+export const REQUEST_PATH_HEADER = "x-hertlin-path";
+
+/**
+ * Ziel für die Weiterleitung zur Anmeldung, mit Rücksprung zur angefragten Seite (z. B. aus einem E-Mail-Link):
+ * „/login?next=%2Ftickets%2F7“. Ohne brauchbaren Pfad, für die Startseite des Bereichs (home) und für die
+ * Anmeldeseite selbst bleibt es bei loginPath.
+ */
+export function loginRedirectTarget(loginPath: string, requestedPath: string | null | undefined, home: string): string {
+  const next = safeLocalPath(requestedPath, "");
+  if (!next || next === home || next === loginPath || next.startsWith(`${loginPath}?`)) return loginPath;
+  return `${loginPath}?next=${encodeURIComponent(next)}`;
+}
+
 /** Absolute URL auf der Hauptdomain, z. B. für E-Mails. */
 export function mainUrl(path = "/"): string {
   return `${appProtocol()}://${rootDomain()}${path.startsWith("/") ? path : `/${path}`}`;

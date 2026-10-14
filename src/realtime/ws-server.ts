@@ -15,7 +15,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { WebSocketServer, type WebSocket } from "ws";
 import { parseHost, normalizeHost } from "@/lib/hosts";
-import { getPresence, markServerAttached, onBusEvent, setPresence, type BusEvent } from "@/realtime/bus";
+import { getPresence, markServerAttached, onBusEvent, setPresence, type BusEvent, type PresenceEntry } from "@/realtime/bus";
 import { WS_PATH, type ChannelKey, type ClientMessage, type ServerMessage } from "@/realtime/protocol";
 
 const SESSION_COOKIE = "hertlin_session";
@@ -46,7 +46,7 @@ type Connection = {
   identity: Identity;
   host: string;
   /** Kanäle und die Rolle, mit der der Browser dort zuhört */
-  channels: Map<ChannelKey, { staff: boolean; name: string }>;
+  channels: Map<ChannelKey, PresenceEntry>;
   lastTyping: Map<ChannelKey, number>;
   alive: boolean;
 };
@@ -204,7 +204,7 @@ function broadcastPresence(key: ChannelKey) {
   }
 }
 
-function joinChannel(conn: Connection, key: ChannelKey, role: { staff: boolean; name: string }) {
+function joinChannel(conn: Connection, key: ChannelKey, role: PresenceEntry) {
   if (!conn.channels.has(key) && conn.channels.size >= MAX_CHANNELS_PER_CONNECTION) return;
   conn.channels.set(key, role);
   if (key !== "staff") {
@@ -266,9 +266,10 @@ async function handleSubscribe(conn: Connection, msg: Extract<ClientMessage, { t
       const exists = await prisma.ticket.count({ where: { id: ticketId } });
       return exists ? joinChannel(conn, key, { staff: true, name: id.name }) : send(conn, { t: "denied", ch: "ticket", id: ticketId });
     }
+    // Mit userId: E-Mails an genau diesen Benutzer entfallen, solange er zusieht (isRecipientWatchingTicket)
     if (id.kind === "customer") {
       return (await customerCanSeeTicket(id, ticketId))
-        ? joinChannel(conn, key, { staff: false, name: id.name })
+        ? joinChannel(conn, key, { staff: false, name: id.name, userId: id.userId })
         : send(conn, { t: "denied", ch: "ticket", id: ticketId });
     }
     // Privatkunde über Status-Link (nur Hauptdomain)

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { generateToken, sha256 } from "@/lib/crypto";
-import { appProtocol, normalizeHost, parseHost } from "@/lib/hosts";
+import { REQUEST_PATH_HEADER, appProtocol, loginRedirectTarget, normalizeHost, parseHost } from "@/lib/hosts";
 import type { Role } from "@/lib/constants";
 
 export const SESSION_COOKIE = "hertlin_session";
@@ -132,10 +132,18 @@ export async function getStaffUser(): Promise<SessionUser | null> {
   return isStaff(user) ? user : null;
 }
 
+/**
+ * Anmeldeseite mit Rücksprung zur gerade angefragten Seite (?next=…), damit Links aus E-Mails nach der
+ * Anmeldung im Ticket landen statt auf der Startseite. Den Pfad setzt der Proxy (REQUEST_PATH_HEADER).
+ */
+async function loginRedirect(loginPath: string, home: string): Promise<never> {
+  redirect(loginRedirectTarget(loginPath, (await headers()).get(REQUEST_PATH_HEADER), home));
+}
+
 /** Für alle Seiten und Actions unter /admin. Leitet sonst zur Anmeldung. */
 export async function requireStaff(): Promise<SessionUser> {
   const user = await getStaffUser();
-  if (!user) redirect("/admin/login");
+  if (!user) return loginRedirect("/admin/login", "/admin");
   return user;
 }
 
@@ -210,7 +218,7 @@ export const getPortalContext = cache(async (): Promise<PortalContext | null> =>
 /** Für alle Seiten und Actions im Kundenportal. Leitet sonst zur Portal-Anmeldung. */
 export async function requirePortalContext(): Promise<PortalContext> {
   const ctx = await getPortalContext();
-  if (!ctx) redirect("/login");
+  if (!ctx) return loginRedirect("/login", "/");
   return ctx;
 }
 

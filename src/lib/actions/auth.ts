@@ -78,10 +78,12 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const ip = await clientIp();
   const key = `login:${ip}:${email}`;
   const limit = rateLimit(key, 8, 15 * 60 * 1000);
-  const ipLimit = rateLimit(`login-ip:${ip}`, 40, 15 * 60 * 1000);
+  // Fehlversuche je Adresse über alle Konten. Nur Fehlversuche zählen: Hinter einem NAT (oder ohne
+  // Proxy-Header, dann ist die Adresse für alle "unknown") melden sich viele Personen korrekt an.
+  const ipKey = `login-ip:${ip}`;
   // Fehlversuche je Konto über alle Adressen, falls die IP nicht verlässlich ist (z. B. falsch eingerichteter Proxy)
   const accountKey = `login-account:${email}`;
-  if (!limit.ok || !ipLimit.ok || rateLimitReached(accountKey, 20)) {
+  if (!limit.ok || rateLimitReached(ipKey, 40) || rateLimitReached(accountKey, 20)) {
     return errorState("Zu viele Anmeldeversuche. Bitte warten Sie 15 Minuten und versuchen Sie es dann erneut.", formData);
   }
 
@@ -102,6 +104,7 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
 
   if (!user || !passwordOk || !user.active || !companyActive || !userBelongsToArea(user, area)) {
     rateLimit(accountKey, 20, 15 * 60 * 1000);
+    rateLimit(ipKey, 40, 15 * 60 * 1000);
     return errorState("E-Mail-Adresse oder Passwort stimmen nicht.", formData);
   }
 
@@ -138,11 +141,27 @@ export async function requestPasswordResetAction(_prev: FormState, formData: For
 
   const user = await db.user.findUnique({
     where: { email: parsed.data.email },
-    select: { id: true, name: true, email: true, role: true, active: true, company: { select: { id: true, parentId: true } } },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      active: true,
+      company: { select: { id: true, parentId: true, active: true, parent: { select: { active: true } } } },
+    },
   });
+  // Wie bei der Anmeldung: Bei deaktivierter Firma oder Unterkunde gibt es keinen Link. Er wäre ohnehin ungültig
+  // (findValidAuthToken) und würde nach dem Reaktivieren innerhalb der Stunde wieder funktionieren.
+  const companyActive = !user?.company || (user.company.active && (user.company.parent?.active ?? true));
 
   // Je Konto nur wenige Links pro Stunde, auch wenn die Anfragen von wechselnden Adressen kommen
-  if (user && user.active && userBelongsToArea(user, area) && rateLimit(`reset-account:${user.id}`, 5, 60 * 60 * 1000).ok) {
+  if (
+    user &&
+    user.active &&
+    companyActive &&
+    userBelongsToArea(user, area) &&
+    rateLimit(`reset-account:${user.id}`, 5, 60 * 60 * 1000).ok
+  ) {
     const { id, name, email } = user;
     // Erst nach der Antwort: Sonst verrät die längere Antwortzeit, dass es das Konto gibt
     after(async () => {
@@ -235,6 +254,12 @@ export async function findPortalAction(_prev: FormState, formData: FormData): Pr
 
   const company = await getPortalCompany(parsed.data.slug);
   if (!company) {
+    // Deaktivierter Firmenkunde: nicht „unbekanntes Kürzel“ melden, sonst sucht der Kunde einen Tippfehler
+    const suspended = await db.company.count({ where: { slug: parsed.data.slug, parentId: null, active: false } });
+    if (suspended > 0) {
+      const site = await getSiteSettings();
+      return errorState(`Dieses Kundenportal ist derzeit gesperrt. Bei Fragen rufen Sie uns bitte an: ${site.phone}.`, formData);
+    }
     return errorState(
       "Zu diesem Kürzel haben wir kein Kundenportal gefunden. Das Kürzel steht in Ihrer Einladungs-E-Mail, z. B. „firma“ in firma.hertlin.de.",
       formData,

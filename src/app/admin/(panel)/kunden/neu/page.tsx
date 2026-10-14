@@ -89,19 +89,26 @@ export default async function NewCompanyPage({
             Bitte prüfen. Nach dem Anlegen wird die Anfrage diesem Kunden zugeordnet und auf „Auftrag erhalten“ gesetzt.
           </Alert>
         ) : null}
-        {inquiry?.company ? (
-          <Alert tone="warning" title={`Anfrage ${formatInquiryNumber(inquiry.id)} ist bereits zugeordnet`}>
-            Aus dieser Anfrage wurde schon{" "}
-            <Link href={`/admin/kunden/${inquiry.company.id}`} className="font-semibold underline">
-              {inquiry.company.name}
-            </Link>{" "}
-            angelegt. Das Formular ist deshalb leer.
-          </Alert>
-        ) : null}
-
         <Card>
           <CardBody className="sm:p-8">
-            <CompanyCreate key={usable?.id ?? "neu"} rootDomain={rootDomain()} defaults={defaults} />
+            {/* Stabiler key: Nach dem Anlegen ist die Anfrage zugeordnet (usable = null). Ein neuer key würde das Formular
+                neu aufbauen und die Erfolgsmeldung mit Einladungslink verwerfen. Der Hinweis erscheint nur über dem Formular. */}
+            <CompanyCreate
+              key={inquiryParam || "neu"}
+              rootDomain={rootDomain()}
+              defaults={defaults}
+              notice={
+                inquiry?.company ? (
+                  <Alert tone="warning" title={`Anfrage ${formatInquiryNumber(inquiry.id)} ist bereits zugeordnet`}>
+                    Aus dieser Anfrage wurde schon{" "}
+                    <Link href={`/admin/kunden/${inquiry.company.id}`} className="font-semibold underline">
+                      {inquiry.company.name}
+                    </Link>{" "}
+                    angelegt. Das Formular ist deshalb leer.
+                  </Alert>
+                ) : null
+              }
+            />
           </CardBody>
         </Card>
       </div>

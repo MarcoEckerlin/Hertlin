@@ -246,8 +246,9 @@ export async function updatePageSettingsAction(pageId: string, _prev: FormState,
     navOrder: data.navOrder,
   };
   if (!page.system) {
-    // Vor dem ersten Veröffentlichen bleibt die Seite ausgeblendet (Kästchen ist dann gesperrt)
-    if (page.publishedAt) update.published = data.published;
+    // Vor dem ersten Veröffentlichen bleibt die Seite ausgeblendet (Kästchen ist dann gesperrt). Stammt das
+    // Formular noch aus dieser Zeit (z. B. zweiter Tab), fehlt „publishedEditable“: Sichtbarkeit nicht anfassen.
+    if (page.publishedAt && formData.get("publishedEditable") === "1") update.published = data.published;
     if (data.slug !== undefined) {
       const slug = normalizeSlug(data.slug);
       const problem = await slugError(slug, pageId);

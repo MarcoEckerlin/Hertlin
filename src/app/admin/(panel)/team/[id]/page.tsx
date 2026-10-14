@@ -10,12 +10,20 @@ import { ResendAccessForm } from "@/components/admin/companies/resend-access-for
 import { AccessBadge } from "@/components/admin/companies/status-badges";
 import { StaffEditForm } from "@/components/admin/team/staff-form";
 import { resendStaffAccessAction } from "@/lib/actions/admin-team";
-import { requireAdmin } from "@/lib/auth";
+import { getStaffUser, requireAdmin } from "@/lib/auth";
 import { OPEN_STATUSES, STAFF_ROLES } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Teammitglied" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const me = await getStaffUser();
+  const id = cleanId((await params).id);
+  const user =
+    me?.role === "ADMIN" && id
+      ? await db.user.findFirst({ where: { id, role: { in: [...STAFF_ROLES] } }, select: { name: true } })
+      : null;
+  return { title: user ? `${user.name} | Team` : "Teammitglied" };
+}
 
 export default async function StaffMemberPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requireAdmin();

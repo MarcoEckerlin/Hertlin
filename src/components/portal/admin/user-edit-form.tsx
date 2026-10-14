@@ -33,13 +33,14 @@ export function UserEditForm({
   const formKey = useFormKey(state);
   const errors = state.fieldErrors ?? {};
   const values = state.values;
-  const [companyId, setCompanyId] = useState(user.companyId);
-
-  // Nach dem Speichern kann sich die Firma geändert haben (neue Daten vom Server)
-  const [prevCompanyId, setPrevCompanyId] = useState(user.companyId);
-  if (prevCompanyId !== user.companyId) {
-    setPrevCompanyId(user.companyId);
-    setCompanyId(user.companyId);
+  // Gewählte Firma für den Rollenhinweis mitführen. Nach dem Speichern (neue Daten vom Server) bzw. einem Fehler
+  // (abgeschickte Auswahl) neu setzen – so wie die Auswahlliste, die dann neu aufgebaut wird.
+  const defaultCompanyId = values?.companyId ?? user.companyId;
+  const [companyId, setCompanyId] = useState(defaultCompanyId);
+  const [prevCompanyId, setPrevCompanyId] = useState(defaultCompanyId);
+  if (prevCompanyId !== defaultCompanyId) {
+    setPrevCompanyId(defaultCompanyId);
+    setCompanyId(defaultCompanyId);
   }
 
   const current = companies.find((c) => c.id === user.companyId);
@@ -129,7 +130,7 @@ export function UserEditForm({
           <Select
             {...fieldProps("edit-company", errors.companyId, true)}
             name="companyId"
-            defaultValue={values?.companyId ?? user.companyId}
+            defaultValue={defaultCompanyId}
             onChange={(e) => setCompanyId(e.currentTarget.value)}
           >
             {roots.map((c) => (

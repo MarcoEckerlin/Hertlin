@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useState, type ReactNode } from "react";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink, buttonClasses } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -33,8 +33,19 @@ export type CompanyCreateDefaults = {
   inquiryNumber?: string;
 };
 
-/** Neuer Firmenkunde mit Subdomain und optional erstem Hauptansprechpartner. */
-export function CompanyCreate({ rootDomain, defaults }: { rootDomain: string; defaults: CompanyCreateDefaults }) {
+/**
+ * Neuer Firmenkunde mit Subdomain und optional erstem Hauptansprechpartner.
+ * notice: Hinweis über dem Formular (z. B. „Anfrage bereits zugeordnet“), nicht über der Erfolgsmeldung.
+ */
+export function CompanyCreate({
+  rootDomain,
+  defaults,
+  notice,
+}: {
+  rootDomain: string;
+  defaults: CompanyCreateDefaults;
+  notice?: ReactNode;
+}) {
   // Nach „Weiteren Firmenkunden anlegen“ startet das Formular leer neu
   const [round, setRound] = useState(0);
   return (
@@ -42,6 +53,7 @@ export function CompanyCreate({ rootDomain, defaults }: { rootDomain: string; de
       key={round}
       rootDomain={rootDomain}
       defaults={round === 0 ? defaults : {}}
+      notice={round === 0 ? notice : null}
       onAgain={() => setRound((r) => r + 1)}
     />
   );
@@ -50,13 +62,17 @@ export function CompanyCreate({ rootDomain, defaults }: { rootDomain: string; de
 function CompanyCreateForm({
   rootDomain,
   defaults,
+  notice,
   onAgain,
 }: {
   rootDomain: string;
   defaults: CompanyCreateDefaults;
+  notice?: ReactNode;
   onAgain: () => void;
 }) {
   const [state, formAction] = useActionState(createCompanyAction, initialFormState);
+  // Stand beim Öffnen merken: Nach dem Anlegen ist die Anfrage zugeordnet und die Seite liefert keine Vorgaben mehr
+  const [fromInquiry] = useState(Boolean(defaults.inquiryId));
   const formRef = useFormFocus(state);
   const errors = state.fieldErrors ?? {};
   const values = state.values ?? {};
@@ -77,7 +93,7 @@ function CompanyCreateForm({
         {data.inviteLink ? <InviteLinkBox link={data.inviteLink} name={data.contactName ?? "den Ansprechpartner"} /> : null}
         <div className="flex flex-wrap gap-3">
           <ButtonLink href={`/admin/kunden/${data.companyId}`}>Zum Kunden</ButtonLink>
-          {defaults.inquiryId ? (
+          {fromInquiry ? (
             <Link href="/admin/kunden/neu" className={buttonClasses("secondary")}>
               Weiteren Firmenkunden anlegen
             </Link>
@@ -95,6 +111,7 @@ function CompanyCreateForm({
 
   return (
     <form ref={formRef} action={formAction} noValidate className="space-y-6">
+      {notice}
       {defaults.inquiryId ? <input type="hidden" name="inquiryId" value={defaults.inquiryId} /> : null}
       <FormMessage state={state} />
 

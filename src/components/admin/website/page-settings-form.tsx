@@ -36,7 +36,15 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
         description="Diese Einstellungen gelten sofort nach dem Übernehmen – unabhängig vom Entwurf."
       />
       <CardBody>
-        <form action={formAction} className="space-y-5" noValidate>
+        {/* Neu aufbauen, wenn sich der Stand von außen ändert (z. B. erstes Veröffentlichen im Editor):
+            defaultChecked/defaultValue wirken nur beim ersten Rendern. Sonst bliebe „Seite anzeigen“
+            leer und „Einstellungen übernehmen“ würde die gerade veröffentlichte Seite wieder ausblenden. */}
+        <form
+          key={`${page.everPublished}-${page.published}-${page.slug}`}
+          action={formAction}
+          className="space-y-5"
+          noValidate
+        >
           {!page.system ? (
             <Field
               label="Adresse"
@@ -120,17 +128,22 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
               Kernseiten sind immer erreichbar. Adresse und Sichtbarkeit lassen sich nicht ändern.
             </p>
           ) : (
-            <Checkbox
-              name="published"
-              label="Seite auf der Website anzeigen"
-              disabled={!page.everPublished}
-              hint={
-                page.everPublished
-                  ? "Ausgeblendete Seiten sind nicht erreichbar und verschwinden aus Menü und Fußzeile. Der Inhalt bleibt erhalten."
-                  : "Wird beim ersten Veröffentlichen automatisch eingeschaltet."
-              }
-              defaultChecked={page.everPublished ? checked("published", page.published) : false}
-            />
+            <>
+              {/* Nur wenn das Kästchen beim Anzeigen bedienbar war, übernimmt der Server „published“
+                  (ein gesperrtes Kästchen wird nicht mitgeschickt und sähe sonst wie „aus“ aus). */}
+              {page.everPublished ? <input type="hidden" name="publishedEditable" value="1" /> : null}
+              <Checkbox
+                name="published"
+                label="Seite auf der Website anzeigen"
+                disabled={!page.everPublished}
+                hint={
+                  page.everPublished
+                    ? "Ausgeblendete Seiten sind nicht erreichbar und verschwinden aus Menü und Fußzeile. Der Inhalt bleibt erhalten."
+                    : "Wird beim ersten Veröffentlichen automatisch eingeschaltet."
+                }
+                defaultChecked={page.everPublished ? checked("published", page.published) : false}
+              />
+            </>
           )}
 
           <FormMessage state={state} />

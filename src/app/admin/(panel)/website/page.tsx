@@ -79,7 +79,7 @@ function PagesTable({ pages, editors, host }: { pages: PageSummary[]; editors: M
                     href={page.path}
                     target="_blank"
                     rel="noopener"
-                    className="inline-flex items-center gap-1 font-mono text-[0.8rem] text-brand-700 hover:underline"
+                    className="inline-flex min-h-6 items-center gap-1 py-1 font-mono text-[0.8rem] text-brand-700 hover:underline"
                     title={`${host}${page.path} in neuem Tab öffnen`}
                   >
                     {page.path}

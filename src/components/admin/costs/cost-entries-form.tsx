@@ -183,12 +183,12 @@ export function CostEntriesForm({
                 />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 id={`ticket-${ticket.id}`} className="text-sm font-semibold break-words text-ink">
-                  <Link href={`/admin/tickets/${ticket.id}`} className="text-brand-700 hover:underline">
+                <h2 id={`ticket-${ticket.id}`} className="text-sm font-semibold break-words text-ink">
+                  <Link href={`/admin/tickets/${ticket.id}`} className="text-brand-700 underline underline-offset-2 hover:text-brand-800">
                     {ticket.number}
                   </Link>{" "}
                   {ticket.subject}
-                </h3>
+                </h2>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
                   <StatusBadge status={ticket.status} audience="staff" />
                   {ticket.subCompany ? <span>Unterkunde: {ticket.subCompany}</span> : null}

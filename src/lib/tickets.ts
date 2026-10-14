@@ -195,8 +195,11 @@ export function portalAccountSeesTicket(
  *   noch sehen darf. Sonst (gesperrt, umgehängt, herabgestuft) ein aktiver Hauptansprechpartner, der es sieht –
  *   nie die alte Kontaktadresse, denn die ist bei Portal-Tickets die Adresse des Erstellers.
  * - Sonst (Privatkunde, von Hertlin angelegt): die hinterlegte Kontaktadresse.
+ * userId: Portalkonto des Empfängers, null bei einer Kontaktadresse ohne Konto (für isRecipientWatchingTicket).
  */
-export async function customerRecipient(ticketId: number): Promise<{ email: string; name: string; link: string } | null> {
+export async function customerRecipient(
+  ticketId: number,
+): Promise<{ email: string; name: string; link: string; userId: string | null } | null> {
   const ticket = await db.ticket.findUnique({
     where: { id: ticketId },
     select: {
@@ -216,9 +219,9 @@ export async function customerRecipient(ticketId: number): Promise<{ email: stri
 
   const creator = ticket.createdBy;
   if (!ticket.company || !creator || !(CUSTOMER_ROLES as readonly string[]).includes(creator.role)) {
-    return ticket.contactEmail ? { email: ticket.contactEmail, name: ticket.contactName ?? "", link } : null;
+    return ticket.contactEmail ? { email: ticket.contactEmail, name: ticket.contactName ?? "", link, userId: null } : null;
   }
-  if (portalAccountSeesTicket(creator, ticket)) return { email: creator.email, name: creator.name, link };
+  if (portalAccountSeesTicket(creator, ticket)) return { email: creator.email, name: creator.name, link, userId: creator.id };
 
   // Hauptansprechpartner der Ticketfirma zuerst, danach die des Firmenkunden
   const companyIds = [ticket.company.parentId, ticket.companyId].filter((id): id is string => !!id);
@@ -231,5 +234,5 @@ export async function customerRecipient(ticketId: number): Promise<{ email: stri
   const fallback = [...admins]
     .sort((a, b) => Number(a.company?.id !== ticket.companyId) - Number(b.company?.id !== ticket.companyId))
     .find((admin) => portalAccountSeesTicket(admin, ticket));
-  return fallback ? { email: fallback.email, name: fallback.name, link } : null;
+  return fallback ? { email: fallback.email, name: fallback.name, link, userId: fallback.id } : null;
 }

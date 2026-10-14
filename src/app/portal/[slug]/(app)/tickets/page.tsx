@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination, parsePage } from "@/components/ui/pagination";
 import { scopeCompanies } from "@/components/portal/portal-data";
+import { searchKey } from "@/components/portal/admin/data";
 import { TicketFilterForm } from "@/components/portal/ticket-filter-form";
 import { TicketStatusTabs } from "@/components/portal/ticket-status-tabs";
 import { TicketTable } from "@/components/portal/ticket-list";
@@ -27,6 +28,8 @@ import {
 export const metadata: Metadata = { title: "Tickets" };
 
 const PAGE_SIZE = 20;
+/** Höchstzahl der Betreffe, die die Suche selbst abgleicht (die neuesten zuerst) */
+const SEARCH_CANDIDATES = 2000;
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -53,7 +56,25 @@ export default async function PortalTicketsPage({ searchParams }: { searchParams
   if (firma) filters.push({ companyId: firma });
   if (suche) {
     const number = parseTicketNumber(suche);
-    filters.push({ OR: [{ subject: { contains: suche } }, ...(number ? [{ id: number }] : [])] });
+    // SQLite ignoriert Groß/Klein bei LIKE nur für ASCII-Buchstaben: „STÄNDIG“ fände „… ständig ab“ nicht.
+    // Deshalb die Betreffe im Sichtbereich zusätzlich so abgleichen wie die Benutzersuche (searchKey).
+    const key = searchKey(suche);
+    const candidates = key
+      ? await db.ticket.findMany({
+          where: portalTicketWhere(ctx),
+          select: { id: true, subject: true },
+          orderBy: { id: "desc" },
+          take: SEARCH_CANDIDATES,
+        })
+      : [];
+    const matchingIds = candidates.filter((t) => searchKey(t.subject).includes(key)).map((t) => t.id);
+    filters.push({
+      OR: [
+        { subject: { contains: suche } },
+        ...(matchingIds.length > 0 ? [{ id: { in: matchingIds } }] : []),
+        ...(number ? [{ id: number }] : []),
+      ],
+    });
   }
   const statusFilter = STATUS_FILTERS.find((f) => f.key === status) ?? STATUS_FILTERS[0];
   const where: Prisma.TicketWhereInput = {

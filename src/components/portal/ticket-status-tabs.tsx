@@ -18,8 +18,9 @@ export function TicketStatusTabs({
   query: Omit<TicketListQuery, "status" | "seite">;
 }) {
   return (
-    <nav aria-label="Tickets nach Status" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-      <ul className="flex w-max gap-1 rounded-full bg-white p-1 ring-1 ring-line ring-inset sm:w-auto sm:max-w-max">
+    // Umbrechen statt seitlich scrollen: Auf schmalen Bildschirmen stehen die Reiter in zwei Zeilen, keiner ist verdeckt
+    <nav aria-label="Tickets nach Status">
+      <ul className="flex w-fit max-w-full flex-wrap gap-1 rounded-2xl bg-white p-1 ring-1 ring-line ring-inset">
         {STATUS_FILTERS.map((filter) => {
           const isActive = filter.key === active;
           const count = counts[filter.key];

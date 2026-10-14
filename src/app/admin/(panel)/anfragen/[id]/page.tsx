@@ -9,8 +9,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Detail, DetailList, Missing } from "@/components/admin/companies/detail-list";
 import { InquiryDeleteForm } from "@/components/admin/inquiries/inquiry-delete-form";
 import { InquiryUpdateForm } from "@/components/admin/inquiries/inquiry-update-form";
+import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { InquiryChatPanel } from "@/components/inquiry-chat/inquiry-chat-panel";
-import { requireStaff } from "@/lib/auth";
+import { getStaffUser, requireStaff } from "@/lib/auth";
 import {
   CONTACT_PREFERENCE_LABELS,
   CUSTOMER_ROLES,
@@ -22,7 +23,13 @@ import {
 import { db } from "@/lib/db";
 import { formatDateTime, formatInquiryNumber, formatTicketNumber } from "@/lib/format";
 
-export const metadata: Metadata = { title: "Anfrage" };
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const staff = await getStaffUser();
+  const id = parseId((await params).id);
+  const inquiry =
+    staff && id ? await db.inquiry.findUnique({ where: { id }, select: { id: true, name: true, companyName: true } }) : null;
+  return { title: inquiry ? `${formatInquiryNumber(inquiry.id)} ${inquiry.companyName || inquiry.name}` : "Anfrage" };
+}
 
 function parseId(raw: string): number | null {
   const m = raw.match(/^(?:A-?)?0*(\d{1,9})$/i);
@@ -114,6 +121,9 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
   });
   if (inquiry.phone) ticketParams.set("kontaktTelefon", inquiry.phone);
   if (inquiry.company) ticketParams.set("firma", inquiry.company.id);
+  // Privatkunde ohne Portalkonto: „Privatkunde“ vorwählen, sonst bleiben die übernommenen Kontaktfelder ausgeblendet.
+  // Mit Portalkonto sucht die Ticketseite die Firma über die E-Mail-Adresse.
+  else if (!isBusiness && !knownUser) ticketParams.set("firma", PRIVATE_CUSTOMER);
   const ticketHref = `/admin/tickets/neu?${ticketParams.toString()}`;
 
   const canCreateCompany = isAdmin && isBusiness && !inquiry.company;

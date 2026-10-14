@@ -110,7 +110,7 @@ function FormBody({
 
   return (
     <>
-      <FormSection id="neu-kunde" title="Kunde" first>
+      <FormSection id="neu-kunde" title="Kunde" level={2} first>
         <Field
           label="Kunde"
           htmlFor="neu-customer"
@@ -251,7 +251,7 @@ function FormBody({
         ) : null}
       </FormSection>
 
-      <FormSection id="neu-ticket" title="Ticket">
+      <FormSection id="neu-ticket" title="Ticket" level={2}>
         <Field label="Betreff" htmlFor="neu-subject" error={errors.subject}>
           <Input
             {...fieldA11y("neu-subject", errors.subject)}

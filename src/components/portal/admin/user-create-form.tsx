@@ -47,7 +47,14 @@ function UserCreateForm({
   const formRef = useFormFocus(state);
   const formKey = useFormKey(state);
   const successRef = useRef<HTMLDivElement>(null);
-  const [companyId, setCompanyId] = useState(defaultCompanyId);
+  // Gewählte Firma für den Rollenhinweis; nach einem Fehler gilt die abgeschickte Auswahl wie in der neu aufgebauten Liste
+  const submittedCompanyId = state.values?.companyId ?? defaultCompanyId;
+  const [companyId, setCompanyId] = useState(submittedCompanyId);
+  const [prevCompanyId, setPrevCompanyId] = useState(submittedCompanyId);
+  if (prevCompanyId !== submittedCompanyId) {
+    setPrevCompanyId(submittedCompanyId);
+    setCompanyId(submittedCompanyId);
+  }
   const errors = state.fieldErrors ?? {};
 
   useEffect(() => {
@@ -156,7 +163,7 @@ function UserCreateForm({
           <Select
             {...fieldProps("user-company", errors.companyId, true)}
             name="companyId"
-            defaultValue={state.values?.companyId ?? defaultCompanyId}
+            defaultValue={submittedCompanyId}
             onChange={(e) => setCompanyId(e.currentTarget.value)}
           >
             {roots.map((c) => (

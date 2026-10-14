@@ -178,7 +178,8 @@ export async function createTicketFromCallAction(callId: string, _prev: FormStat
       type: input.type,
       category: input.category,
       priority: input.priority,
-      status: "NEW",
+      // Wie beim Anlegen in der Verwaltung: Mit Bearbeiter ist das Ticket schon in Bearbeitung, nicht mehr „Neu“
+      status: input.assignToMe ? "IN_PROGRESS" : "NEW",
       source: "STAFF",
       companyId: company?.id ?? null,
       // Mit Ansprechpartner sieht dieser das Ticket auch im Kundenportal

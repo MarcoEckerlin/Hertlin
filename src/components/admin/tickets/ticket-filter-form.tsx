@@ -103,7 +103,7 @@ export function TicketFilterForm({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 gap-2 min-[26rem]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
         <div>
           <Label htmlFor="filter-status" className="sr-only">
             Status
@@ -145,7 +145,7 @@ export function TicketFilterForm({
             Art
           </Label>
           <Select id="filter-art" name="art" defaultValue={filters.art ?? ""} onChange={onSelect} className={selectClass}>
-            <option value="">Störungen und Anfragen</option>
+            <option value="">Alle Arten</option>
             {TICKET_TYPES.map((t) => (
               <option key={t} value={t}>
                 {TYPE_FILTER_LABELS[t]}

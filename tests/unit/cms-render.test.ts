@@ -372,7 +372,7 @@ describe("Standardinhalte der Kernseiten", () => {
 
   it.each(Object.entries(DEFAULT_PAGE_SOURCES))("„/%s“ hat eine Beschreibung ohne Kürzungs-Warnung im Editor", (_, page) => {
     // Der Seiten-Editor warnt ab 160 Zeichen, die mitgelieferten Texte sollen darunter bleiben
-    expect(page.description.length).toBeLessThanOrEqual(160);
+    expect((page.description ?? "").length).toBeLessThanOrEqual(160);
   });
 
   it("hat das Menü wie bisher", () => {

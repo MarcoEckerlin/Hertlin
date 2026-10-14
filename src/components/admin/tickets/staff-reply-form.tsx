@@ -51,7 +51,11 @@ export function StaffReplyForm({
   const signalTyping = useTypingSignal(`ticket:${ticketId}`, internal);
   // Gleicher Kanal wie die Live-Leiste am Verlauf; die Verbindung wird geteilt
   const { presence } = useChannel({ t: "sub", ch: "ticket", id: ticketId });
-  const customerOnline = presence.customers.length > 0;
+  // Die E-Mail entfällt nur, wenn ihr Empfänger selbst zusieht – nicht, wenn z. B. nur der Hauptansprechpartner das Ticket
+  // offen hat (gleiche Regel wie isRecipientWatchingTicket). Gäste mit Status-Link erscheinen mit Kontaktnamen oder „Kunde“.
+  const customerOnline = recipient
+    ? presence.customers.includes(recipient.name || "Kunde")
+    : presence.customers.length > 0;
   const errors = state.fieldErrors ?? {};
   const values = state.status === "error" ? (state.values ?? {}) : {};
 

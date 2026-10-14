@@ -24,9 +24,10 @@ function isPageSlug(slug: string): boolean {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (!isPageSlug(slug)) return {};
+  // Unbekannte Seite: Titel passend zur 404-Seite statt des Standardtitels der Startseite
+  if (!isPageSlug(slug)) return { title: "Seite nicht gefunden" };
   const [page, settings] = await Promise.all([getPublishedPage(slug), getSiteSettings()]);
-  if (!page) return {};
+  if (!page) return { title: "Seite nicht gefunden" };
   const ctx = buildBlockContext(settings);
   return {
     title: replacePlaceholders(page.title, ctx.text),

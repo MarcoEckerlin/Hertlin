@@ -19,26 +19,32 @@ export function a11yProps(id: string, error?: string, hasHint = false) {
   } as const;
 }
 
-/** Überschrift + Inhalt einer Formulargruppe, mit Trennlinie zur vorherigen Gruppe. */
+/**
+ * Überschrift + Inhalt einer Formulargruppe, mit Trennlinie zur vorherigen Gruppe.
+ * level: Überschriftenebene passend zur Seite (h3 unter einem Abschnitt mit h2, h2 direkt unter der h1).
+ */
 export function FormSection({
   id,
   title,
   description,
   first = false,
+  level = 3,
   children,
 }: {
   id: string;
   title: string;
   description?: ReactNode;
   first?: boolean;
+  level?: 2 | 3;
   children: ReactNode;
 }) {
+  const Heading = level === 2 ? "h2" : "h3";
   return (
     <div role="group" aria-labelledby={id} className={cn("space-y-5", !first && "border-t border-line pt-7")}>
       <div>
-        <h3 id={id} className="text-base font-bold text-ink">
+        <Heading id={id} className="text-base font-bold text-ink">
           {title}
-        </h3>
+        </Heading>
         {description ? <p className="mt-1 text-sm text-ink-muted">{description}</p> : null}
       </div>
       {children}

@@ -1,6 +1,6 @@
 import "server-only";
 import { getSiteSettings } from "@/lib/settings";
-import { isCustomerWatchingTicket, isStaffWatchingTicket } from "@/realtime/bus";
+import { isRecipientWatchingTicket, isStaffWatchingTicket } from "@/realtime/bus";
 import { sendMail, staffNotificationAddress } from "@/lib/mail";
 import { formatInquiryNumber, formatTicketNumber } from "@/lib/format";
 import { mainUrl, portalUrl } from "@/lib/hosts";
@@ -169,7 +169,10 @@ export async function sendPrivateTicketConfirmation(opts: {
   });
 }
 
-/** Neue Antwort von Hertlin an den Kunden. link: Portal- oder Status-Link. */
+/**
+ * Neue Antwort von Hertlin an den Kunden. link: Portal- oder Status-Link.
+ * userId: Portalkonto des Empfängers aus customerRecipient(), null/fehlend bei einer Kontaktadresse ohne Konto.
+ */
 export async function notifyCustomerStaffReply(opts: {
   to: string;
   name: string;
@@ -178,9 +181,11 @@ export async function notifyCustomerStaffReply(opts: {
   body: string;
   link: string;
   waitingForCustomer?: boolean;
+  userId?: string | null;
 }) {
-  // Kunde ist gerade im Ticket (Live-Chat) – die Nachricht erscheint dort sofort
-  if (isCustomerWatchingTicket(opts.ticketId)) return;
+  // Der Empfänger selbst ist gerade im Ticket (Live-Chat) – die Nachricht erscheint dort sofort.
+  // Sieht nur jemand anderes zu (z. B. der Hauptansprechpartner), geht die E-Mail trotzdem raus.
+  if (isRecipientWatchingTicket(opts.ticketId, opts.userId ?? null)) return;
   await sendMail({
     to: opts.to,
     subject: `${opts.waitingForCustomer ? "Rückfrage" : "Neue Antwort"} zu ${formatTicketNumber(opts.ticketId)}: ${opts.subject}`,

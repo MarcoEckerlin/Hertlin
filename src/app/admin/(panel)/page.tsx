@@ -6,6 +6,7 @@ import { requireStaff } from "@/lib/auth";
 import { OPEN_STATUSES } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
 import { startOfBerlinDay } from "@/lib/phone";
+import { getSiteSettings, unfinishedSettings } from "@/lib/settings";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -14,8 +15,10 @@ import { findTicketPage, staffTicketRowSelect } from "@/components/admin/tickets
 import { ticketListHref } from "@/components/admin/tickets/filters";
 import { StaffTicketList } from "@/components/admin/tickets/ticket-table";
 import { InquiryList, ListCard, StatCard } from "@/components/admin/dashboard/widgets";
+import { settingsLabelList } from "@/components/admin/website/settings-labels";
 
-export const metadata: Metadata = { title: "Übersicht" };
+// Die Titelvorlage aus (panel)/layout.tsx gilt nicht für die Seite im selben Segment
+export const metadata: Metadata = { title: { absolute: "Übersicht | Hertlin Verwaltung" } };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -97,6 +100,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         }))
       : null;
 
+  // Platzhalter in den Firmendaten erscheinen öffentlich (Kopfzeile, Impressum, E-Mails). Ändern können sie nur Administratoren.
+  const unfinished = user.role === "ADMIN" ? unfinishedSettings(await getSiteSettings()) : [];
+
   const today = new Intl.DateTimeFormat("de-DE", {
     weekday: "long",
     day: "numeric",
@@ -121,6 +127,18 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       {hinweis === "kein-zugriff" ? (
         <Alert tone="warning" title="Kein Zugriff" className="mb-6">
           Diese Seite ist Administratoren vorbehalten. Wenn Sie dort etwas brauchen, sprechen Sie bitte einen Administrator an.
+        </Alert>
+      ) : null}
+
+      {unfinished.length > 0 ? (
+        <Alert tone="warning" title="Die Firmendaten sind noch nicht vollständig" className="mb-6">
+          <p>
+            Noch mit Platzhalter („TODO“): {settingsLabelList(unfinished)}. Diese Angaben stehen so auf der Website, im Impressum und in
+            E-Mails an Kunden.{" "}
+            <Link href="/admin/website/firmendaten" className="font-semibold underline underline-offset-2">
+              Firmendaten ergänzen
+            </Link>
+          </p>
         </Alert>
       ) : null}
 

@@ -13,14 +13,20 @@ import { Detail, DetailList, Missing } from "@/components/admin/companies/detail
 import { cleanId, firstParam } from "@/components/admin/companies/list-tools";
 import { AccessBadge, CompanyActiveBadge } from "@/components/admin/companies/status-badges";
 import { RecentCallsCard, recentCallSelect } from "@/components/admin/companies/recent-calls-card";
-import { requireStaff } from "@/lib/auth";
+import { getStaffUser, requireStaff } from "@/lib/auth";
 import { CUSTOMER_ROLES, OPEN_STATUSES } from "@/lib/constants";
 import { getCompanyCostSummary } from "@/lib/costs";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatInquiryNumber, formatMoney, formatRelative, formatTicketNumber } from "@/lib/format";
 import { portalHost, portalUrl } from "@/lib/hosts";
 
-export const metadata: Metadata = { title: "Kunde" };
+/** Titel mit Firmennamen, damit mehrere offene Kunden-Tabs unterscheidbar sind */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const staff = await getStaffUser();
+  const id = cleanId((await params).id);
+  const company = staff && id ? await db.company.findUnique({ where: { id }, select: { name: true } }) : null;
+  return { title: company ? `${company.name} | Kunden` : "Kunde" };
+}
 
 function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, "")}`;

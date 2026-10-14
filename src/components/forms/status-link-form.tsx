@@ -45,7 +45,7 @@ export function StatusLinkForm() {
       <Field
         label="Ticketnummer"
         htmlFor={`${ID}-ticketNumber`}
-        hint="Steht im Betreff unserer E-Mails, z. B. T-00042."
+        hint="Beginnt mit T-, z. B. T-00042, und steht im Betreff unserer E-Mails. Bei einer Anfrage mit A-Nummer nutzen Sie bitte den Link aus Ihrer Bestätigungs-E-Mail."
         error={errors.ticketNumber}
       >
         <Input

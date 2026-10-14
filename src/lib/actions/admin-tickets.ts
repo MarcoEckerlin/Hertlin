@@ -35,7 +35,7 @@ import {
   sendPrivateTicketConfirmation,
   sendStaffCreatedTicketMail,
 } from "@/lib/notifications";
-import { isCustomerWatchingTicket } from "@/realtime/bus";
+import { isRecipientWatchingTicket } from "@/realtime/bus";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { parseTicketIdParam } from "@/components/admin/tickets/data";
 
@@ -531,14 +531,16 @@ export async function staffReplyAction(_prev: FormState, formData: FormData): Pr
 
   if (internal) return successState("Interne Notiz gespeichert.");
 
-  // Kunde ist gerade live im Ticket: Die Antwort erscheint sofort bei ihm, die E-Mail entfällt (siehe notifyCustomerStaffReply)
-  if (isCustomerWatchingTicket(ticket.id)) {
-    return successState("Antwort gesendet. Der Kunde ist gerade online und sieht sie sofort – eine E-Mail war nicht nötig.");
-  }
-
   const recipient = await customerRecipient(ticket.id);
   if (!recipient) {
     return successState("Antwort gespeichert. Eine E-Mail-Benachrichtigung war nicht möglich, weil keine Adresse hinterlegt ist.");
+  }
+  // Der Empfänger ist gerade live im Ticket: Die Antwort erscheint sofort bei ihm, die E-Mail entfällt (siehe notifyCustomerStaffReply).
+  // Sieht nur jemand anderes zu (z. B. der Hauptansprechpartner), bekommt der Empfänger seine E-Mail trotzdem.
+  if (isRecipientWatchingTicket(ticket.id, recipient.userId)) {
+    return successState(
+      `Antwort gesendet. ${recipient.name || "Der Kunde"} ist gerade online und sieht sie sofort – eine E-Mail war nicht nötig.`,
+    );
   }
   const finalStatus = nextStatus ?? ticket.status;
   const mailBody = [body, attachmentNote(files.length)].filter(Boolean).join("\n\n");
@@ -553,6 +555,7 @@ export async function staffReplyAction(_prev: FormState, formData: FormData): Pr
       body: mailBody,
       link: recipient.link,
       waitingForCustomer: finalStatus === "WAITING_CUSTOMER",
+      userId: recipient.userId,
     }),
   );
   return successState(`Antwort gesendet – Benachrichtigung an ${recipient.email}.`);

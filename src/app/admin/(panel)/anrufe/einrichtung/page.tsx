@@ -20,9 +20,15 @@ export const metadata: Metadata = { title: "Telefonanlage einrichten" };
 
 const PLACEHOLDER = "IHR-ZUGANGSSCHLUESSEL";
 
-function Code({ children }: { children: string }) {
+/** Scrollbarer Codeblock; per Tastatur fokussierbar, damit er sich auch ohne Maus seitlich scrollen lässt */
+function Code({ label, children }: { label: string; children: string }) {
   return (
-    <pre className="overflow-x-auto rounded-xl bg-mist p-4 text-xs leading-relaxed text-ink ring-1 ring-line ring-inset">
+    <pre
+      tabIndex={0}
+      role="region"
+      aria-label={label}
+      className="overflow-x-auto rounded-xl bg-mist p-4 text-xs leading-relaxed text-ink ring-1 ring-line ring-inset"
+    >
       <code>{children}</code>
     </pre>
   );
@@ -180,7 +186,7 @@ export default async function TelephonySetupPage() {
               </Alert>
             ) : null}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <code className="min-w-0 flex-1 overflow-x-auto rounded-xl bg-mist px-4 py-3 text-sm whitespace-nowrap text-ink ring-1 ring-line ring-inset">
+              <code className="min-w-0 flex-1 rounded-xl bg-mist px-4 py-3 text-sm break-all text-ink ring-1 ring-line ring-inset">
                 {url}
               </code>
               <CopyButton value={url} label="Adresse kopieren" />
@@ -259,7 +265,7 @@ export default async function TelephonySetupPage() {
 
             <div className="space-y-2">
               <h3 className="text-sm font-bold text-ink">Beispiel: Anruf klingelt, wird angenommen und beendet</h3>
-              <Code>
+              <Code label="Beispiel-Aufrufe mit curl">
                 {[
                   curl(
                     '{"event":"ringing","callId":"1728900000.42","from":"+49 711 1234567","to":"+49 711 9876500","direction":"in"}',

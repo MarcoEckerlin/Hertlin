@@ -621,10 +621,10 @@ export function PageEditor({
         }
       />
 
-      {/* Aktionsleiste */}
-      <div className="sticky top-14 z-20 -mx-4 mb-6 border-y border-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-10 lg:px-10">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <p className="min-w-0 flex-1 text-sm" role="status" aria-live="polite">
+      {/* Aktionsleiste – mobil kompakt (Status in einer Zeile, Knöpfe in einer Zeile), damit beim Bearbeiten Platz bleibt */}
+      <div className="sticky top-14 z-20 -mx-4 mb-6 border-y border-line bg-white/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 sm:py-3 lg:top-0 lg:-mx-10 lg:px-10">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-y-3">
+          <p className="min-w-0 flex-1 text-sm max-sm:basis-full max-sm:truncate" role="status" aria-live="polite">
             {busy === "draft" ? (
               <span className="text-ink-soft">Wird gespeichert …</span>
             ) : busy === "publish" ? (
@@ -639,9 +639,9 @@ export function PageEditor({
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {dirty ? (
-              <Button variant="ghost" size="sm" onClick={() => void resetLocal()} disabled={pending}>
+              <Button variant="ghost" size="sm" onClick={() => void resetLocal()} disabled={pending} className="max-sm:px-2.5">
                 <Undo2 className="size-4" aria-hidden />
-                Änderungen zurücksetzen
+                <span className="max-sm:sr-only">Änderungen zurücksetzen</span>
               </Button>
             ) : null}
             {canDiscard ? (
@@ -654,16 +654,23 @@ export function PageEditor({
               target="_blank"
               rel="noopener"
               onClick={openPreview}
-              className={buttonClasses("secondary", "sm", pending ? "pointer-events-none opacity-55" : undefined)}
+              className={buttonClasses("secondary", "sm", cn("max-sm:px-2.5", pending && "pointer-events-none opacity-55"))}
               aria-disabled={pending || undefined}
             >
               <ExternalLink className="size-4" aria-hidden />
-              {dirty ? "Speichern und Vorschau" : "Vorschau"}
+              <span className="max-sm:sr-only">{dirty ? "Speichern und Vorschau" : "Vorschau"}</span>
               <span className="sr-only"> (öffnet in neuem Tab)</span>
             </a>
             <Button variant="secondary" size="sm" onClick={() => void runSave("draft")} disabled={pending}>
               <Save className="size-4" aria-hidden />
-              {busy === "draft" ? "Wird gespeichert …" : "Entwurf speichern"}
+              {busy === "draft" ? (
+                "Wird gespeichert …"
+              ) : (
+                <>
+                  <span className="sm:hidden">Speichern</span>
+                  <span className="max-sm:hidden">Entwurf speichern</span>
+                </>
+              )}
             </Button>
             <Button size="sm" onClick={() => void runSave("publish")} disabled={pending}>
               {busy === "publish" ? "Wird veröffentlicht …" : "Veröffentlichen"}
