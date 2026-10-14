@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { requireStaff } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { locationOptions } from "@/lib/locations";
 import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } from "@/lib/uploads";
 import { Card, CardBody } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -30,10 +32,18 @@ export default async function NewStaffTicketPage({ searchParams }: { searchParam
   const user = await requireStaff();
   const params = await searchParams;
 
-  const [customers, staff] = await Promise.all([
+  const [customers, staff, locations, companyLocations, mainLocation] = await Promise.all([
     loadCustomerGroups({ activeOnly: true, withUsers: true }),
     loadStaffOptions(),
+    locationOptions(),
+    db.company.findMany({
+      where: { active: true },
+      select: { id: true, location: { select: { name: true, active: true } } },
+    }),
+    db.location.findFirst({ where: { isMain: true, active: true }, orderBy: { sortOrder: "asc" }, select: { name: true } }),
   ]);
+  // Standort je Firma (nur aktive Standorte); Unterkunden ohne eigenen erben den des Firmenkunden
+  const ownLocation = new Map(companyLocations.map((c) => [c.id, c.location?.active ? c.location.name : null]));
 
   const groups: NewTicketCustomerGroup[] = customers.map((root) => {
     const rootAdmins = root.users.filter((u) => u.role === "CUSTOMER_ADMIN");
@@ -41,7 +51,15 @@ export default async function NewStaffTicketPage({ searchParams }: { searchParam
       id: root.id,
       name: root.name,
       companies: [
-        { id: root.id, name: root.name, label: root.name, isRoot: true, users: root.users, rootAdmins: [] },
+        {
+          id: root.id,
+          name: root.name,
+          label: root.name,
+          isRoot: true,
+          users: root.users,
+          rootAdmins: [],
+          locationLabel: ownLocation.get(root.id) ?? null,
+        },
         ...root.children.map((child) => ({
           id: child.id,
           name: child.name,
@@ -49,6 +67,7 @@ export default async function NewStaffTicketPage({ searchParams }: { searchParam
           isRoot: false,
           users: child.users,
           rootAdmins,
+          locationLabel: ownLocation.get(child.id) ?? ownLocation.get(root.id) ?? null,
         })),
       ],
     };
@@ -109,6 +128,7 @@ export default async function NewStaffTicketPage({ searchParams }: { searchParam
               maxFileSize: MAX_FILE_SIZE,
               allowedLabel: ALLOWED_EXTENSIONS_LABEL,
             }}
+            locations={{ options: locations, mainLabel: mainLocation?.name ?? null }}
           />
         </CardBody>
       </Card>

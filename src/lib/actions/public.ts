@@ -339,6 +339,13 @@ export async function submitPrivateTicketAction(_prev: FormState, formData: Form
   // Sprache für unsere Antworten: Auswahl im Formular, sonst die Sprache des Website-Übersetzers
   const requestedLanguage = text(formData, "language").trim();
   const contactLanguage = isLangCode(requestedLanguage) ? requestedLanguage : await visitorLanguage();
+  // Zuständig für Privatkunden ist der Hauptsitz (sofern Standorte gepflegt sind)
+  const mainLocation = await db.location.findFirst({
+    where: { isMain: true, active: true },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true },
+  });
+  const locationId = mainLocation?.id ?? null;
 
   let ticketId: number;
   try {
@@ -351,6 +358,7 @@ export async function submitPrivateTicketAction(_prev: FormState, formData: Form
         status: "NEW",
         source: "PRIVATE_FORM",
         companyId: null,
+        locationId,
         contactName: data.name,
         contactEmail: data.email,
         contactPhone: data.phone,
