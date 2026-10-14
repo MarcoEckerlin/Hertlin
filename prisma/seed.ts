@@ -41,6 +41,36 @@ async function main() {
     data: { email: "technik@hertlin.de", name: "Jonas Keller", role: "TECHNICIAN", passwordHash, position: "Systemtechniker" },
   });
 
+  // Standorte
+  const zentrale = await db.location.create({
+    data: {
+      name: "Hertlin Zentrale",
+      street: "Hauptstraße 21",
+      zip: "12345",
+      city: "Musterstadt",
+      phone: "01234 98760",
+      email: "info@hertlin.de",
+      openingHours: "Mo–Do: 8:00 – 17:00 Uhr\nFr: 8:00 – 14:00 Uhr",
+      note: "Kundenparkplätze im Hof",
+      isMain: true,
+      sortOrder: 10,
+    },
+  });
+  const standortUlm = await db.location.create({
+    data: {
+      name: "Hertlin Ulm",
+      street: "Neue Straße 5",
+      zip: "89073",
+      city: "Ulm",
+      phone: "0731 123450",
+      email: "ulm@hertlin.de",
+      openingHours: "Mo–Fr: 9:00 – 16:00 Uhr",
+      sortOrder: 20,
+    },
+  });
+  await db.user.update({ where: { id: admin.id }, data: { locationId: zentrale.id } });
+  await db.user.update({ where: { id: tech.id }, data: { locationId: standortUlm.id } });
+
   // Firmenkunde mit Unterkunden
   const muster = await db.company.create({
     data: {
@@ -53,13 +83,25 @@ async function main() {
       phone: "01234 567890",
       email: "kanzlei@muster.example",
       internalNote: "Betreuungsvertrag seit 2023. Server im Keller, Schlüssel bei Frau Berger.",
+      locationId: zentrale.id,
+      billingEmail: "buchhaltung@muster.example",
     },
   });
   const musterUlm = await db.company.create({
-    data: { name: "Büro Ulm", parentId: muster.id, city: "Ulm", street: "Am Markt 3", zip: "89073" },
+    data: {
+      name: "Büro Ulm",
+      parentId: muster.id,
+      city: "Ulm",
+      street: "Am Markt 3",
+      zip: "89073",
+      locationId: standortUlm.id,
+      // Das Ulmer Büro bekommt eigene Rechnungen
+      invoiceSeparately: true,
+      billingEmail: "ulm@muster.example",
+    },
   });
   const musterHome = await db.company.create({
-    data: { name: "Homeoffice-Arbeitsplätze", parentId: muster.id },
+    data: { name: "Homeoffice-Arbeitsplätze", parentId: muster.id, locationId: zentrale.id },
   });
 
   const berger = await db.user.create({
@@ -68,6 +110,7 @@ async function main() {
       name: "Claudia Berger",
       role: "CUSTOMER_ADMIN",
       companyId: muster.id,
+      locationId: zentrale.id,
       passwordHash,
       position: "Kanzleileitung",
       phone: "01234 567891",
@@ -91,6 +134,7 @@ async function main() {
       customerNumber: "K-1002",
       city: "Musterstadt",
       email: "info@baeckerei.example",
+      locationId: zentrale.id,
     },
   });
   const baecker = await db.user.create({
@@ -106,6 +150,7 @@ async function main() {
       priority: "NORMAL",
       status: "IN_PROGRESS",
       companyId: muster.id,
+      locationId: zentrale.id,
       createdById: yilmaz.id,
       assigneeId: tech.id,
       createdAt: daysAgo(3, 8),
@@ -143,6 +188,7 @@ async function main() {
             totalCents: 8990,
             performedAt: daysAgo(2),
             createdById: admin.id,
+            performedById: admin.id,
           },
           {
             kind: "LABOR",
@@ -152,17 +198,21 @@ async function main() {
             unitPriceCents: 9500,
             totalCents: 4750,
             performedAt: daysAgo(2),
-            createdById: admin.id,
+            createdById: tech.id,
+            performedById: tech.id,
+            presetId: "preset_arbeitszeit",
           },
           {
             kind: "TRAVEL",
-            description: "Anfahrt Musterstadt",
+            description: "Anfahrt Stadtgebiet",
             quantityHundredths: 100,
             unit: "Pauschale",
             unitPriceCents: 3500,
             totalCents: 3500,
             performedAt: daysAgo(2),
-            createdById: admin.id,
+            createdById: tech.id,
+            performedById: tech.id,
+            presetId: "preset_anfahrt",
           },
         ],
       },
@@ -177,6 +227,7 @@ async function main() {
       priority: "LOW",
       status: "NEW",
       companyId: musterUlm.id,
+      locationId: standortUlm.id,
       createdById: ulmLead.id,
       createdAt: daysAgo(1, 14),
       messages: {
@@ -200,6 +251,7 @@ async function main() {
       priority: "HIGH",
       status: "WAITING_CUSTOMER",
       companyId: musterHome.id,
+      locationId: zentrale.id,
       createdById: berger.id,
       assigneeId: tech.id,
       createdAt: daysAgo(5, 11),
@@ -229,6 +281,8 @@ async function main() {
             totalCents: 7125,
             performedAt: daysAgo(4),
             createdById: admin.id,
+            performedById: admin.id,
+            presetId: "preset_fernwartung",
           },
         ],
       },
@@ -243,6 +297,7 @@ async function main() {
       priority: "CRITICAL",
       status: "RESOLVED",
       companyId: baeckerei.id,
+      locationId: zentrale.id,
       createdById: baecker.id,
       assigneeId: tech.id,
       createdAt: daysAgo(12, 6),
@@ -261,6 +316,19 @@ async function main() {
       costs: {
         create: [
           {
+            // Vom Techniker erfasst, ohne Katalogpreis: Ein Administrator muss den Preis noch eintragen
+            kind: "MATERIAL",
+            description: "Netzwerkkabel Cat. 6, 5 m",
+            quantityHundredths: 200,
+            unit: "Stk.",
+            unitPriceCents: 0,
+            totalCents: 0,
+            needsPrice: true,
+            performedAt: daysAgo(1),
+            createdById: tech.id,
+            performedById: tech.id,
+          },
+          {
             kind: "MATERIAL",
             description: "Netzteil 400 W",
             quantityHundredths: 100,
@@ -269,6 +337,7 @@ async function main() {
             totalCents: 5490,
             performedAt: daysAgo(12),
             createdById: admin.id,
+            performedById: admin.id,
             billed: true,
             billedAt: daysAgo(5),
           },
@@ -281,6 +350,7 @@ async function main() {
             totalCents: 18000,
             performedAt: daysAgo(12),
             createdById: admin.id,
+            performedById: admin.id,
             billed: true,
             billedAt: daysAgo(5),
           },
@@ -304,6 +374,7 @@ async function main() {
       contactPhone: "0171 1234567",
       contactAddress: "Lindenstraße 8, 12345 Musterstadt",
       guestToken,
+      locationId: zentrale.id,
       assigneeId: tech.id,
       createdAt: daysAgo(2, 19),
       messages: {
@@ -332,6 +403,7 @@ async function main() {
             totalCents: 8900,
             performedAt: daysAgo(1),
             createdById: admin.id,
+            performedById: admin.id,
           },
         ],
       },

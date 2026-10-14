@@ -17,9 +17,11 @@ export function PageHeader({
   breadcrumbs?: Crumb[];
   meta?: ReactNode;
 }) {
+  // Auf Seiten der ersten Ebene („Übersicht › Tickets“) bringt der Pfad nichts und lässt die Überschrift springen
+  const topLevel = breadcrumbs?.length === 2 && (breadcrumbs[0].href === "/admin" || breadcrumbs[0].href === "/");
   return (
     <div className="mb-6 sm:mb-8">
-      {breadcrumbs && breadcrumbs.length > 0 ? (
+      {breadcrumbs && breadcrumbs.length > 0 && !topLevel ? (
         <nav aria-label="Brotkrumen" className="mb-3">
           <ol className="flex flex-wrap items-center gap-1 text-sm text-ink-muted">
             {breadcrumbs.map((c, i) => (

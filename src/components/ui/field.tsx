@@ -3,7 +3,7 @@ import { cn } from "@/lib/cn";
 
 // Fokus wie bei Buttons und Links: 2-px-Rahmen in brand-600 mit etwas Abstand, gut sichtbar auch auf Hellblau
 const control =
-  "block w-full rounded-xl border border-line-strong bg-white px-3.5 text-[0.9375rem] text-ink placeholder:text-ink-muted/80 shadow-[inset_0_1px_1px_rgb(16_36_58/0.03)] transition-colors hover:border-brand-300 focus:border-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:bg-mist disabled:text-ink-muted aria-[invalid=true]:border-red-400";
+  "block w-full rounded-xl border border-line-strong bg-surface px-3.5 text-[0.9375rem] text-ink placeholder:text-ink-muted/80 shadow-[inset_0_1px_1px_rgb(16_36_58/0.03)] transition-colors hover:border-brand-300 focus:border-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:bg-mist disabled:text-ink-muted aria-[invalid=true]:border-danger-solid";
 
 export function Label({ className, ...props }: ComponentProps<"label">) {
   return <label className={cn("block text-sm font-semibold text-ink", className)} {...props} />;
@@ -54,7 +54,7 @@ export function Checkbox({ className, label, hint, ...props }: ComponentProps<"i
 export function FieldError({ children, id }: { children?: ReactNode; id?: string }) {
   if (!children) return null;
   return (
-    <p id={id} className="mt-1.5 text-sm font-medium text-red-700">
+    <p id={id} className="mt-1.5 text-sm font-medium text-danger-ink">
       {children}
     </p>
   );

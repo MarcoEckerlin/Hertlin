@@ -32,12 +32,12 @@ export function Pagination({
       </span>
       <div className="flex gap-2">
         {page > 1 ? (
-          <Link className={cn(link, "bg-white text-ink hover:bg-brand-50")} href={href(page - 1)}>
+          <Link className={cn(link, "bg-surface text-ink hover:bg-brand-50")} href={href(page - 1)}>
             Zurück
           </Link>
         ) : null}
         {page < pageCount ? (
-          <Link className={cn(link, "bg-white text-ink hover:bg-brand-50")} href={href(page + 1)}>
+          <Link className={cn(link, "bg-surface text-ink hover:bg-brand-50")} href={href(page + 1)}>
             Weiter
           </Link>
         ) : null}

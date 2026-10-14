@@ -33,10 +33,27 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  /// Zuständiger Hertlin-Standort (Vorgabe für neue Tickets)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  /// Rechnungsversand: eigene Adresse für Rechnungen (sonst E-Mail der Firma)
+  billingEmail      String?
+  /// Abweichender Rechnungsempfänger und -anschrift (leer = Firmenname und Anschrift oben)
+  billingName       String?
+  billingStreet     String?
+  billingZip        String?
+  billingCity       String?
+  /// USt-IdNr. des Kunden (optional, erscheint auf der Rechnung)
+  vatId             String?
+  /// Nur Unterkunden: eigene Rechnung statt Abrechnung über den Firmenkunden
+  invoiceSeparately Boolean @default(false)
+
   users      User[]
   tickets    Ticket[]
   inquiries  Inquiry[]
   phoneCalls PhoneCall[]
+  invoices   Invoice[]
 
   @@index([parentId])
 }
@@ -59,6 +76,9 @@ model User {
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  /// Nur Mitarbeiter: Standort, an dem die Person arbeitet
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   sessions        Session[]
   tokens          AuthToken[]
@@ -66,6 +86,9 @@ model User {
   ticketsAssigned Ticket[]         @relation("TicketAssignee")
   messages        TicketMessage[]
   costEntries     CostEntry[]
+  costsPerformed  CostEntry[]      @relation("CostPerformedBy")
+  costPresets     CostPreset[]
+  invoicesCreated Invoice[]
   ticketEvents    TicketEvent[]
   inquiryMessages InquiryMessage[]
   callsAsContact  PhoneCall[]      @relation("CallContact")
@@ -118,11 +141,14 @@ model Ticket {
 
   /// Firmenkunde oder Unterkunde; null bei Privatkunden
   companyId   String?
-  company     Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   createdById String?
-  createdBy   User?    @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdBy   User?     @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   assigneeId  String?
-  assignee    User?    @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  assignee    User?     @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  /// Zuständiger Hertlin-Standort
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   /// Kontaktdaten (Pflicht bei Privatkunden, optional abweichender Ansprechpartner sonst)
   contactName     String?
@@ -149,6 +175,7 @@ model Ticket {
   @@index([status])
   @@index([assigneeId])
   @@index([contactEmail])
+  @@index([locationId])
 }
 
 /// internal = true: interne Notiz, nur für Hertlin-Mitarbeiter sichtbar
@@ -204,9 +231,9 @@ model TicketEvent {
 /// Kosten zu einem Ticket. Ausschließlich für Benutzer mit Rolle ADMIN sichtbar.
 /// kind: LABOR | TRAVEL | MATERIAL | FLAT
 model CostEntry {
-  id                 String    @id @default(cuid())
+  id                 String      @id @default(cuid())
   ticketId           Int
-  ticket             Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket             Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   kind               String
   description        String
   /// Menge in Hundertsteln (1,25 Std. = 125), um Rundungsfehler zu vermeiden
@@ -215,15 +242,158 @@ model CostEntry {
   unitPriceCents     Int
   totalCents         Int
   performedAt        DateTime
-  billed             Boolean   @default(false)
+  billed             Boolean     @default(false)
   billedAt           DateTime?
   createdById        String?
-  createdBy          User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdBy          User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  /// Wer die Leistung erbracht hat (Mitarbeiter); Vorgabe: wer die Position erfasst
+  performedById      String?
+  performedBy        User?       @relation("CostPerformedBy", fields: [performedById], references: [id], onDelete: SetNull)
+  /// Herkunft aus dem Katalog (Standardposition), falls ausgewählt
+  presetId           String?
+  preset             CostPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  /// Preis fehlt noch: Techniker hat eine Position ohne Katalogpreis erfasst, ein Administrator setzt ihn
+  needsPrice         Boolean     @default(false)
+  /// Rechnung, auf der die Position abgerechnet wurde
+  invoiceId          String?
+  invoice            Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@index([ticketId])
   @@index([performedAt])
+  @@index([invoiceId])
+}
+
+/// Katalog der Standardpositionen (z. B. „Anfahrt Stadtgebiet“, „Arbeitszeit Technik“).
+/// Neue Positionen aus dem Ticket landen automatisch hier.
+model CostPreset {
+  id                        String    @id @default(cuid())
+  kind                      String
+  name                      String
+  /// Kleingeschrieben und ohne doppelte Leerzeichen – verhindert Dubletten
+  nameKey                   String    @unique
+  unit                      String
+  /// Netto-Einzelpreis in Cent; null = Preis wird je Position festgelegt
+  unitPriceCents            Int?
+  defaultQuantityHundredths Int       @default(100)
+  active                    Boolean   @default(true)
+  usageCount                Int       @default(0)
+  lastUsedAt                DateTime?
+  sortOrder                 Int       @default(0)
+  createdById               String?
+  createdBy                 User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  entries CostEntry[]
+
+  @@index([active, kind])
+}
+
+/// Hertlin-Standort (Filiale/Büro)
+model Location {
+  id            String   @id @default(cuid())
+  name          String
+  street        String
+  zip           String
+  city          String
+  phone         String?
+  email         String?
+  /// Öffnungszeiten als Freitext, eine Zeile pro Eintrag (z. B. „Mo–Fr: 8–17 Uhr“)
+  openingHours  String?
+  /// Hinweis für Besucher (z. B. „Parkplätze im Hof“)
+  note          String?
+  isMain        Boolean  @default(false)
+  showOnWebsite Boolean  @default(true)
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  companies Company[]
+  users     User[]
+  tickets   Ticket[]
+}
+
+/// Rechnung oder Stornorechnung. Nach dem Erstellen unveränderlich (nur Status, Versand, Zahlung).
+model Invoice {
+  id               String   @id @default(cuid())
+  /// Fortlaufende Nummer, z. B. RE-2026-0001
+  number           String   @unique
+  year             Int
+  sequence         Int
+  /// INVOICE | CANCELLATION
+  kind             String   @default("INVOICE")
+  /// OPEN | SENT | PAID | CANCELLED
+  status           String   @default("OPEN")
+  /// Bei Stornorechnung: die stornierte Rechnung
+  cancelsInvoiceId String?  @unique
+  cancelsInvoice   Invoice? @relation("InvoiceCancellation", fields: [cancelsInvoiceId], references: [id], onDelete: Restrict)
+  cancelledBy      Invoice? @relation("InvoiceCancellation")
+
+  /// Firmenkunde/Unterkunde; null bei Privatkunden
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// Privatkunden: Konto-Schlüssel (E-Mail, kleingeschrieben)
+  privateEmail String?
+
+  /// Empfängerdaten zum Zeitpunkt der Rechnung (Kopie, ändert sich nicht mehr)
+  recipientName    String
+  recipientAddress String
+  recipientEmail   String?
+  recipientVatId   String?
+
+  issueDate          DateTime
+  servicePeriodStart DateTime?
+  servicePeriodEnd   DateTime?
+  dueDate            DateTime
+  netCents           Int
+  /// Steuersatz in Basispunkten (1900 = 19 %)
+  taxRateBasisPoints Int
+  taxCents           Int
+  grossCents         Int
+  /// Kleinunternehmer nach § 19 UStG: keine Umsatzsteuer ausgewiesen
+  smallBusiness      Boolean   @default(false)
+  introText          String?
+  footerText         String?
+  /// PDF relativ zu UPLOAD_DIR (wird beim Erstellen einmal erzeugt)
+  pdfPath            String?
+
+  sentAt      DateTime?
+  sentTo      String?
+  paidAt      DateTime?
+  cancelledAt DateTime?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lines       InvoiceLine[]
+  costEntries CostEntry[]
+
+  @@unique([year, sequence])
+  @@index([companyId])
+  @@index([privateEmail])
+  @@index([status])
+}
+
+model InvoiceLine {
+  id                 String    @id @default(cuid())
+  invoiceId          String
+  invoice            Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  position           Int
+  description        String
+  /// z. B. „Ticket #1042“
+  reference          String?
+  performedAt        DateTime?
+  quantityHundredths Int
+  unit               String
+  unitPriceCents     Int
+  totalCents         Int
+  costEntryId        String?
+
+  @@index([invoiceId])
 }
 
 /// Anfrage von Interessenten (Neukunden) über die Website.
