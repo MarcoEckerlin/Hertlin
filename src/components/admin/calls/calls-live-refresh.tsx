@@ -39,7 +39,7 @@ export function CallsLiveRefresh({ callId }: { callId?: string }) {
 
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted" aria-live="polite">
-      <span className={cn("size-2 rounded-full", connected ? "bg-emerald-500" : "bg-slate-300")} aria-hidden />
+      <span className={cn("size-2 rounded-full", connected ? "bg-success-solid" : "bg-neutral-solid")} aria-hidden />
       {connected ? "Live – aktualisiert sich selbst" : "Live-Verbindung wird aufgebaut …"}
     </span>
   );

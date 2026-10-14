@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { Search } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination, parsePage } from "@/components/ui/pagination";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { ListFilters, ListResults, ListSearchForm } from "@/components/admin/companies/list-filters";
 import { CallsList, type CallListItem } from "@/components/admin/calls/calls-list";
 import { CallsLiveRefresh } from "@/components/admin/calls/calls-live-refresh";
 import { NotificationPermission } from "@/components/admin/calls/notification-permission";
 import { requireStaff } from "@/lib/auth";
-import { cn } from "@/lib/cn";
 import { db } from "@/lib/db";
 import { formatInquiryNumber, formatTicketNumber } from "@/lib/format";
 import { counterpartNumber, normalizePhone, startOfBerlinDay } from "@/lib/phone";
@@ -45,21 +45,6 @@ function filterHref(filters: Filters, change: Partial<Filters>): string {
   return s ? `/admin/anrufe?${s}` : "/admin/anrufe";
 }
 
-function Pill({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold ring-1 ring-inset",
-        active ? "bg-ink text-white ring-ink" : "bg-white text-ink-soft ring-line-strong hover:bg-brand-50 hover:text-ink",
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
-
 function callerLink(
   company: { id: string; parentId: string | null } | null,
   match: CallerMatch | null,
@@ -67,12 +52,17 @@ function callerLink(
   if (company) return { href: `/admin/kunden/${company.parentId ?? company.id}`, label: "Kunde öffnen" };
   if (!match) return null;
   if (match.rootCompanyId) return { href: `/admin/kunden/${match.rootCompanyId}`, label: "Kunde öffnen" };
-  if (match.inquiryId) return { href: `/admin/anfragen/${match.inquiryId}`, label: `Anfrage ${formatInquiryNumber(match.inquiryId)}` };
+  if (match.inquiryId)
+    return { href: `/admin/anfragen/${match.inquiryId}`, label: `Anfrage ${formatInquiryNumber(match.inquiryId)}` };
   if (match.ticketId) return { href: `/admin/tickets/${match.ticketId}`, label: `Ticket ${formatTicketNumber(match.ticketId)}` };
   return null;
 }
 
-export default async function CallsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function CallsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireStaff();
   const sp = await searchParams;
   const rangeParam = first(sp.zeitraum);
@@ -175,7 +165,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
     <div>
       <PageHeader
         title="Anrufe"
-        description="Alle Anrufe aus der Telefonanlage. Bekannte Nummern ordnen wir automatisch dem Kunden zu – aus jedem Anruf lässt sich direkt ein Ticket machen."
+        description="Anrufe aus der Telefonanlage. Bekannte Nummern sind dem Kunden zugeordnet, aus jedem Anruf lässt sich ein Ticket machen."
         meta={
           <>
             <CallsLiveRefresh />
@@ -200,94 +190,110 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
         </Alert>
       ) : null}
 
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <nav aria-label="Filter" className="flex flex-wrap items-center gap-2">
-          {RANGES.map((r) => (
-            <Pill key={r.key} href={filterHref(filters, { zeitraum: r.key })} active={filters.zeitraum === r.key}>
-              {r.label}
-            </Pill>
-          ))}
-          <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />
-          <Pill href={filterHref(filters, { verpasst: !filters.verpasst })} active={filters.verpasst}>
-            Verpasst, offen{openMissed > 0 ? ` (${openMissed})` : ""}
-          </Pill>
-          <Pill href={filterHref(filters, { ohneTicket: !filters.ohneTicket })} active={filters.ohneTicket}>
-            Ohne Ticket
-          </Pill>
-        </nav>
+      <ListFilters>
+        <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <SegmentedTabs
+              label="Zeitraum"
+              tabs={RANGES.map((r) => ({
+                href: filterHref(filters, { zeitraum: r.key }),
+                label: r.label,
+                active: filters.zeitraum === r.key,
+              }))}
+            />
+            <SegmentedTabs
+              label="Auswahl"
+              tabs={[
+                {
+                  href: filterHref(filters, { verpasst: false, ohneTicket: false }),
+                  label: "Alle Anrufe",
+                  active: !filters.verpasst && !filters.ohneTicket,
+                },
+                {
+                  href: filterHref(filters, { verpasst: true, ohneTicket: false }),
+                  label: "Verpasst, offen",
+                  active: filters.verpasst,
+                  count: openMissed,
+                  highlight: true,
+                },
+                {
+                  href: filterHref(filters, { ohneTicket: true, verpasst: false }),
+                  label: "Ohne Ticket",
+                  active: filters.ohneTicket,
+                },
+              ]}
+            />
+          </div>
 
-        <form action="/admin/anrufe" method="get" role="search" className="flex w-full gap-2 lg:w-auto">
-          {filters.zeitraum !== "7-tage" ? <input type="hidden" name="zeitraum" value={filters.zeitraum} /> : null}
-          {filters.verpasst ? <input type="hidden" name="verpasst" value="1" /> : null}
-          {filters.ohneTicket ? <input type="hidden" name="ohne-ticket" value="1" /> : null}
-          <label htmlFor="anrufe-suche" className="sr-only">
-            Nummer, Name oder Notiz suchen
-          </label>
-          <input
+          <ListSearchForm
+            action="/admin/anrufe"
             id="anrufe-suche"
-            name="q"
-            type="search"
-            defaultValue={filters.q}
+            value={filters.q}
+            label="Nummer, Name oder Notiz suchen"
             placeholder="Nummer, Name oder Notiz"
-            maxLength={80}
-            className="block h-10 w-full min-w-0 rounded-full border border-line-strong bg-white px-4 text-sm text-ink placeholder:text-ink-muted/80 hover:border-brand-300 focus:border-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:w-64"
-          />
-          <Button type="submit" variant="secondary">
-            <Search className="size-4" aria-hidden />
-            Suchen
-          </Button>
-        </form>
-      </div>
-
-      {calls.length === 0 ? (
-        anyCalls === 0 ? (
-          <EmptyState
-            title="Noch keine Anrufe"
-            action={
-              isAdmin ? (
-                <ButtonLink href="/admin/anrufe/einrichtung">{telephonyToken() ? "Einrichtung prüfen" : "Telefonanlage einrichten"}</ButtonLink>
-              ) : null
-            }
-          >
-            Sobald die Telefonanlage angebunden ist, erscheint hier jeder Anruf – mit Kunde, Status und wer angenommen hat.
-            {isAdmin ? null : " Die Anbindung richtet ein Administrator ein."}
-          </EmptyState>
-        ) : (
-          <EmptyState
-            title="Keine Anrufe für diese Auswahl"
-            action={
-              filtered ? (
-                <ButtonLink href="/admin/anrufe?zeitraum=alle" variant="secondary">
-                  Alle Anrufe anzeigen
-                </ButtonLink>
-              ) : null
-            }
-          >
-            {filters.q
-              ? `Zu „${filters.q}“ haben wir keinen Anruf gefunden. Prüfen Sie die Schreibweise oder erweitern Sie den Zeitraum.`
-              : "Ändern Sie den Zeitraum oder die Filter oben."}
-          </EmptyState>
-        )
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-ink-muted">
-            {total === 1 ? "1 Anruf" : `${total} Anrufe`}
-            {filters.zeitraum === "heute" ? " heute" : filters.zeitraum === "7-tage" ? " in den letzten 7 Tagen" : ""}
-          </p>
-          <CallsList calls={calls} now={now} />
-          <Pagination
-            page={Math.min(page, pageCount)}
-            pageCount={pageCount}
-            basePath="/admin/anrufe"
-            baseQuery={{
+            keep={{
               zeitraum: filters.zeitraum !== "7-tage" ? filters.zeitraum : undefined,
               verpasst: filters.verpasst ? "1" : undefined,
               "ohne-ticket": filters.ohneTicket ? "1" : undefined,
-              q: filters.q || undefined,
             }}
+            className="xl:w-auto"
           />
-        </>
-      )}
+        </div>
+
+        <ListResults>
+          {calls.length === 0 ? (
+            anyCalls === 0 ? (
+              <EmptyState
+                title="Noch keine Anrufe"
+                action={
+                  isAdmin ? (
+                    <ButtonLink href="/admin/anrufe/einrichtung">
+                      {telephonyToken() ? "Einrichtung prüfen" : "Telefonanlage einrichten"}
+                    </ButtonLink>
+                  ) : null
+                }
+              >
+                Sobald die Telefonanlage angebunden ist, erscheint hier jeder Anruf – mit Kunde, Status und wer angenommen hat.
+                {isAdmin ? null : " Die Anbindung richtet ein Administrator ein."}
+              </EmptyState>
+            ) : (
+              <EmptyState
+                title="Keine Anrufe für diese Auswahl"
+                action={
+                  filtered ? (
+                    <ButtonLink href="/admin/anrufe?zeitraum=alle" variant="secondary">
+                      Alle Anrufe anzeigen
+                    </ButtonLink>
+                  ) : null
+                }
+              >
+                {filters.q
+                  ? `Zu „${filters.q}“ haben wir keinen Anruf gefunden. Prüfen Sie die Schreibweise oder erweitern Sie den Zeitraum.`
+                  : "Ändern Sie den Zeitraum oder die Filter oben."}
+              </EmptyState>
+            )
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-ink-muted">
+                {total === 1 ? "1 Anruf" : `${total} Anrufe`}
+                {filters.zeitraum === "heute" ? " heute" : filters.zeitraum === "7-tage" ? " in den letzten 7 Tagen" : ""}
+              </p>
+              <CallsList calls={calls} now={now} />
+              <Pagination
+                page={Math.min(page, pageCount)}
+                pageCount={pageCount}
+                basePath="/admin/anrufe"
+                baseQuery={{
+                  zeitraum: filters.zeitraum !== "7-tage" ? filters.zeitraum : undefined,
+                  verpasst: filters.verpasst ? "1" : undefined,
+                  "ohne-ticket": filters.ohneTicket ? "1" : undefined,
+                  q: filters.q || undefined,
+                }}
+              />
+            </>
+          )}
+        </ListResults>
+      </ListFilters>
     </div>
   );
 }

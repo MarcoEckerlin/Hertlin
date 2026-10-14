@@ -49,9 +49,9 @@ export function SlugInput({
       </div>
       <div
         className={cn(
-          "flex h-11 items-stretch overflow-hidden rounded-xl border bg-white shadow-[inset_0_1px_1px_rgb(16_36_58/0.03)] transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600",
+          "flex h-11 items-stretch overflow-hidden rounded-xl border bg-surface shadow-[inset_0_1px_1px_rgb(16_36_58/0.03)] transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600",
           error
-            ? "border-red-400"
+            ? "border-danger-solid"
             : "border-line-strong hover:border-brand-300 focus-within:border-brand-600",
         )}
       >
@@ -83,13 +83,13 @@ export function SlugInput({
       ) : (
         <p
           id={`${id}-preview`}
-          className={cn("mt-1.5 text-sm", check?.tone === "warn" ? "font-medium text-amber-800" : "text-ink-muted")}
+          className={cn("mt-1.5 text-sm", check?.tone === "warn" ? "font-medium text-warning-ink" : "text-ink-muted")}
         >
           {check ? (
             check.text
           ) : value ? (
             <>
-              Portal-Adresse: <span className="font-semibold break-all text-ink">{`${value}.${rootDomain}`}</span>
+              Portal-Adresse: <span className="font-semibold break-words text-ink">{`${value}.${rootDomain}`}</span>
             </>
           ) : (
             (hint ?? "Kleinbuchstaben, Ziffern und Bindestrich, z. B. „mueller-bau“.")

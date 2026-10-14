@@ -291,7 +291,7 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
                       {call.user.name}
                       {call.user.position ? `, ${call.user.position}` : ""}
                       <br />
-                      <a href={`mailto:${call.user.email}`} className="break-all hover:underline">
+                      <a href={`mailto:${call.user.email}`} className="break-words hover:underline">
                         {call.user.email}
                       </a>
                     </p>

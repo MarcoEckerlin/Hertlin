@@ -247,7 +247,7 @@ export function StaffEditForm({
           disabled={isSelf}
           hint={isSelf ? "Ihre eigene Rolle können Sie nicht ändern – das muss ein anderer Administrator tun." : undefined}
         />
-        <div className={cn("rounded-xl border p-4", active ? "border-line" : "border-amber-200 bg-amber-50/60")}>
+        <div className={cn("rounded-xl border p-4", active ? "border-line" : "border-warning-line bg-warning-soft")}>
           <Checkbox
             id="staff-active"
             name="active"

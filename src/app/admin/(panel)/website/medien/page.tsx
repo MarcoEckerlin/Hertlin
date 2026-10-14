@@ -66,12 +66,12 @@ export default async function MediaLibraryPage() {
                       href={item.url}
                       target="_blank"
                       rel="noopener"
-                      className="group relative block aspect-[4/3] bg-mist"
+                      className="group relative block aspect-[4/3] bg-paper"
                       aria-label={`${item.fileName} in voller Größe öffnen (neuer Tab)`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.url} alt={item.alt ?? ""} loading="lazy" className="size-full object-contain" />
-                      <span className="absolute top-2 right-2 grid size-8 place-items-center rounded-full bg-white/90 text-ink-soft opacity-0 shadow-card transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                      <span className="absolute top-2 right-2 grid size-8 place-items-center rounded-full bg-surface-raised/90 text-ink-soft opacity-0 shadow-card transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                         <ExternalLink className="size-4" aria-hidden />
                       </span>
                     </a>

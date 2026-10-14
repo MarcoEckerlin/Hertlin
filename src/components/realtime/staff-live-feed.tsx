@@ -140,13 +140,13 @@ export function StaffLiveFeed() {
             extra = (
               <div className="mt-2 flex flex-wrap gap-2">
                 {n.companyId ? (
-                  <Link href={`/admin/kunden/${n.companyId}`} className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink ring-1 ring-line-strong hover:bg-brand-50">
+                  <Link href={`/admin/kunden/${n.companyId}`} className="rounded-full bg-surface px-3 py-1 text-xs font-semibold text-ink ring-1 ring-line-strong hover:bg-brand-50">
                     Kunde öffnen
                   </Link>
                 ) : null}
                 <Link
                   href={`/admin/anrufe/${n.callId}#ticket-anlegen`}
-                  className="rounded-full bg-brand-400 px-3 py-1 text-xs font-semibold text-ink hover:bg-brand-300"
+                  className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-on-primary hover:bg-primary-hover active:bg-primary-active"
                 >
                   Ticket anlegen
                 </Link>
@@ -178,12 +178,12 @@ export function StaffLiveFeed() {
         return (
           <div
             key={id}
-            className={`pointer-events-auto rounded-2xl border p-4 shadow-lift ${
-              critical ? "border-brand-300 bg-brand-100" : "border-line bg-white"
+            className={`pointer-events-auto rounded-2xl border p-4 shadow-lift transition-[opacity,translate] duration-200 starting:translate-y-2 starting:opacity-0 ${
+              critical ? "border-brand-300 bg-brand-100" : "border-line bg-surface-raised"
             }`}
           >
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-white text-brand-700 ring-1 ring-line">{icon}</span>
+              <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-surface text-brand-700 ring-1 ring-line">{icon}</span>
               <div className="min-w-0 flex-1">
                 {href && n.kind !== "call.incoming" ? (
                   <Link href={href} className="block font-semibold text-ink hover:underline" onClick={() => dismiss(id)}>
@@ -198,7 +198,7 @@ export function StaffLiveFeed() {
               <button
                 type="button"
                 onClick={() => dismiss(id)}
-                className="grid size-7 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-white hover:text-ink"
+                className="grid size-7 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-mist hover:text-ink"
                 aria-label="Hinweis schließen"
               >
                 <X className="size-4" aria-hidden />

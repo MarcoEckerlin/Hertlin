@@ -48,7 +48,7 @@ export function AddBlockDialog({
                     type="button"
                     onClick={() => onAdd(type)}
                     data-autofocus={gi === 0 && i === 0 ? true : undefined}
-                    className="flex h-full w-full flex-col items-start gap-0.5 rounded-xl border border-line bg-white px-4 py-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50"
+                    className="flex h-full w-full flex-col items-start gap-0.5 rounded-xl border border-line bg-surface px-4 py-3 text-left transition-colors hover:border-brand-300 hover:bg-brand-50"
                   >
                     <span className="font-semibold text-ink">{BLOCK_LABELS[type].label}</span>
                     <span className="text-sm leading-snug text-ink-muted">{BLOCK_LABELS[type].description}</span>

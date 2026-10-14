@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { DisclosureCard } from "@/components/admin/companies/disclosure";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -131,7 +132,7 @@ export default async function TelephonySetupPage() {
                     {status.tokenTooShort ? (
                       <>
                         <Badge tone="red">Zu kurz</Badge>
-                        <span className="block text-red-700">
+                        <span className="block text-danger-ink">
                           Meldungen der Anlage werden abgewiesen, bis der Schlüssel mindestens 24 Zeichen hat. Verwenden Sie
                           32 oder mehr zufällige Zeichen.
                         </span>
@@ -205,9 +206,8 @@ export default async function TelephonySetupPage() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader title="sipgate" description="sipgate meldet Anrufe über seine Webhooks (sipgate.io)." />
-          <CardBody>
+        <DisclosureCard title="sipgate" summary="sipgate meldet Anrufe über seine Webhooks (sipgate.io).">
+          <div>
             <ol className="space-y-4">
               <Step n={1}>Melden Sie sich in der Weboberfläche von sipgate mit einem Administrator-Konto an.</Step>
               <Step n={2}>
@@ -227,15 +227,14 @@ export default async function TelephonySetupPage() {
               Wohin sipgate die Annahme und das Auflegen meldet, teilen wir sipgate bei jedem Anruf automatisch mit. Dafür ist nichts
               weiter einzustellen. Den Namen, der bei „angenommen von“ erscheint, übernehmen wir aus dem sipgate-Benutzer.
             </p>
-          </CardBody>
-        </Card>
+          </div>
+        </DisclosureCard>
 
-        <Card>
-          <CardHeader
-            title="Andere Telefonanlagen"
-            description="Asterisk, FreePBX, 3CX oder eine andere Anlage, die bei Anrufen eine Adresse aufrufen kann."
-          />
-          <CardBody className="space-y-5">
+        <DisclosureCard
+          title="Andere Telefonanlagen"
+          summary="Asterisk, FreePBX, 3CX, Placetel oder eine andere Anlage, die bei Anrufen eine Adresse aufrufen kann."
+        >
+          <div className="space-y-5">
             <p className="text-[0.9375rem] leading-relaxed text-ink-soft">
               Die Anlage schickt bei jedem Schritt eines Anrufs eine Meldung per HTTP POST an die Adresse oben – als JSON oder als
               Formulardaten mit denselben Feldnamen. In Asterisk und FreePBX geht das z. B. mit einem kleinen Skript im Wählplan
@@ -244,7 +243,7 @@ export default async function TelephonySetupPage() {
               <code className="font-semibold">cause</code> der Wert von <code className="font-semibold">{"${DIALSTATUS}"}</code>.
             </p>
 
-            <Table>
+            <Table stack>
               <THead>
                 <tr>
                   <TH>Feld</TH>
@@ -256,8 +255,10 @@ export default async function TelephonySetupPage() {
                 {GENERIC_FIELDS.map((f) => (
                   <TR key={f.field}>
                     <TD className="font-mono text-xs font-semibold text-ink">{f.field}</TD>
-                    <TD className="whitespace-nowrap">{f.required}</TD>
-                    <TD>{f.text}</TD>
+                    <TD label="Pflicht" className="whitespace-nowrap">
+                      {f.required}
+                    </TD>
+                    <TD label="Bedeutung">{f.text}</TD>
                   </TR>
                 ))}
               </tbody>
@@ -290,8 +291,8 @@ export default async function TelephonySetupPage() {
                 dort die Adresse von oben ein.
               </li>
             </ul>
-          </CardBody>
-        </Card>
+          </div>
+        </DisclosureCard>
 
         <Card>
           <CardHeader title="Anrufe annehmen" />
