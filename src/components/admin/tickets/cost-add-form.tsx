@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useActionState, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Search } from "lucide-react";
 import { addCostAction } from "@/lib/actions/admin-costs";
 import { initialFormState } from "@/lib/forms";
@@ -20,11 +20,15 @@ import { cn } from "@/lib/cn";
 import { Checkbox, Field, FieldError, Input, Select } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { showToast } from "@/components/ui/toaster";
 import { fieldA11y, useStaffForm } from "@/components/admin/tickets/use-staff-form";
 import { PerformerField, PriceField, TotalOutput, costControl } from "@/components/admin/tickets/cost-fields";
 import type { PresetOption, StaffChoice } from "@/components/admin/tickets/cost-values";
 
 type Mode = "katalog" | "neu";
+
+/** Auswahl aus der Schnellwahl über dem Formular; nonce zählt hoch, damit auch derselbe Eintrag erneut wirkt */
+export type CostPick = { presetId: string; nonce: number };
 
 type Props = {
   ticketId: number;
@@ -36,6 +40,8 @@ type Props = {
   laborHint: string;
   /** YYYY-MM-DD, vom Server (deutsche Zeit) */
   today: string;
+  /** Schnellwahl: diesen Katalogeintrag auswählen */
+  pick?: CostPick | null;
 };
 
 /**
@@ -47,10 +53,15 @@ export function CostAddForm(props: Props) {
   const { formRef, formKey } = useStaffForm(state);
   const values = state.status === "error" ? (state.values ?? null) : null;
 
+  // Erfolg als kurze Meldung; die neue Zeile steht dann in der Tabelle darüber
+  useEffect(() => {
+    if (state.status === "success" && state.message) showToast(state.message);
+  }, [state]);
+
   return (
     <form key={formKey} ref={formRef} action={action} noValidate className="@container space-y-4">
       <input type="hidden" name="ticketId" value={props.ticketId} />
-      <FormMessage state={state} />
+      {state.status === "error" ? <FormMessage state={state} /> : null}
       <AddFields {...props} values={values} errors={state.fieldErrors ?? {}} />
       <div className="pt-1">
         <SubmitButton pendingText="Wird gespeichert …">Position hinzufügen</SubmitButton>
@@ -66,6 +77,7 @@ function AddFields({
   canSetPrice,
   laborHint,
   today,
+  pick = null,
   values,
   errors,
 }: Props & { values: Record<string, string> | null; errors: Record<string, string> }) {
@@ -109,6 +121,37 @@ function AddFields({
       setPriceTouched(false);
     }
   }
+
+  // Schnellwahl: Eintrag auswählen und die vorbelegten Felder kurz hervorheben
+  const [seenPick, setSeenPick] = useState(pick);
+  const [highlight, setHighlight] = useState(0);
+  if (pick !== seenPick) {
+    setSeenPick(pick);
+    const picked = pick ? presets.find((p) => p.id === pick.presetId) : undefined;
+    if (picked) {
+      setMode("katalog");
+      setSearch("");
+      choose(picked);
+      setHighlight(pick?.nonce ?? 0);
+    }
+  }
+
+  useEffect(() => {
+    if (!highlight) return;
+    const frame = requestAnimationFrame(() => {
+      const radio = presetId ? document.getElementById(`kosten-preset-${presetId}`) : null;
+      // Gewählten Eintrag in der Liste (und auf der Seite) zeigen, ohne zu springen
+      radio?.focus({ preventScroll: true });
+      radio?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+    const timer = window.setTimeout(() => setHighlight(0), 700);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+    // Nur bei einer neuen Schnellwahl
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlight]);
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -170,7 +213,7 @@ function AddFields({
       {hasPresets ? (
         <fieldset className="min-w-0">
           <legend className="sr-only">Woher kommt die Position?</legend>
-          <div className="grid max-w-md grid-cols-2 gap-1 rounded-full bg-white p-1 ring-1 ring-line-strong ring-inset">
+          <div className="grid max-w-md grid-cols-2 gap-1 rounded-full bg-surface p-1 ring-1 ring-line-strong ring-inset">
             {(
               [
                 ["katalog", "Aus dem Katalog"],
@@ -237,8 +280,8 @@ function AddFields({
             <legend className="sr-only">Position aus dem Katalog</legend>
             <div
               className={cn(
-                "max-h-72 overflow-y-auto overscroll-contain rounded-xl border bg-white",
-                errors.presetId ? "border-red-400" : "border-line-strong",
+                "max-h-72 overflow-y-auto overscroll-contain rounded-xl border bg-surface",
+                errors.presetId ? "border-danger-solid" : "border-line-strong",
               )}
             >
               {groups.map((group) => (
@@ -363,7 +406,12 @@ function AddFields({
       )}
 
       {showDetails ? (
-        <div className="grid grid-cols-2 gap-4 @xl:grid-cols-4">
+        <div
+          className={cn(
+            "-m-2 grid grid-cols-2 gap-4 rounded-xl p-2 transition-colors duration-500 @xl:grid-cols-4",
+            highlight ? "bg-brand-100" : "bg-transparent",
+          )}
+        >
           {mode === "neu" ? (
             <>
               <Field label="Art" htmlFor="kosten-kind" error={errors.kind}>

@@ -15,7 +15,7 @@ export function CostDeleteButton({ label, confirmText }: { label: string; confir
       onClick={(event) => {
         if (!window.confirm(confirmText)) event.preventDefault();
       }}
-      className="inline-flex size-8 items-center justify-center rounded-full text-red-700 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-55"
+      className="inline-flex size-8 items-center justify-center rounded-full text-danger-ink transition-colors hover:bg-danger-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 disabled:opacity-55"
     >
       {pending ? (
         <span className="size-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden />

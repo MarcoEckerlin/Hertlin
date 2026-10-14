@@ -4,6 +4,7 @@ import Form from "next/form";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
 
 export type PeriodOption = { value: string; label: string };
 
@@ -50,14 +51,14 @@ export function CostFilterForm({
     <Form
       ref={formRef}
       action={action}
-      className="flex flex-col gap-4 rounded-2xl border border-line bg-white p-4 shadow-card sm:flex-row sm:flex-wrap sm:items-end sm:p-5"
+      className="grid grid-cols-2 gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card sm:flex sm:flex-row sm:flex-wrap sm:items-end sm:gap-4 sm:p-5"
     >
       {Object.entries(hidden).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
 
-      <div className="sm:w-60">
-        <Label htmlFor="kosten-zeitraum" className="mb-1.5">
+      <div className="min-w-0 sm:w-60">
+        <Label htmlFor="kosten-zeitraum" className="mb-1 text-xs sm:mb-1.5 sm:text-sm">
           Zeitraum
         </Label>
         <Select
@@ -92,7 +93,7 @@ export function CostFilterForm({
       </div>
 
       {custom ? (
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="col-span-2 flex flex-wrap items-end gap-3 max-sm:order-3">
           <div>
             <Label htmlFor="kosten-von" className="mb-1.5">
               Von
@@ -108,8 +109,8 @@ export function CostFilterForm({
         </div>
       ) : null}
 
-      <div className="sm:w-60">
-        <Label htmlFor="kosten-abrechnung" className="mb-1.5">
+      <div className="min-w-0 sm:w-60">
+        <Label htmlFor="kosten-abrechnung" className="mb-1 text-xs sm:mb-1.5 sm:text-sm">
           Abrechnung
         </Label>
         <Select
@@ -129,7 +130,12 @@ export function CostFilterForm({
         </Select>
       </div>
 
-      <Button type="submit" variant={custom ? "primary" : "secondary"} className="h-10">
+      {/* Auswahllisten laden sofort neu; auf dem Handy braucht es den Knopf nur beim eigenen Zeitraum */}
+      <Button
+        type="submit"
+        variant={custom ? "primary" : "secondary"}
+        className={cn("h-10 max-sm:order-4", custom ? "col-span-2" : "max-sm:sr-only")}
+      >
         Anzeigen
       </Button>
     </Form>

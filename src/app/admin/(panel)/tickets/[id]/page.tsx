@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cache, type ReactNode } from "react";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
-import { MapPin, UserCheck } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { db } from "@/lib/db";
 import { getStaffUser, requireStaff } from "@/lib/auth";
 import { CATEGORY_LABELS, SOURCE_LABELS, TYPE_LABELS, labelOf } from "@/lib/constants";
@@ -14,13 +14,10 @@ import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } 
 import { isLangCode, languageLabel } from "@/lib/languages";
 import { translationEnabled } from "@/lib/translate";
 import { translateForViewer } from "@/lib/chat-translation";
-import { takeTicketAction } from "@/lib/actions/admin-tickets";
-import { Alert } from "@/components/ui/alert";
 import { Badge, PriorityBadge, StatusBadge } from "@/components/ui/badge";
-import { buttonClasses } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { FlashToast } from "@/components/ui/toaster";
 import { LiveConversation } from "@/components/realtime/live-conversation";
 import {
   customerLabel,
@@ -40,6 +37,7 @@ import { LinkedCallsCard } from "@/components/admin/tickets/linked-calls-card";
 import { StaffReplyForm } from "@/components/admin/tickets/staff-reply-form";
 import { StaffTimeline, type TimelineTranslations } from "@/components/admin/tickets/staff-timeline";
 import { TicketMetaForm, type MetaCompanyGroup } from "@/components/admin/tickets/ticket-meta-form";
+import { TicketQuickBar } from "@/components/admin/tickets/ticket-quick-bar";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -155,16 +153,24 @@ export default async function AdminTicketPage({ params, searchParams }: { params
   const customerLanguage =
     translate && isLangCode(readerLanguage) && readerLanguage !== "de" ? languageLabel(readerLanguage) : null;
 
-  const isNew = first(query.neu) === "1";
   const mail = first(query.mail);
   const costTotal = adminCosts ? adminCosts.filter((c) => !c.needsPrice).reduce((sum, c) => sum + c.totalCents, 0) : 0;
   const costMissingPrice = adminCosts ? adminCosts.filter((c) => c.needsPrice && !c.invoiceId).length : 0;
   const costCount = adminCosts?.length ?? staffCosts?.length ?? 0;
   const staffChoices = staff.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name, active: s.active }));
-  const assignedToMe = ticket.assigneeId === user.id;
+  const createdNote =
+    mail === "1"
+      ? "Der Kunde wird per E-Mail informiert."
+      : mail === "0"
+        ? "Eine E-Mail an den Kunden war nicht möglich, weil keine Adresse hinterlegt ist."
+        : "Der Kunde wurde nicht per E-Mail informiert.";
 
   return (
     <>
+      {/* Rückmeldung nach „Ticket anlegen“; beide Parameter verschwinden danach aus der Adresse */}
+      <FlashToast param="neu" value={first(query.neu)} messages={{ "1": `Ticket ${number} ist angelegt. ${createdNote}` }} />
+      <FlashToast param="mail" value={mail} messages={{}} />
+
       <PageHeader
         breadcrumbs={[
           { label: "Übersicht", href: "/admin" },
@@ -181,30 +187,8 @@ export default async function AdminTicketPage({ params, searchParams }: { params
             <span className="text-sm text-ink-muted">{labelOf(CATEGORY_LABELS, ticket.category)}</span>
           </>
         }
-        actions={
-          <>
-            {adminCosts ? (
-              <a href="#kosten" className={buttonClasses("ghost", "sm")}>
-                Kosten: {formatMoney(costTotal)}
-                {costMissingPrice > 0 ? <span className="text-amber-800">· Preis fehlt</span> : null}
-              </a>
-            ) : recordCosts ? (
-              <a href="#kosten" className={buttonClasses("ghost", "sm")}>
-                Leistungen{costCount > 0 ? ` (${costCount})` : ""}
-              </a>
-            ) : null}
-            {!assignedToMe ? (
-              <form action={takeTicketAction.bind(null, ticket.id)}>
-                <SubmitButton variant="secondary" size="sm" pendingText="Einen Moment …">
-                  <UserCheck className="size-4" aria-hidden />
-                  {ticket.assignee ? "Selbst übernehmen" : "Übernehmen"}
-                </SubmitButton>
-              </form>
-            ) : null}
-          </>
-        }
         description={
-          <span className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+          <span className="flex flex-wrap gap-x-2 gap-y-1 text-sm">
             <span>
               {company && rootId ? (
                 <Link href={`/admin/kunden/${rootId}`} className="font-semibold text-brand-700 hover:underline">
@@ -238,24 +222,40 @@ export default async function AdminTicketPage({ params, searchParams }: { params
                 {formatRelative(ticket.updatedAt)}
               </time>
             </span>
+            {ticket.closedAt ? (
+              <>
+                <span aria-hidden>·</span>
+                <span>geschlossen {formatDateTime(ticket.closedAt)}</span>
+              </>
+            ) : ticket.resolvedAt ? (
+              <>
+                <span aria-hidden>·</span>
+                <span>gelöst {formatDateTime(ticket.resolvedAt)}</span>
+              </>
+            ) : null}
           </span>
         }
       />
 
-      {isNew ? (
-        <Alert tone="success" title={`Ticket ${number} ist angelegt`} className="mb-6">
-          {mail === "1"
-            ? "Der Kunde wird per E-Mail informiert."
-            : mail === "0"
-              ? "Eine E-Mail an den Kunden war nicht möglich, weil keine Adresse hinterlegt ist."
-              : "Der Kunde wurde nicht per E-Mail informiert."}
-        </Alert>
-      ) : null}
+      <TicketQuickBar
+        ticketId={ticket.id}
+        current={{ status: ticket.status, assigneeId: ticket.assigneeId ?? "" }}
+        staff={staff.map((s) => ({ id: s.id, name: s.name, active: s.active }))}
+        currentUserId={user.id}
+        recipientEmail={recipient?.email ?? null}
+        costLink={
+          adminCosts && adminCosts.length > 0
+            ? { label: `Kosten ${formatMoney(costTotal)}`, warning: costMissingPrice > 0 ? "Preis fehlt" : undefined }
+            : recordCosts
+              ? { label: costCount > 0 ? `Leistungen (${costCount})` : "Leistungen" }
+              : null
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
-          <section aria-labelledby="verlauf-titel">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <section aria-labelledby="verlauf-titel" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
               <h2 id="verlauf-titel" className="text-lg font-bold text-ink">
                 Verlauf
               </h2>
@@ -270,25 +270,25 @@ export default async function AdminTicketPage({ params, searchParams }: { params
                 translations={translations}
               />
             ) : (
-              <p className="rounded-2xl border border-dashed border-line-strong bg-white px-5 py-8 text-center text-sm text-ink-soft">
+              <p className="rounded-2xl border border-dashed border-line-strong bg-surface px-5 py-8 text-center text-sm text-ink-soft">
                 Zu diesem Ticket gibt es noch keine Nachrichten.
               </p>
             )}
-          </section>
 
-          <StaffReplyForm
-            ticketId={ticket.id}
-            status={ticket.status}
-            recipient={recipient ? { name: recipient.name, email: recipient.email } : null}
-            customerChannel={company ? "im Kundenportal" : "über seinen Status-Link"}
-            customerLanguage={customerLanguage}
-            uploadRules={{
-              accept: ACCEPT_ATTRIBUTE,
-              maxFiles: MAX_FILES,
-              maxFileSize: MAX_FILE_SIZE,
-              allowedLabel: ALLOWED_EXTENSIONS_LABEL,
-            }}
-          />
+            <StaffReplyForm
+              ticketId={ticket.id}
+              status={ticket.status}
+              recipient={recipient ? { name: recipient.name, email: recipient.email } : null}
+              customerChannel={company ? "im Kundenportal" : "über seinen Status-Link"}
+              customerLanguage={customerLanguage}
+              uploadRules={{
+                accept: ACCEPT_ATTRIBUTE,
+                maxFiles: MAX_FILES,
+                maxFileSize: MAX_FILE_SIZE,
+                allowedLabel: ALLOWED_EXTENSIONS_LABEL,
+              }}
+            />
+          </section>
 
           {adminCosts ? (
             <CostSection
@@ -317,25 +317,21 @@ export default async function AdminTicketPage({ params, searchParams }: { params
 
         <aside aria-label="Bearbeitung und Kontakt" className="min-w-0 space-y-6">
           <Card>
-            <CardHeader title="Bearbeitung" />
+            <CardHeader title="Details" />
             <CardBody>
               <TicketMetaForm
                 ticketId={ticket.id}
                 current={{
-                  status: ticket.status,
                   priority: ticket.priority,
                   type: ticket.type,
                   category: ticket.category,
-                  assigneeId: ticket.assigneeId ?? "",
                   customer: ticket.companyId ?? PRIVATE_CUSTOMER,
                   locationId: ticket.locationId ?? "",
                 }}
                 locations={locationChoices}
-                staff={staff.map((s) => ({ id: s.id, name: s.name, active: s.active }))}
                 companyGroups={companyGroups}
                 allowPrivate={ticket.companyId === null || Boolean(ticket.guestToken)}
                 customerHint={customerHint}
-                recipientEmail={recipient?.email ?? null}
               />
             </CardBody>
           </Card>
@@ -343,30 +339,8 @@ export default async function AdminTicketPage({ params, searchParams }: { params
           <ContactCard ticket={ticket} />
 
           <LinkedCallsCard calls={ticket.phoneCalls} />
-
-          <Card>
-            <CardHeader title="Zeitpunkte" />
-            <CardBody>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm lg:grid-cols-1">
-                <Detail label="Erstellt">{formatDateTime(ticket.createdAt)}</Detail>
-                <Detail label="Letzte Änderung">{formatDateTime(ticket.updatedAt)}</Detail>
-                {ticket.resolvedAt ? <Detail label="Gelöst">{formatDateTime(ticket.resolvedAt)}</Detail> : null}
-                {ticket.closedAt ? <Detail label="Geschlossen">{formatDateTime(ticket.closedAt)}</Detail> : null}
-                <Detail label="Quelle">{labelOf(SOURCE_LABELS, ticket.source)}</Detail>
-              </dl>
-            </CardBody>
-          </Card>
         </aside>
       </div>
     </>
-  );
-}
-
-function Detail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-xs font-semibold text-ink-muted">{label}</dt>
-      <dd className="mt-0.5 break-words text-ink">{children}</dd>
-    </div>
   );
 }

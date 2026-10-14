@@ -39,7 +39,7 @@ export function CatalogList({ rows }: { rows: CatalogRow[] }) {
             {group.label}
             <span className="text-sm font-semibold text-ink-muted tabular-nums">{group.rows.length}</span>
           </h2>
-          <Table aria-labelledby={`katalog-${group.kind}`}>
+          <Table stack aria-labelledby={`katalog-${group.kind}`}>
             <THead>
               <tr>
                 <TH>Bezeichnung</TH>
@@ -72,35 +72,41 @@ function CatalogTableRow({ row }: { row: CatalogRow }) {
   return (
     <TR className={row.active ? undefined : "bg-mist/60"}>
       <TD className="min-w-[14rem]">
-        <Link href={`/admin/kosten/katalog/${row.id}`} className="font-semibold break-words text-ink hover:underline">
-          {row.name}
-        </Link>
-        {row.createdByName ? <span className="block text-xs text-ink-muted">angelegt von {row.createdByName}</span> : null}
+        <div className="min-w-0">
+          <Link href={`/admin/kosten/katalog/${row.id}`} className="font-semibold break-words text-ink hover:underline">
+            {row.name}
+          </Link>
+          {row.createdByName ? <span className="block text-xs text-ink-muted">angelegt von {row.createdByName}</span> : null}
+        </div>
       </TD>
-      <TD className="whitespace-nowrap">{row.unit}</TD>
-      <TD className="text-right whitespace-nowrap tabular-nums">
+      <TD label="Einheit" className="whitespace-nowrap">
+        {row.unit}
+      </TD>
+      <TD label="Preis netto" className="text-right whitespace-nowrap tabular-nums">
         {row.unitPriceCents === null ? (
           <span className="text-ink-muted">je Position</span>
         ) : (
           <span className="font-semibold text-ink">{formatMoney(row.unitPriceCents)}</span>
         )}
       </TD>
-      <TD className="text-right whitespace-nowrap tabular-nums">
+      <TD label="Standardmenge" className="text-right whitespace-nowrap tabular-nums">
         {formatQuantity(row.defaultQuantityHundredths)} {row.unit}
       </TD>
-      <TD className="text-right whitespace-nowrap tabular-nums">
+      <TD label="Benutzt" className="text-right whitespace-nowrap tabular-nums">
         {uses === 0 ? (
           <span className="text-ink-muted">noch nie</span>
         ) : (
-          <>
+          <div>
             {uses}×
             {row.lastUsedAt ? <span className="block text-xs text-ink-muted">zuletzt {formatDate(row.lastUsedAt)}</span> : null}
-          </>
+          </div>
         )}
       </TD>
-      <TD className="whitespace-nowrap">{row.active ? <Badge tone="green">aktiv</Badge> : <Badge tone="gray">deaktiviert</Badge>}</TD>
+      <TD label="Status" className="whitespace-nowrap">
+        {row.active ? <Badge tone="green">aktiv</Badge> : <Badge tone="gray">deaktiviert</Badge>}
+      </TD>
       <TD className="whitespace-nowrap">
-        <div className="flex items-center justify-end gap-1">
+        <div className="-mx-2 flex flex-wrap items-center justify-end gap-1 sm:mx-0">
           <Link
             href={`/admin/kosten/katalog/${row.id}`}
             className={buttonClasses("ghost", "sm")}
@@ -123,7 +129,7 @@ function CatalogTableRow({ row }: { row: CatalogRow }) {
               <ConfirmSubmitButton
                 variant="ghost"
                 size="sm"
-                className="text-red-700 hover:bg-red-50 hover:text-red-800"
+                className="text-danger-ink hover:bg-danger-soft hover:text-danger-ink"
                 confirmText={`„${row.name}“ aus dem Katalog löschen?`}
                 pendingText="…"
                 aria-label={`Löschen: ${row.name}`}

@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { buttonClasses } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { FlashToast } from "@/components/ui/toaster";
 import { Missing } from "@/components/admin/companies/detail-list";
 import { cleanId, firstParam } from "@/components/admin/companies/list-tools";
 import { InvoiceStatusBadge, OverdueNote } from "@/components/admin/invoices/invoice-badges";
@@ -105,29 +106,27 @@ export default async function InvoicePage({
         }
       />
 
+      {/* Rückmeldungen nach dem Erstellen bzw. Stornieren als kurze Meldung; die Parameter verschwinden aus der Adresse */}
+      <FlashToast
+        param="erstellt"
+        value={firstParam(sp.erstellt)}
+        messages={{
+          "1": `Rechnung ${invoice.number} ist erstellt. Die Positionen sind als abgerechnet markiert – senden Sie die Rechnung jetzt per E-Mail oder laden Sie das PDF herunter.`,
+        }}
+      />
+      <FlashToast
+        param="storniert"
+        value={firstParam(sp.storniert)}
+        messages={
+          invoice.cancelsInvoice
+            ? {
+                "1": `Stornorechnung ${invoice.number} ist erstellt. Die Rechnung ${invoice.cancelsInvoice.number} ist storniert, ihre Positionen sind wieder offen.`,
+              }
+            : {}
+        }
+      />
+
       <div className="mb-6 space-y-3 empty:hidden">
-        {firstParam(sp.erstellt) === "1" ? (
-          <Alert tone="success" title={`Rechnung ${invoice.number} ist erstellt`}>
-            Die Positionen sind als abgerechnet markiert. Senden Sie die Rechnung jetzt per E-Mail oder laden Sie das PDF herunter.
-          </Alert>
-        ) : null}
-        {firstParam(sp.storniert) === "1" && invoice.cancelsInvoice ? (
-          <Alert tone="success" title={`Stornorechnung ${invoice.number} ist erstellt`}>
-            Die Rechnung{" "}
-            <Link href={`/admin/rechnungen/${invoice.cancelsInvoice.id}`} className="font-semibold underline">
-              {invoice.cancelsInvoice.number}
-            </Link>{" "}
-            ist storniert, ihre Positionen sind wieder offen.
-            {costHref ? (
-              <>
-                {" "}
-                <Link href={costHref} className="font-semibold underline">
-                  Zu den offenen Positionen
-                </Link>
-              </>
-            ) : null}
-          </Alert>
-        ) : null}
         {invoice.cancelledBy ? (
           <Alert tone="info" title="Diese Rechnung ist storniert">
             Am {formatDate(invoice.cancelledBy.issueDate)} durch die Stornorechnung{" "}
@@ -137,13 +136,21 @@ export default async function InvoicePage({
             .
           </Alert>
         ) : null}
-        {isCancellation && invoice.cancelsInvoice && firstParam(sp.storniert) !== "1" ? (
+        {isCancellation && invoice.cancelsInvoice ? (
           <Alert tone="info">
             Hebt die Rechnung{" "}
             <Link href={`/admin/rechnungen/${invoice.cancelsInvoice.id}`} className="font-semibold underline">
               {invoice.cancelsInvoice.number}
             </Link>{" "}
             vom {formatDate(invoice.cancelsInvoice.issueDate)} auf.
+            {costHref ? (
+              <>
+                {" "}
+                <Link href={costHref} className="font-semibold underline">
+                  Zu den offenen Positionen
+                </Link>
+              </>
+            ) : null}
           </Alert>
         ) : null}
       </div>

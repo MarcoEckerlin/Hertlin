@@ -130,7 +130,7 @@ export default async function EditCostPage({ params }: { params: Params }) {
           </CardBody>
         </Card>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 bg-white px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger-line bg-surface px-5 py-4 sm:px-6">
           <p className="text-sm text-ink-soft">Falsch erfasst? Die Position lässt sich vollständig löschen.</p>
           <form action={deleteCostAction.bind(null, cost.ticket.id, cost.id)}>
             <ConfirmSubmitButton

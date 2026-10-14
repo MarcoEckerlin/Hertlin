@@ -4,9 +4,9 @@ import { formatMoney } from "@/lib/format";
 
 function Tile({ label, value, note }: { label: string; value: ReactNode; note?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-4 shadow-card sm:p-5">
+    <div className="min-w-0 rounded-2xl border border-line bg-surface p-3 shadow-card sm:p-5">
       <dt className="text-xs font-semibold text-ink-muted">{label}</dt>
-      <dd className="mt-1 text-xl font-bold tracking-tight text-ink tabular-nums sm:text-2xl">{value}</dd>
+      <dd className="mt-0.5 text-lg font-bold tracking-tight text-ink tabular-nums sm:mt-1 sm:text-2xl">{value}</dd>
       {note ? <dd className="mt-0.5 text-xs text-ink-muted">{note}</dd> : null}
     </div>
   );
@@ -32,7 +32,7 @@ export function CostSummary({
       ? ` · ohne ${totals.unpricedEntries === 1 ? "1 Position" : `${totals.unpricedEntries} Positionen`} ohne Preis`
       : "";
   return (
-    <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+    <dl className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
       <Tile label={sumLabel} value={formatMoney(totals.totalCents)} note={`${periodLabel}${unpriced}`} />
       {billing === "alle" ? (
         <Tile label="davon offen" value={formatMoney(totals.openCents)} note={`${formatMoney(totals.billedCents)} abgerechnet`} />

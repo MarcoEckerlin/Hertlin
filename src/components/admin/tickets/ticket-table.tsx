@@ -16,6 +16,10 @@ function Updated({ date }: { date: Date }) {
   );
 }
 
+function urgent(priority: string): boolean {
+  return priority === "HIGH" || priority === "CRITICAL";
+}
+
 function AssigneeName({ ticket, currentUserId }: { ticket: StaffTicketRow; currentUserId: string }) {
   if (!ticket.assignee) return <span className="text-ink-muted">nicht zugewiesen</span>;
   return (
@@ -38,24 +42,27 @@ function LocationTag({ ticket }: { ticket: StaffTicketRow }) {
   );
 }
 
+/** Kosten in einer Zeile: Betrag, dahinter ein Punkt, solange etwas nicht abgerechnet ist */
 function CostCell({ sums }: { sums: { total: number; open: number } | undefined }) {
   if (!sums || sums.total === 0) return <span className="text-ink-muted">–</span>;
+  const title =
+    sums.open === 0 ? "abgerechnet" : sums.open === sums.total ? "nicht abgerechnet" : `offen ${formatMoney(sums.open)}`;
   return (
-    <span className="block text-right">
+    <span className="inline-flex items-center justify-end gap-1.5" title={title}>
       <span className="font-semibold text-ink tabular-nums">{formatMoney(sums.total)}</span>
       {sums.open > 0 ? (
-        <span className="block text-xs text-amber-800 tabular-nums">
-          {sums.open === sums.total ? "nicht abgerechnet" : `offen ${formatMoney(sums.open)}`}
-        </span>
+        <span className="size-2 shrink-0 rounded-full bg-warning-solid" aria-hidden />
       ) : (
-        <span className="block text-xs text-ink-muted">abgerechnet</span>
+        <span className="size-2 shrink-0" aria-hidden />
       )}
+      <span className="sr-only">({title})</span>
     </span>
   );
 }
 
 /**
  * Ticketliste der Verwaltung: Tabelle ab md, darunter als Kartenliste.
+ * Wenige, zusammengefasste Spalten, damit nichts abgeschnitten wird; die ganze Zeile führt zum Ticket.
  * costs: NUR für Administratoren übergeben – ohne diesen Wert gibt es keine Kostenspalte.
  * showLocation: Standort hinter dem Kunden zeigen (sinnvoll erst ab mehreren Standorten).
  */
@@ -71,36 +78,42 @@ export function StaffTicketTable({
   showLocation?: boolean;
 }) {
   const showCosts = costs !== undefined;
-  // Mit Kostenspalte wird es eng: Betreff erst auf großen Bildschirmen in voller Breite
-  const subjectWidth = showCosts ? "max-w-[17rem] 2xl:max-w-[24rem]" : "max-w-[24rem]";
   return (
     <>
       <div className="hidden md:block">
-        <Table>
+        <Table className="min-w-0 table-fixed">
           <THead>
             <tr>
-              <TH>Nr.</TH>
-              <TH>Betreff und Kunde</TH>
-              <TH>Status</TH>
-              <TH>Priorität</TH>
-              <TH>Bearbeiter</TH>
-              <TH>Aktualisiert</TH>
-              {showCosts ? <TH className="text-right">Kosten</TH> : null}
+              <TH>Ticket</TH>
+              <TH className="w-40">Status</TH>
+              <TH className="w-40">Bearbeiter</TH>
+              <TH className="w-32 max-lg:hidden">Aktualisiert</TH>
+              {showCosts ? <TH className="w-32 text-right">Kosten</TH> : null}
+              <TH className="w-10">
+                <span className="sr-only">Öffnen</span>
+              </TH>
             </tr>
           </THead>
           <tbody>
             {tickets.map((ticket) => (
-              <TR key={ticket.id} className={ticket.priority === "CRITICAL" && ticket.status !== "CLOSED" ? "bg-red-50/40" : undefined}>
-                <TD className="font-medium whitespace-nowrap text-ink-muted tabular-nums">{formatTicketNumber(ticket.id)}</TD>
+              <TR
+                key={ticket.id}
+                className={cn(
+                  "group relative cursor-pointer",
+                  ticket.priority === "CRITICAL" && ticket.status !== "CLOSED" && "bg-danger-soft/50",
+                )}
+              >
                 <TD>
                   <Link
                     href={`/admin/tickets/${ticket.id}`}
                     title={ticket.subject}
-                    className={cn("block truncate font-semibold text-ink hover:text-brand-700 hover:underline", subjectWidth)}
+                    className="block truncate font-semibold text-ink after:absolute after:inset-0 group-hover:text-brand-700 focus-visible:outline-none focus-visible:after:rounded-sm focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-brand-600"
                   >
                     {ticket.subject}
                   </Link>
-                  <span className={cn("mt-0.5 flex items-center gap-2 text-xs text-ink-muted", subjectWidth)}>
+                  <span className="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-ink-muted">
+                    <span className="shrink-0 font-medium tabular-nums">{formatTicketNumber(ticket.id)}</span>
+                    <span aria-hidden>·</span>
                     <span className="min-w-0 truncate" title={customerLabel(ticket)}>
                       {customerLabel(ticket)}
                     </span>
@@ -108,22 +121,25 @@ export function StaffTicketTable({
                   </span>
                 </TD>
                 <TD>
-                  <StatusBadge status={ticket.status} audience="staff" />
-                </TD>
-                <TD>
-                  <PriorityBadge priority={ticket.priority} />
+                  <span className="flex flex-col items-start gap-1">
+                    <StatusBadge status={ticket.status} audience="staff" />
+                    {urgent(ticket.priority) ? <PriorityBadge priority={ticket.priority} /> : null}
+                  </span>
                 </TD>
                 <TD>
                   <AssigneeName ticket={ticket} currentUserId={currentUserId} />
                 </TD>
-                <TD className="whitespace-nowrap">
+                <TD className="whitespace-nowrap max-lg:hidden">
                   <Updated date={ticket.updatedAt} />
                 </TD>
                 {showCosts ? (
-                  <TD className="whitespace-nowrap">
+                  <TD className="text-right whitespace-nowrap">
                     <CostCell sums={costs.get(ticket.id)} />
                   </TD>
                 ) : null}
+                <TD className="px-2">
+                  <ChevronRight className="size-4 text-ink-muted transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden />
+                </TD>
               </TR>
             ))}
           </tbody>
@@ -137,7 +153,10 @@ export function StaffTicketTable({
             <li key={ticket.id}>
               <Link
                 href={`/admin/tickets/${ticket.id}`}
-                className="block rounded-2xl border border-line bg-white p-4 shadow-card transition-colors hover:border-brand-300 active:bg-brand-50"
+                className={cn(
+                  "block rounded-2xl border border-line p-4 shadow-card transition-colors hover:border-brand-300 active:bg-brand-50",
+                  ticket.priority === "CRITICAL" && ticket.status !== "CLOSED" ? "bg-danger-soft/50" : "bg-surface",
+                )}
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs font-semibold text-ink-muted tabular-nums">{formatTicketNumber(ticket.id)}</span>
@@ -152,12 +171,17 @@ export function StaffTicketTable({
                 ) : null}
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 text-xs text-ink-muted">
                   <span className="flex items-center gap-2">
-                    <PriorityBadge priority={ticket.priority} />
+                    {urgent(ticket.priority) ? <PriorityBadge priority={ticket.priority} /> : null}
                     {ticket.assignee ? ticket.assignee.name : "nicht zugewiesen"}
                   </span>
-                  <span>
+                  <span className="inline-flex items-center gap-1.5">
                     <Updated date={ticket.updatedAt} />
-                    {showCosts && sums && sums.total > 0 ? ` · ${formatMoney(sums.total)}` : null}
+                    {showCosts && sums && sums.total > 0 ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <CostCell sums={sums} />
+                      </>
+                    ) : null}
                   </span>
                 </div>
               </Link>
@@ -169,7 +193,7 @@ export function StaffTicketTable({
   );
 }
 
-/** Kompakte Ticketliste für die Übersicht. */
+/** Kompakte Ticketliste für die Übersicht. Auf dem Handy steht der Status unter dem Titel, damit dieser Platz hat. */
 export function StaffTicketList({ tickets, emptyText }: { tickets: StaffTicketRow[]; emptyText: string }) {
   if (tickets.length === 0) return <p className="px-5 py-6 text-sm text-ink-muted sm:px-6">{emptyText}</p>;
   return (
@@ -178,21 +202,21 @@ export function StaffTicketList({ tickets, emptyText }: { tickets: StaffTicketRo
         <li key={ticket.id}>
           <Link
             href={`/admin/tickets/${ticket.id}`}
-            className="group flex items-center gap-3 px-5 py-3 transition-colors hover:bg-brand-50/60 sm:px-6"
+            className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-brand-50/60 sm:px-6"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-ink group-hover:text-brand-700">{ticket.subject}</p>
+              <p className="line-clamp-2 font-semibold text-ink group-hover:text-brand-700 sm:truncate">{ticket.subject}</p>
               <p className="mt-0.5 truncate text-sm text-ink-muted">
                 <span className="tabular-nums">{formatTicketNumber(ticket.id)}</span> · {customerLabel(ticket)} ·{" "}
                 <Updated date={ticket.updatedAt} />
               </p>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:hidden">
+                <StatusBadge status={ticket.status} audience="staff" />
+                {urgent(ticket.priority) ? <PriorityBadge priority={ticket.priority} /> : null}
+              </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
-              {ticket.priority === "HIGH" || ticket.priority === "CRITICAL" ? (
-                <span className="hidden sm:block">
-                  <PriorityBadge priority={ticket.priority} />
-                </span>
-              ) : null}
+            <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
+              {urgent(ticket.priority) ? <PriorityBadge priority={ticket.priority} /> : null}
               <StatusBadge status={ticket.status} audience="staff" />
             </div>
             <ChevronRight className="size-4 shrink-0 text-ink-muted" aria-hidden />

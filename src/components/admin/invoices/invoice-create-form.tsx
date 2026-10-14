@@ -197,7 +197,7 @@ export function InvoiceCreateForm({
                   </span>
                 ))}
                 {recipient.addressLines.length === 0 ? (
-                  <span className="mt-1 block text-sm font-medium text-red-700">
+                  <span className="mt-1 block text-sm font-medium text-danger-ink">
                     Keine Anschrift hinterlegt – bitte unter „Rechnungsdaten ändern“ ergänzen.
                   </span>
                 ) : null}
@@ -280,7 +280,7 @@ export function InvoiceCreateForm({
                 </div>
               </div>
               {errors.periodStart || errors.periodEnd ? (
-                <p id={errors.periodEnd ? "invoice-periodEnd-error" : "invoice-periodStart-error"} className="text-sm font-medium text-red-700">
+                <p id={errors.periodEnd ? "invoice-periodEnd-error" : "invoice-periodStart-error"} className="text-sm font-medium text-danger-ink">
                   {errors.periodStart ?? errors.periodEnd}
                 </p>
               ) : (
@@ -318,7 +318,8 @@ export function InvoiceCreateForm({
             ) : null
           }
         />
-        <div className="relative overflow-x-auto">
+        {/* Auf dem Handy wird jede Position zur Karte */}
+        <div className="scroll-shadow-x table-stack relative overflow-x-auto">
           <table className="w-full min-w-[42rem] border-collapse text-left text-sm">
             <caption className="sr-only">Positionen der Rechnung</caption>
             <thead className="border-b border-line bg-mist text-xs text-ink-muted">
@@ -358,7 +359,7 @@ export function InvoiceCreateForm({
                   const on = selected.has(e.id);
                   return (
                     <tr key={e.id} className={cn("border-t border-line", on ? "" : "text-ink-muted")}>
-                      <td className="py-2.5 pl-5 align-top">
+                      <td className="py-2.5 pl-5 align-top max-sm:float-left! max-sm:pr-3!">
                         <input
                           type="checkbox"
                           checked={on}
@@ -367,14 +368,23 @@ export function InvoiceCreateForm({
                           className="mt-0.5 size-[1.125rem] cursor-pointer rounded border-line-strong accent-brand-600"
                         />
                       </td>
-                      <td className="px-3 py-2.5 align-top whitespace-nowrap">{e.date}</td>
-                      <td className={cn("px-3 py-2.5 align-top", on && "text-ink")}>
-                        <span className="break-words">{e.description}</span>
-                        <span className="block text-xs text-ink-muted">{e.kind}</span>
+                      <td data-label="Datum" className="px-3 py-2.5 align-top whitespace-nowrap">
+                        {e.date}
                       </td>
-                      <td className="px-3 py-2.5 text-right align-top whitespace-nowrap tabular-nums">{e.quantity}</td>
-                      <td className="px-3 py-2.5 text-right align-top whitespace-nowrap tabular-nums">{e.unitPrice}</td>
+                      <td className={cn("px-3 py-2.5 align-top", on && "text-ink")}>
+                        <div className="min-w-0">
+                          <span className="block break-words">{e.description}</span>
+                          <span className="block text-xs text-ink-muted">{e.kind}</span>
+                        </div>
+                      </td>
+                      <td data-label="Menge" className="px-3 py-2.5 text-right align-top whitespace-nowrap tabular-nums">
+                        {e.quantity}
+                      </td>
+                      <td data-label="Einzelpreis" className="px-3 py-2.5 text-right align-top whitespace-nowrap tabular-nums">
+                        {e.unitPrice}
+                      </td>
                       <td
+                        data-label="Gesamt"
                         className={cn(
                           "py-2.5 pr-5 pl-3 text-right align-top whitespace-nowrap tabular-nums",
                           on ? "font-semibold text-ink" : "line-through",
@@ -437,7 +447,7 @@ export function InvoiceCreateForm({
         <Alert tone="warning">Bitte zuerst die fehlenden Angaben oben ergänzen – dann lässt sich die Rechnung erstellen.</Alert>
       ) : null}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <p className="min-w-0 flex-1 text-sm text-ink-soft">
           Danach ist die Rechnung festgeschrieben: Nummer, Positionen und Beträge lassen sich nicht mehr ändern, nur stornieren.
         </p>

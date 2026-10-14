@@ -31,7 +31,8 @@ export function InvoiceLines({
 }) {
   return (
     <div>
-      <div className="relative overflow-x-auto">
+      {/* Auf dem Handy wird jede Position zur Karte */}
+      <div className="scroll-shadow-x table-stack relative overflow-x-auto">
         <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
           <caption className="sr-only">Positionen</caption>
           <thead className="border-b border-line bg-mist text-xs text-ink-muted">
@@ -56,20 +57,27 @@ export function InvoiceLines({
           <tbody>
             {lines.map((l) => (
               <tr key={l.id} className="border-b border-line last:border-0">
-                <td className="py-2.5 pl-5 align-top text-ink-muted tabular-nums">{l.position}</td>
-                <td className="px-3 py-2.5 align-top text-ink">
-                  <span className="break-words">{l.description}</span>
-                  <span className="block text-xs text-ink-muted">
-                    {[l.reference, l.performedAt ? formatDate(l.performedAt) : null].filter(Boolean).join(" · ")}
-                  </span>
+                <td data-label="Pos." className="py-2.5 pl-5 align-top text-ink-muted tabular-nums">
+                  {l.position}
                 </td>
-                <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
+                <td className="px-3 py-2.5 align-top text-ink">
+                  <div className="min-w-0">
+                    <span className="block break-words">{l.description}</span>
+                    <span className="block text-xs text-ink-muted">
+                      {[l.reference, l.performedAt ? formatDate(l.performedAt) : null].filter(Boolean).join(" · ")}
+                    </span>
+                  </div>
+                </td>
+                <td data-label="Menge" className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
                   {formatQuantity(l.quantityHundredths)} {l.unit}
                 </td>
-                <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
+                <td data-label="Einzelpreis" className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
                   {formatMoney(l.unitPriceCents)}
                 </td>
-                <td className="py-2.5 pr-5 pl-3 text-right align-top font-semibold whitespace-nowrap text-ink tabular-nums">
+                <td
+                  data-label="Gesamt"
+                  className="py-2.5 pr-5 pl-3 text-right align-top font-semibold whitespace-nowrap text-ink tabular-nums"
+                >
                   {formatMoney(l.totalCents)}
                 </td>
               </tr>

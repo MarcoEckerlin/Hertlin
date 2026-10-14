@@ -118,8 +118,9 @@ export function TimelineFollower({
           onClick={jumpToLatest}
           className={cn(
             // Mittig über dem Inhaltsbereich (ab lg steht links die Navigation mit 16rem)
-            "fixed left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold whitespace-nowrap text-white shadow-lift hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:left-[calc(50%_+_8rem)]",
-            jump === "up" ? "top-[4.5rem] lg:top-5" : "bottom-5",
+            "fixed left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold whitespace-nowrap text-on-ink shadow-lift transition-[opacity,translate] duration-200 starting:translate-y-1 starting:opacity-0 hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:left-[calc(50%_+_8rem)]",
+            // Auf dem Handy über dem Schnellzugriff am unteren Rand
+            jump === "up" ? "top-[4.5rem] lg:top-5" : "bottom-20 lg:bottom-5",
           )}
         >
           <Arrow className="size-4" aria-hidden />

@@ -90,7 +90,7 @@ function RecipientHeader({
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
           <span>{recipient.description}</span>
           {recipient.email ? (
-            <span className="inline-flex items-center gap-1 break-all">
+            <span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere]">
               <Mail className="size-3.5 shrink-0" aria-hidden />
               {recipient.email}
             </span>
@@ -104,7 +104,7 @@ function RecipientHeader({
           ) : null}
         </p>
         {unpriced > 0 ? (
-          <p className="mt-1 text-sm text-orange-800">
+          <p className="mt-1 text-sm text-caution-ink">
             {unpriced === 1 ? "1 Position hat" : `${unpriced} Positionen haben`} noch keinen Preis – bitte im Ticket nachtragen.
           </p>
         ) : null}

@@ -34,7 +34,7 @@ function isStaffRole(role: string | null | undefined): boolean {
 /**
  * Verlauf eines Tickets für die Verwaltung: alle Nachrichten inklusive interner Notizen
  * und das Ereignisprotokoll (Status, Priorität, Bearbeiter …) in zeitlicher Reihenfolge.
- * Kunde weiß (links), Antworten von Hertlin hellblau, interne Notizen gelb abgesetzt (rechts).
+ * Kunde als Karte (links), Antworten von Hertlin hellblau, interne Notizen gelb abgesetzt (rechts).
  * Kundennachrichten erscheinen auf Wunsch übersetzt (translations); das Original bleibt abrufbar.
  * Kommen live neue Einträge dazu, scrollt der Verlauf weich mit (TimelineFollower).
  */
@@ -136,14 +136,14 @@ function MessageItem({
       <article
         className={cn(
           "w-full max-w-3xl rounded-2xl border p-4 sm:p-5",
-          variant === "note" && "border-amber-300 bg-amber-50 sm:ml-10",
+          variant === "note" && "border-warning-line bg-warning-soft sm:ml-10",
           variant === "staff" && "border-brand-200 bg-brand-50 sm:ml-10",
-          variant === "customer" && "border-line bg-white shadow-card sm:mr-10",
+          variant === "customer" && "border-line bg-surface shadow-card sm:mr-10",
         )}
         aria-label={`${subtitle}: ${name}`}
       >
         {variant === "note" ? (
-          <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900 ring-1 ring-amber-300 ring-inset">
+          <p className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-surface/60 px-2.5 py-0.5 text-xs font-bold text-warning-ink ring-1 ring-warning-line ring-inset">
             <Lock className="size-3" aria-hidden />
             Interne Notiz – für Kunden unsichtbar
           </p>
@@ -153,8 +153,8 @@ function MessageItem({
             <span
               className={cn(
                 "grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold",
-                variant === "note" && "bg-amber-200 text-amber-900",
-                variant === "staff" && "bg-brand-400 text-ink",
+                variant === "note" && "bg-warning-line text-warning-ink",
+                variant === "staff" && "bg-primary text-on-primary",
                 variant === "customer" && "bg-brand-100 text-brand-800",
               )}
               aria-hidden
@@ -192,7 +192,7 @@ function MessageItem({
                   href={`/admin/dateien/${attachment.id}`}
                   target="_blank"
                   rel="noopener"
-                  className="inline-flex max-w-full items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line ring-inset hover:bg-brand-50 hover:ring-brand-300"
+                  className="inline-flex max-w-full items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line ring-inset hover:bg-brand-50 hover:ring-brand-300"
                 >
                   <Paperclip className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
                   <span className="truncate">{attachment.fileName}</span>
