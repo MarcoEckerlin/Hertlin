@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "next build",
-    "start": "NODE_ENV=production tsx server.ts",
+    "start": "cross-env NODE_ENV=production tsx server.ts",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
-    "create-admin": "tsx scripts/create-admin.ts"
+    "create-admin": "tsx scripts/create-admin.ts",
+    "setup": "node scripts/setup.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -23,6 +24,7 @@
     "@anthropic-ai/sdk": "^0.133.0",
     "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
     "@prisma/client": "^6.19.3",
+    "cross-env": "^10.1.0",
     "lucide-react": "^1.57.0",
     "next": "^16.4.0",
     "nodemailer": "^10.1.1",
