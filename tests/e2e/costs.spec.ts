@@ -16,9 +16,10 @@ import {
 } from "./fixtures";
 
 /**
- * Kernanforderung: Kosten werden im Ticket erfasst, sind aber nur für Administratoren sichtbar –
- * mit Übersicht pro Konto. Jede Position hat einen zufälligen, eindeutigen Betrag und ein eigenes
- * Leistungsdatum, damit sich die Prüfungen über den Zeitraumfilter nicht mit anderen Positionen mischen.
+ * Kernanforderung: Leistungen und Material werden im Ticket erfasst – von Administratoren und Technikern.
+ * Beträge (Preise, Summen, Kostenübersicht) sehen nur Administratoren; Kunden sehen gar nichts davon.
+ * Jede Position hat einen zufälligen, eindeutigen Betrag und ein eigenes Leistungsdatum, damit sich die
+ * Prüfungen über den Zeitraumfilter nicht mit anderen Positionen mischen.
  */
 
 const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
@@ -82,17 +83,20 @@ async function createTicketWithCost(browser: Browser): Promise<CostCase> {
   return { ticketId, subject, ...c };
 }
 
+/** Neue (freie) Position im Ticket, ohne sie in den Katalog aufzunehmen. */
 async function addCost(admin: Page, ticketId: number, c: Omit<CostCase, "ticketId" | "subject">) {
   await admin.goto(main(`/admin/tickets/${ticketId}`));
   const section = admin.locator("#kosten");
-  await expect(section.getByRole("heading", { name: "Kosten" })).toBeVisible();
-  await section.getByLabel("Art").selectOption({ label: "Arbeitszeit" });
-  await section.getByLabel("Beschreibung").fill(c.description);
+  await expect(section.getByRole("heading", { name: "Leistungen und Material" })).toBeVisible();
+  await section.getByRole("radio", { name: "Neue Position" }).check();
+  await section.getByLabel("Bezeichnung").fill(c.description);
+  await section.getByLabel("Art", { exact: true }).selectOption({ label: "Arbeitszeit" });
   await section.getByLabel("Datum").fill(c.date);
   await section.getByLabel("Menge").fill(c.quantityInput);
   await section.getByLabel("Einzelpreis (€)").fill(c.priceInput);
   // Vorschau rechnet mit deutschen Zahlen
   await expect(section.getByLabel("Gesamtbetrag")).toHaveText(c.totalMoney);
+  await section.getByLabel("In den Katalog aufnehmen").uncheck();
   await section.getByRole("button", { name: "Position hinzufügen" }).click();
   await expect(section.getByText(`Arbeitszeit über ${c.totalMoney} hinzugefügt.`)).toBeVisible();
   await expect(section.getByRole("row").filter({ hasText: c.description })).toBeVisible();
@@ -103,7 +107,7 @@ async function htmlOf(page: Page, url: string): Promise<string> {
   return response.text();
 }
 
-test.describe("Kosten – nur für Administratoren", () => {
+test.describe("Leistungen und Kosten im Ticket", () => {
   let shared: CostCase;
 
   test.beforeAll(async ({ browser }) => {
@@ -114,23 +118,26 @@ test.describe("Kosten – nur für Administratoren", () => {
     await loginStaff(page, ACCOUNTS.admin.email);
     await page.goto(main(`/admin/tickets/${shared.ticketId}`));
     const section = page.locator("#kosten");
-    await expect(section.getByText("Nur für Administratoren sichtbar")).toBeVisible();
+    await expect(section.getByText("Preise und Summen sehen nur Administratoren")).toBeVisible();
     const row = section.getByRole("row").filter({ hasText: shared.description });
     await expect(row).toContainText("1,25 Std.");
-    await expect(row).toContainText(`${shared.priceText} €`);
+    await expect(row).toContainText(`erbracht von ${ACCOUNTS.admin.name}`);
+    await expect(row).toContainText(`${shared.priceText} €`);
     await expect(row).toContainText(shared.totalMoney);
 
     // Zweite Position: Tausenderpunkt und Komma. Anderes Leistungsdatum, damit die Prüfungen der Übersicht
     // (gefiltert auf das Datum der ersten Position) davon unberührt bleiben.
     const second = randomCase();
     const secondDate = second.date === shared.date ? "2023-06-15" : second.date;
-    await section.getByLabel("Art").selectOption({ label: "Material" });
-    await section.getByLabel("Beschreibung").fill(second.description);
+    await section.getByRole("radio", { name: "Neue Position" }).check();
+    await section.getByLabel("Bezeichnung").fill(second.description);
+    await section.getByLabel("Art", { exact: true }).selectOption({ label: "Material" });
     await section.getByLabel("Datum").fill(secondDate);
     await section.getByLabel("Menge").fill("2");
     await section.getByLabel("Einheit").selectOption("Stk.");
     await section.getByLabel("Einzelpreis (€)").fill("1.234,5");
     await expect(section.getByLabel("Gesamtbetrag")).toHaveText(euro.format(2469));
+    await section.getByLabel("In den Katalog aufnehmen").uncheck();
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
     await expect(section.getByText(`Material über ${euro.format(2469)} hinzugefügt.`)).toBeVisible();
 
@@ -145,28 +152,67 @@ test.describe("Kosten – nur für Administratoren", () => {
     await expect(sumRow).toContainText(euro.format(totalCents / 100));
   });
 
-  test("Techniker sieht im Ticket weder Kostenabschnitt noch Beträge", async ({ page }) => {
+  test("Techniker sieht Positionen ohne Beträge und erfasst selbst aus dem Katalog", async ({ page, browser }) => {
     await loginStaff(page, ACCOUNTS.tech.email);
     await page.goto(main(`/admin/tickets/${shared.ticketId}`));
     await expect(page.getByRole("heading", { level: 1, name: shared.subject })).toBeVisible();
-    await expect(page.locator("#kosten")).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Kosten" })).toHaveCount(0);
+    const section = page.locator("#kosten");
+    await expect(section.getByRole("heading", { name: "Leistungen und Material" })).toBeVisible();
+    await expect(section.getByText("die Preise ergänzt die Verwaltung")).toBeVisible();
 
-    // Auch nicht im ausgelieferten HTML (inkl. Daten für React)
+    // Position des Administrators: sichtbar mit Menge und wer sie erbracht hat – ohne Preis und ohne Bearbeiten
+    const adminRow = section.getByRole("row").filter({ hasText: shared.description });
+    await expect(adminRow).toContainText("1,25 Std.");
+    await expect(adminRow).toContainText(`erbracht von ${ACCOUNTS.admin.name}`);
+    await expect(adminRow.getByRole("link", { name: /Bearbeiten/ })).toHaveCount(0);
+    await expect(section.getByRole("columnheader", { name: "Einzelpreis" })).toHaveCount(0);
+    await expect(section.getByLabel("Gesamtbetrag")).toHaveCount(0);
+
+    // Keine Beträge im ausgelieferten HTML (inkl. Daten für React) – auch keine Katalogpreise
     const html = await htmlOf(page, main(`/admin/tickets/${shared.ticketId}`));
     expect(html).toContain(shared.subject);
-    for (const secret of [shared.description, shared.totalText, shared.priceText, shared.totalCsv]) {
+    expect(html).toContain(shared.description);
+    for (const secret of [shared.totalText, shared.priceText, shared.totalCsv, "95,00", "35,00", "unitPriceCents", "totalCents"]) {
       expect(html, `HTML enthält ${secret}`).not.toContain(secret);
     }
-    expect(await page.content()).not.toContain(shared.totalText);
 
-    // Auch Ticketliste und Übersicht nennen keine Beträge
+    // Aus dem Katalog erfassen: Der Preis kommt auf dem Server dazu, die Rückmeldung nennt keinen Betrag
+    await section.getByLabel("Katalog durchsuchen").fill("anfahrt");
+    await section.getByRole("radio", { name: "Anfahrt Stadtgebiet" }).check();
+    await expect(section.getByLabel("Einzelpreis (€)")).toHaveCount(0);
+    await section.getByLabel("Notiz").fill("zweiter Termin");
+    await section.getByRole("button", { name: "Position hinzufügen" }).click();
+    await expect(section.getByText("Hinzugefügt: „Anfahrt Stadtgebiet – zweiter Termin“ (1 Pauschale).")).toBeVisible();
+    const ownRow = section.getByRole("row").filter({ hasText: "Anfahrt Stadtgebiet – zweiter Termin" });
+    await expect(ownRow).toContainText(`erbracht von ${ACCOUNTS.tech.name}`);
+    await expect(ownRow).not.toContainText("€");
+
+    // Eigene Position bearbeiten – ohne Preisfeld
+    await ownRow.getByRole("link", { name: /Bearbeiten/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Position bearbeiten" })).toBeVisible();
+    await expect(page.getByLabel("Einzelpreis (€)")).toHaveCount(0);
+    await page.getByLabel("Menge").fill("2");
+    await page.getByRole("button", { name: "Änderungen speichern" }).click();
+    await expect(page.getByText("Die Position ist gespeichert.")).toBeVisible();
+    await expect(page.locator("#kosten").getByRole("row").filter({ hasText: "zweiter Termin" })).toContainText("2 Pauschale");
+
+    // Der Administrator sieht die Position mit Katalogpreis
+    const adminContext = await newContext(browser);
+    const admin = await adminContext.newPage();
+    await loginStaff(admin, ACCOUNTS.admin.email);
+    await admin.goto(main(`/admin/tickets/${shared.ticketId}`));
+    const techRowForAdmin = admin.locator("#kosten").getByRole("row").filter({ hasText: "zweiter Termin" });
+    await expect(techRowForAdmin).toContainText(euro.format(35));
+    await expect(techRowForAdmin).toContainText(euro.format(70));
+    await adminContext.close();
+
+    // Ticketliste und Übersicht nennen keine Beträge
     for (const listUrl of [main("/admin/tickets"), main("/admin")]) {
       const listHtml = await htmlOf(page, listUrl);
       expect(listHtml, `${listUrl} enthält Betrag`).not.toContain(shared.totalText);
     }
 
-    // Kein Menüpunkt, Kostenseiten leiten um, Export und Konto-Ansicht sind gesperrt
+    // Kein Menüpunkt, Kostenseiten und Katalog leiten um, Export und Konto-Ansicht sind gesperrt
     await expect(page.getByRole("navigation", { name: "Hauptnavigation" }).first().getByRole("link", { name: /Kosten/ })).toHaveCount(0);
     await page.goto(main("/admin/kosten"));
     await expect(page).toHaveURL(main("/admin?hinweis=kein-zugriff"));
@@ -176,6 +222,31 @@ test.describe("Kosten – nur für Administratoren", () => {
     expect(await exportResponse.text()).not.toContain(shared.description);
     await page.goto(main("/admin/kosten/privat"));
     await expect(page).toHaveURL(main("/admin?hinweis=kein-zugriff"));
+    await page.goto(main("/admin/kosten/katalog"));
+    await expect(page).toHaveURL(main("/admin?hinweis=kein-zugriff"));
+  });
+
+  test("Techniker kann Positionen von Kollegen nicht ändern", async ({ page, browser }) => {
+    // Adresse der Admin-Position zum Bearbeiten (nur Administratoren sehen den Link)
+    const adminContext = await newContext(browser);
+    const admin = await adminContext.newPage();
+    await loginStaff(admin, ACCOUNTS.admin.email);
+    await admin.goto(main(`/admin/tickets/${shared.ticketId}`));
+    const href = await admin
+      .locator("#kosten")
+      .getByRole("row")
+      .filter({ hasText: shared.description })
+      .getByRole("link", { name: /Bearbeiten/ })
+      .getAttribute("href");
+    await adminContext.close();
+    expect(href).toMatch(/\/kosten\//);
+
+    await loginStaff(page, ACCOUNTS.tech.email);
+    await page.goto(main(href!));
+    await expect(page.getByText("Diese Position hat jemand anderes erfasst.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Änderungen speichern" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Position löschen" })).toHaveCount(0);
+    expect(await htmlOf(page, main(href!))).not.toContain(shared.priceText);
   });
 
   test("Kunde sieht im Portal keine Kosten", async ({ page }) => {
@@ -186,7 +257,7 @@ test.describe("Kosten – nur für Administratoren", () => {
     expect(raw.status).toBe(200);
     const html = Buffer.from(raw.base64, "base64").toString("utf8");
     expect(html).toContain(shared.subject);
-    for (const secret of [shared.description, shared.totalText, shared.priceText, shared.totalCsv]) {
+    for (const secret of [shared.description, shared.totalText, shared.priceText, shared.totalCsv, "zweiter Termin", "Leistungen und Material"]) {
       expect(html, `HTML enthält ${secret}`).not.toContain(secret);
     }
 

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ChevronRight, Plus, TriangleAlert } from "lucide-react";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth";
 import { OPEN_STATUSES } from "@/lib/constants";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatTicketNumber } from "@/lib/format";
+import { canSeeCostAmounts } from "@/lib/permissions";
 import { startOfBerlinDay } from "@/lib/phone";
 import { getSiteSettings, unfinishedSettings } from "@/lib/settings";
 import { Alert } from "@/components/ui/alert";
@@ -87,18 +88,23 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     db.phoneCall.count({ take: 1 }),
   ]);
 
-  // Kosten nur für Administratoren abfragen und anzeigen
-  const unbilled =
-    user.role === "ADMIN"
-      ? await Promise.all([
-          db.costEntry.aggregate({ where: { billed: false }, _sum: { totalCents: true }, _count: { _all: true } }),
-          db.costEntry.groupBy({ by: ["ticketId"], where: { billed: false } }),
-        ]).then(([sum, tickets]) => ({
-          cents: sum._sum.totalCents ?? 0,
-          positions: sum._count._all,
-          tickets: tickets.length,
-        }))
-      : null;
+  // Kosten nur für Administratoren abfragen und anzeigen. Positionen ohne Preis zählen erst mit Preis.
+  const showAmounts = canSeeCostAmounts(user.role);
+  const unbilled = showAmounts
+    ? await Promise.all([
+        db.costEntry.aggregate({
+          where: { billed: false, needsPrice: false },
+          _sum: { totalCents: true },
+          _count: { _all: true },
+        }),
+        db.costEntry.groupBy({ by: ["ticketId"], where: { billed: false, needsPrice: false } }),
+      ]).then(([sum, tickets]) => ({
+        cents: sum._sum.totalCents ?? 0,
+        positions: sum._count._all,
+        tickets: tickets.length,
+      }))
+    : null;
+  const missingPrices = showAmounts ? await loadMissingPrices() : null;
 
   // Platzhalter in den Firmendaten erscheinen öffentlich (Kopfzeile, Impressum, E-Mails). Ändern können sie nur Administratoren.
   const unfinished = user.role === "ADMIN" ? unfinishedSettings(await getSiteSettings()) : [];
@@ -216,6 +222,46 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
             <InquiryList inquiries={inquiries} />
           </ListCard>
 
+          {missingPrices && missingPrices.positions > 0 ? (
+            <section
+              aria-labelledby="karte-preis-fehlt"
+              className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-card"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-4 sm:px-6">
+                <h2 id="karte-preis-fehlt" className="flex items-center gap-2 text-base font-bold text-amber-900">
+                  <TriangleAlert className="size-4 shrink-0" aria-hidden />
+                  Positionen ohne Preis ({missingPrices.positions})
+                </h2>
+              </div>
+              <p className="px-5 pt-4 text-sm text-ink-muted sm:px-6">
+                Im Ticket ohne Katalogpreis erfasst. Erst mit Preis zählen sie in den Summen und lassen sich abrechnen.
+              </p>
+              <ul className="divide-y divide-line px-2 py-2 sm:px-3">
+                {missingPrices.tickets.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      href={`/admin/tickets/${t.id}#kosten`}
+                      className="group flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-brand-50"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-ink group-hover:underline">{t.subject}</span>
+                        <span className="block text-xs text-ink-muted">
+                          {formatTicketNumber(t.id)} · {plural(t.count, "Position", "Positionen")}
+                        </span>
+                      </span>
+                      <ChevronRight className="size-4 shrink-0 text-ink-muted" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {missingPrices.moreTickets > 0 ? (
+                <p className="border-t border-line px-5 py-3 text-xs text-ink-muted sm:px-6">
+                  Dazu {plural(missingPrices.moreTickets, "weiteres Ticket", "weitere Tickets")}.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+
           {unbilled ? (
             <Card>
               <CardHeader title="Nicht abgerechnete Kosten" description="Nur für Administratoren sichtbar." />
@@ -236,4 +282,31 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       </div>
     </>
   );
+}
+
+const MISSING_PRICE_LIMIT = 6;
+
+/** Positionen ohne Preis (nicht auf einer Rechnung), gruppiert nach Ticket – nur für Administratoren. */
+async function loadMissingPrices() {
+  const groups = await db.costEntry.groupBy({
+    by: ["ticketId"],
+    where: { needsPrice: true, invoiceId: null },
+    _count: { _all: true },
+    _max: { createdAt: true },
+  });
+  const positions = groups.reduce((sum, g) => sum + g._count._all, 0);
+  // Zuletzt erfasste zuerst
+  const shown = [...groups]
+    .sort((a, b) => (b._max.createdAt?.getTime() ?? 0) - (a._max.createdAt?.getTime() ?? 0))
+    .slice(0, MISSING_PRICE_LIMIT);
+  const subjects = await db.ticket.findMany({
+    where: { id: { in: shown.map((g) => g.ticketId) } },
+    select: { id: true, subject: true },
+  });
+  const subjectOf = new Map(subjects.map((t) => [t.id, t.subject]));
+  return {
+    positions,
+    tickets: shown.map((g) => ({ id: g.ticketId, subject: subjectOf.get(g.ticketId) ?? "", count: g._count._all })),
+    moreTickets: Math.max(0, groups.length - shown.length),
+  };
 }

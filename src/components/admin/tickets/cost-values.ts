@@ -1,12 +1,27 @@
-import type { CostKind } from "@/lib/constants";
 import { centsToInput, toDateInput } from "@/lib/format";
+import { quantityToInput } from "@/lib/cost-catalog";
 
 /**
- * Werte für das Kostenformular (Server und Browser). Nur auf Seiten nach requireAdmin() verwenden.
+ * Werte für die Formulare „Leistungen und Material“ (Server und Browser).
+ * Preise nur füllen, wenn die Seite für einen Administrator gerendert wird.
  */
 
-/** Vorschlagswerte je Art (aus src/config/pricing.ts, vom Server übergeben). */
-export type CostDefaults = Record<CostKind, { unit: string; unitPriceCents: number | null; quantityHundredths: number }>;
+/** Katalogeintrag für „Aus dem Katalog“. unitPriceCents ist nur für Administratoren gesetzt. */
+export type PresetOption = {
+  id: string;
+  kind: string;
+  name: string;
+  unit: string;
+  defaultQuantityHundredths: number;
+  usageCount: number;
+  /** ISO-Zeitpunkt */
+  lastUsedAt: string | null;
+  sortOrder: number;
+  unitPriceCents?: number | null;
+};
+
+/** Mitarbeiter für „Erbracht von“ */
+export type StaffChoice = { id: string; name: string; active: boolean };
 
 export type CostFormValues = {
   kind: string;
@@ -16,39 +31,28 @@ export type CostFormValues = {
   /** deutsche Schreibweise, z. B. "1,25" */
   quantity: string;
   unit: string;
-  /** deutsche Schreibweise, z. B. "95,00" */
+  /** deutsche Schreibweise, z. B. "95,00"; leer = Preis fehlt (nur Administratoren) */
   unitPrice: string;
+  performedById: string;
   billed: boolean;
 };
 
-/** Menge für das Eingabefeld: 125 -> "1,25" (ohne Tausenderpunkte, damit sie wieder eingelesen werden kann) */
-function quantityToInput(hundredths: number): string {
-  return (hundredths / 100).toString().replace(".", ",");
+/** Heute als Vorgabe für das Leistungsdatum */
+export function todayInput(): string {
+  return toDateInput();
 }
 
-/** Startwerte für eine neue Position der gewählten Art (Datum: heute). */
-export function newCostValues(defaults: CostDefaults, kind: CostKind = "LABOR"): CostFormValues {
-  const d = defaults[kind];
-  return {
-    kind,
-    description: "",
-    performedAt: toDateInput(),
-    quantity: quantityToInput(d.quantityHundredths),
-    unit: d.unit,
-    unitPrice: d.unitPriceCents === null ? "" : centsToInput(d.unitPriceCents),
-    billed: false,
-  };
-}
-
-/** Formularwerte aus einer gespeicherten Position. */
+/** Formularwerte aus einer gespeicherten Position. Ohne Preisangaben (Techniker) bleibt unitPrice leer. */
 export function costValuesFromEntry(entry: {
   kind: string;
   description: string;
   performedAt: Date;
   quantityHundredths: number;
   unit: string;
-  unitPriceCents: number;
+  performedById: string | null;
   billed: boolean;
+  unitPriceCents?: number;
+  needsPrice?: boolean;
 }): CostFormValues {
   return {
     kind: entry.kind,
@@ -56,7 +60,8 @@ export function costValuesFromEntry(entry: {
     performedAt: toDateInput(entry.performedAt),
     quantity: quantityToInput(entry.quantityHundredths),
     unit: entry.unit,
-    unitPrice: centsToInput(entry.unitPriceCents),
+    unitPrice: entry.unitPriceCents === undefined || entry.needsPrice ? "" : centsToInput(entry.unitPriceCents),
+    performedById: entry.performedById ?? "",
     billed: entry.billed,
   };
 }

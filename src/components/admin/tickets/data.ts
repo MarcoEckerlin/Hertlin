@@ -253,6 +253,8 @@ export const staffTicketDetailSelect = {
   companyId: true,
   createdById: true,
   assigneeId: true,
+  locationId: true,
+  location: { select: { id: true, name: true, city: true, active: true } },
   contactName: true,
   contactEmail: true,
   contactPhone: true,
@@ -355,32 +357,123 @@ export function parseTicketIdParam(value: unknown): number | null {
 }
 
 /* ------------------------------------------------------------------ */
-/* Kosten (NUR Administratoren)                                        */
+/* Leistungen und Material (Kostenpositionen)                          */
 /* ------------------------------------------------------------------ */
 
-export const costEntrySelect = {
+/**
+ * Was alle Mitarbeiter von einer Position sehen: Datum, Art, Beschreibung, Menge, wer sie erbracht hat
+ * und ob sie abgerechnet ist. KEINE Preise, Summen oder Rechnungsdaten – die stehen nur in costEntrySelect.
+ */
+export const staffCostEntrySelect = {
   id: true,
   ticketId: true,
   kind: true,
   description: true,
   quantityHundredths: true,
   unit: true,
-  unitPriceCents: true,
-  totalCents: true,
   performedAt: true,
   billed: true,
-  billedAt: true,
+  invoiceId: true,
+  presetId: true,
   createdAt: true,
-  createdBy: { select: { name: true } },
+  createdById: true,
+  createdBy: { select: { id: true, name: true } },
+  performedBy: { select: { id: true, name: true } },
+} satisfies Prisma.CostEntrySelect;
+
+export type StaffCostEntryRow = Prisma.CostEntryGetPayload<{ select: typeof staffCostEntrySelect }>;
+
+/** Wie staffCostEntrySelect, zusätzlich Preise und Abrechnung – NUR für Administratoren. */
+export const costEntrySelect = {
+  ...staffCostEntrySelect,
+  unitPriceCents: true,
+  totalCents: true,
+  needsPrice: true,
+  billedAt: true,
+  invoice: { select: { id: true, number: true } },
+  preset: { select: { id: true, name: true, unit: true, unitPriceCents: true } },
 } satisfies Prisma.CostEntrySelect;
 
 export type CostEntryRow = Prisma.CostEntryGetPayload<{ select: typeof costEntrySelect }>;
 
-/** Kostenpositionen eines Tickets – nur nach requireAdmin() bzw. Rollenprüfung aufrufen. */
+const costOrder = [{ performedAt: "asc" as const }, { createdAt: "asc" as const }];
+
+/** Katalogeintrag für „Aus dem Katalog“ (Typ liegt bei den Formularwerten, damit ihn auch der Browser kennt) */
+type PresetOption = import("@/components/admin/tickets/cost-values").PresetOption;
+
+/** Positionen eines Tickets ohne Beträge – für alle Mitarbeiter (canRecordCosts). */
+export async function loadTicketCostsForStaff(ticketId: number): Promise<StaffCostEntryRow[]> {
+  return db.costEntry.findMany({ where: { ticketId }, orderBy: costOrder, select: staffCostEntrySelect });
+}
+
+/** Positionen eines Tickets mit Beträgen – nur nach requireAdmin() bzw. canSeeCostAmounts() aufrufen. */
 export async function loadTicketCosts(ticketId: number): Promise<CostEntryRow[]> {
-  return db.costEntry.findMany({
-    where: { ticketId },
-    orderBy: [{ performedAt: "asc" }, { createdAt: "asc" }],
-    select: costEntrySelect,
+  return db.costEntry.findMany({ where: { ticketId }, orderBy: costOrder, select: costEntrySelect });
+}
+
+/**
+ * Aktive Katalogeinträge für „Aus dem Katalog“. Für Techniker wird der Preis gar nicht erst geladen,
+ * damit er auch nicht in den Daten der Seite landet.
+ */
+export async function loadPresetOptions(opts: { withPrices: boolean }): Promise<PresetOption[]> {
+  const presets = await db.costPreset.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      kind: true,
+      name: true,
+      unit: true,
+      defaultQuantityHundredths: true,
+      usageCount: true,
+      lastUsedAt: true,
+      sortOrder: true,
+      unitPriceCents: opts.withPrices,
+    },
   });
+  return presets.map((p) => {
+    const option: PresetOption = {
+      id: p.id,
+      kind: p.kind,
+      name: p.name,
+      unit: p.unit,
+      defaultQuantityHundredths: p.defaultQuantityHundredths,
+      usageCount: p.usageCount,
+      lastUsedAt: p.lastUsedAt ? p.lastUsedAt.toISOString() : null,
+      sortOrder: p.sortOrder,
+    };
+    if (opts.withPrices) option.unitPriceCents = p.unitPriceCents ?? null;
+    return option;
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Standort neuer Tickets                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Vorgabe für den Standort eines neuen Tickets:
+ * Firma → deren Standort, bei einer Unterkunde ohne eigenen Standort der des Firmenkunden;
+ * Privatkunde (companyId null) → Hauptsitz. Nur aktive Standorte, sonst null.
+ */
+export async function defaultTicketLocationId(companyId: string | null): Promise<string | null> {
+  if (!companyId) {
+    const main = await db.location.findFirst({
+      where: { isMain: true, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true },
+    });
+    return main?.id ?? null;
+  }
+  const company = await db.company.findUnique({
+    where: { id: companyId },
+    select: {
+      location: { select: { id: true, active: true } },
+      parent: { select: { location: { select: { id: true, active: true } } } },
+    },
+  });
+  if (!company) return null;
+  if (company.location?.active) return company.location.id;
+  if (company.parent?.location?.active) return company.parent.location.id;
+  return null;
 }
