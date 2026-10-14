@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
-import { site } from "@/config/site";
+import { getSiteSettings } from "@/lib/settings";
 import { db } from "@/lib/db";
 import { generateToken } from "@/lib/crypto";
 import { mainUrl } from "@/lib/hosts";
@@ -49,7 +49,10 @@ const HOUR = 60 * 60 * 1000;
 /** Gleiche Form wie in src/app/(site)/status/[token]/guest-ticket.ts */
 const GUEST_TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,100}$/;
 
-const SAVE_FAILED = `Das hat leider nicht geklappt. Bitte versuchen Sie es in ein paar Minuten noch einmal oder rufen Sie uns an: ${site.phone}.`;
+async function saveFailed(): Promise<string> {
+  const { phone } = await getSiteSettings();
+  return `Das hat leider nicht geklappt. Bitte versuchen Sie es in ein paar Minuten noch einmal oder rufen Sie uns an: ${phone}.`;
+}
 
 /** Textfeld aus FormData; fehlende Felder werden zu "" (ergibt verständliche Pflichtfeld-Meldungen). */
 function text(formData: FormData, key: string): string {
@@ -69,7 +72,8 @@ async function rateLimitMessage(scope: string, limit: number, windowMs: number):
   if (result.ok) return null;
   const minutes = Math.max(1, Math.ceil(result.retryAfterMs / 60_000));
   const wait = minutes === 1 ? "einer Minute" : `${minutes} Minuten`;
-  return `Von Ihrem Anschluss kamen gerade sehr viele Nachrichten. Bitte versuchen Sie es in ${wait} noch einmal oder rufen Sie uns an: ${site.phone}.`;
+  const { phone } = await getSiteSettings();
+  return `Von Ihrem Anschluss kamen gerade sehr viele Nachrichten. Bitte versuchen Sie es in ${wait} noch einmal oder rufen Sie uns an: ${phone}.`;
 }
 
 /** Fehler aus Zod und eigenen Prüfungen zu einem Formularzustand zusammenführen. */
@@ -201,7 +205,7 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
     });
   } catch (error) {
     console.error("[kontakt] Anfrage konnte nicht gespeichert werden:", error);
-    return errorState(SAVE_FAILED, formData);
+    return errorState(await saveFailed(), formData);
   }
 
   // Persönlicher Chat-Link zur Anfrage. Klappt das nicht, ist die Anfrage trotzdem gespeichert.
@@ -350,17 +354,17 @@ export async function submitPrivateTicketAction(_prev: FormState, formData: Form
     ticketId = ticket.id;
   } catch (error) {
     console.error("[privatkunden] Ticket konnte nicht angelegt werden:", error);
-    return errorState(`${SAVE_FAILED}${filesNote(files)}`, formData);
+    return errorState(`${await saveFailed()}${filesNote(files)}`, formData);
   }
 
   try {
-    await createTicketMessage({ ticketId, body, authorName: data.name, fromStaff: false, files });
+    await createTicketMessage({ ticketId, body, authorName: data.name, fromStaff: false, files, initial: true });
     await recordTicketEvent(ticketId, "CREATED", null);
   } catch (error) {
     console.error("[privatkunden] Nachricht zum Ticket konnte nicht gespeichert werden:", error);
     // Kein halbes Ticket ohne Beschreibung zurücklassen
     await db.ticket.delete({ where: { id: ticketId } }).catch(() => undefined);
-    return errorState(`${SAVE_FAILED}${filesNote(files)}`, formData);
+    return errorState(`${await saveFailed()}${filesNote(files)}`, formData);
   }
 
   after(async () => {
@@ -416,12 +420,12 @@ export async function replyAsGuestAction(_prev: FormState, formData: FormData): 
   let ticket;
   try {
     ticket = await db.ticket.findFirst({
-      where: { guestToken: token, source: "PRIVATE_FORM", companyId: null },
+      where: { guestToken: token, companyId: null },
       select: { id: true, subject: true, type: true, category: true, priority: true, status: true, contactName: true },
     });
   } catch (error) {
     console.error("[status] Ticket zum Status-Link konnte nicht geladen werden:", error);
-    return errorState(SAVE_FAILED, formData);
+    return errorState(await saveFailed(), formData);
   }
   if (!ticket) {
     return errorState(INVALID_STATUS_LINK);
@@ -456,7 +460,7 @@ export async function replyAsGuestAction(_prev: FormState, formData: FormData): 
     if (nextStatus !== ticket.status) await setTicketStatus(ticket.id, nextStatus, null);
   } catch (error) {
     console.error("[status] Antwort konnte nicht gespeichert werden:", error);
-    return errorState(`${SAVE_FAILED}${filesNote(files)}`, formData);
+    return errorState(`${await saveFailed()}${filesNote(files)}`, formData);
   }
 
   after(() =>
@@ -503,7 +507,7 @@ export async function guestTicketLanguageAction(_prev: FormState, formData: Form
 
   try {
     const ticket = await db.ticket.findFirst({
-      where: { guestToken: token, source: "PRIVATE_FORM", companyId: null },
+      where: { guestToken: token, companyId: null },
       select: { id: true, contactLanguage: true, updatedAt: true },
     });
     if (!ticket) return errorState(INVALID_STATUS_LINK);
@@ -515,7 +519,7 @@ export async function guestTicketLanguageAction(_prev: FormState, formData: Form
     }
   } catch (error) {
     console.error("[status] Sprache konnte nicht gespeichert werden:", error);
-    return errorState(SAVE_FAILED);
+    return errorState(await saveFailed());
   }
 
   revalidatePath(`/status/${token}`);
@@ -567,7 +571,6 @@ export async function resendStatusLinkAction(_prev: FormState, formData: FormDat
       });
       if (
         ticket &&
-        ticket.source === "PRIVATE_FORM" &&
         ticket.companyId === null &&
         ticket.guestToken &&
         ticket.contactEmail &&
@@ -587,7 +590,7 @@ export async function resendStatusLinkAction(_prev: FormState, formData: FormDat
       }
     } catch (error) {
       console.error("[status] Status-Link konnte nicht gesucht werden:", error);
-      return errorState(SAVE_FAILED, formData);
+      return errorState(await saveFailed(), formData);
     }
   }
 

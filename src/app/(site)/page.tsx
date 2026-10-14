@@ -7,7 +7,6 @@ import { replacePlaceholders } from "@/cms/placeholders";
 import { buildBlockContext, PageBlocks, type SearchParams } from "@/cms/render";
 
 export async function generateMetadata(): Promise<Metadata> {
-  await connection();
   const [page, settings] = await Promise.all([getPublishedPage(""), getSiteSettings()]);
   const ctx = buildBlockContext(settings);
   return {

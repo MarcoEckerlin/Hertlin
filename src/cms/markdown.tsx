@@ -97,7 +97,7 @@ export function parseMarkdownBlocks(source: string): MdBlock[] {
   return blocks;
 }
 
-const ESCAPABLE = /[\\*[\]()#_`{}-]/;
+const ESCAPABLE = /[\\*[\]()#_`-]/;
 
 /** Index der schließenden Klammer zu "(" an Position open (verschachtelte Klammern werden mitgezählt). */
 function matchingParen(s: string, open: number): number {
@@ -265,7 +265,11 @@ function renderText(value: string, key: string, inLink: boolean, opts: RenderOpt
   const parts = splitPlaceholders(value, opts.ctx);
   return parts.map((part, i) =>
     part.href && !inLink ? (
-      <a key={`${key}-${i}`} href={part.href} className={cn(linkClasses[opts.colors], "whitespace-nowrap")}>
+      <a
+        key={`${key}-${i}`}
+        href={part.href}
+        className={cn(linkClasses[opts.colors], part.href.startsWith("tel:") ? "whitespace-nowrap" : "break-words")}
+      >
         {part.text}
       </a>
     ) : (
@@ -322,31 +326,45 @@ export function InlineMarkdown({
   return <>{renderInline(parseInline(text.replace(/\r\n?/g, "\n")), { ctx, colors }, "i")}</>;
 }
 
-const variantStyles: Record<
-  MarkdownVariant,
-  { root: string; p: string; h2: string; h3: string; list: string; afterHeading: string }
-> = {
+type VariantStyle = {
+  root: string;
+  p: string;
+  h2: string;
+  h2Space: string;
+  h3: string;
+  h3Space: string;
+  list: string;
+  afterHeading: string;
+};
+
+const variantStyles: Record<MarkdownVariant, VariantStyle> = {
   prose: {
     root: "text-base leading-[1.75] sm:text-[1.0625rem]",
     p: "mt-4",
-    h2: "mt-10 text-xl font-bold tracking-tight sm:text-[1.375rem]",
-    h3: "mt-7 text-lg font-bold",
+    h2: "text-xl font-bold tracking-tight sm:text-[1.375rem]",
+    h2Space: "mt-10",
+    h3: "text-lg font-bold",
+    h3Space: "mt-7",
     list: "mt-4",
     afterHeading: "mt-2",
   },
   lead: {
     root: "text-lg leading-relaxed",
     p: "mt-3",
-    h2: "mt-7 text-xl font-bold tracking-tight",
-    h3: "mt-6 text-base font-bold",
+    h2: "text-xl font-bold tracking-tight",
+    h2Space: "mt-7",
+    h3: "text-base font-bold",
+    h3Space: "mt-6",
     list: "mt-4",
     afterHeading: "mt-2",
   },
   compact: {
     root: "text-[0.9375rem] leading-relaxed",
     p: "mt-3",
-    h2: "mt-6 text-base font-bold",
-    h3: "mt-5 text-sm font-bold",
+    h2: "text-base font-bold",
+    h2Space: "mt-6",
+    h3: "text-sm font-bold",
+    h3Space: "mt-5",
     list: "mt-3",
     afterHeading: "mt-2",
   },
@@ -360,8 +378,9 @@ const textColor: Record<MarkdownColors, { root: string; heading: string }> = {
 
 type HeadingTag = "h2" | "h3" | "h4" | "h5" | "h6";
 
-function headingTag(level: 2 | 3, base: 2 | 3 | 4): HeadingTag {
-  const n = Math.min(6, base + (level - 2));
+/** Semantische Ebene: die oberste Überschrift im Text bekommt headingBase, tiefere folgen ohne Lücke. */
+function headingTag(level: 2 | 3, topLevel: 2 | 3, base: 2 | 3 | 4): HeadingTag {
+  const n = Math.min(6, base + (level - topLevel));
   return `h${n}` as HeadingTag;
 }
 
@@ -372,7 +391,10 @@ export type MarkdownProps = {
   colors?: MarkdownColors;
   /** "bullet" = Aufzählungspunkte, "check" = Häkchen wie in den Listen der Website */
   listStyle?: "bullet" | "check";
-  /** Überschriftenebene für "##" (Standard h2). In Abschnitten mit eigener Überschrift 3 wählen. */
+  /**
+   * Überschriftenebene der obersten Zwischenüberschrift im Text (Standard h2). In Abschnitten mit eigener
+   * Überschrift 3 wählen. Die Größe richtet sich weiter nach "##" bzw. "###".
+   */
   headingBase?: 2 | 3 | 4;
   className?: string;
 };
@@ -393,6 +415,7 @@ export function Markdown({
   const style = variantStyles[variant];
   const color = textColor[colors];
   const opts: RenderOptions = { ctx, colors };
+  const topLevel = blocks.reduce<2 | 3>((top, b) => (b.t === "h" && b.level < top ? b.level : top), 3);
 
   return (
     <div className={cn(style.root, color.root, className)}>
@@ -402,10 +425,11 @@ export function Markdown({
         const key = `b${index}`;
 
         if (block.t === "h") {
-          const Tag = headingTag(block.level, headingBase);
+          const Tag = headingTag(block.level, topLevel, headingBase);
           const cls = block.level === 2 ? style.h2 : style.h3;
+          const space = index === 0 ? undefined : block.level === 2 ? style.h2Space : style.h3Space;
           return (
-            <Tag key={key} className={cn(cls, color.heading, index === 0 && "mt-0")}>
+            <Tag key={key} className={cn(cls, space, color.heading)}>
               {renderInline(parseInline(block.text), opts, `${key}.`)}
             </Tag>
           );

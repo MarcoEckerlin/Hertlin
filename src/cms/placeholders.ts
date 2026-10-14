@@ -148,7 +148,6 @@ export function resolveHref(raw: string | null | undefined, ctx: PlaceholderCont
   const href = raw.trim();
   if (!href || href.length > 500) return null;
   // Steuerzeichen und Backslashes: Browser machen aus "/\ziel" eine fremde Adresse
-  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f\\]/.test(href)) return null;
   if (!SAFE_HREF.test(href)) return null;
   if (href === "{fernwartung}") {

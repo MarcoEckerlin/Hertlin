@@ -2,7 +2,6 @@
 
 import { useActionState, useState, useSyncExternalStore } from "react";
 import { CircleCheck } from "lucide-react";
-import { site } from "@/config/site";
 import { initialFormState, type FormState } from "@/lib/forms";
 import { LANGUAGES, LANGUAGE_COOKIE, isLangCode, type LangCode } from "@/lib/languages";
 import { submitPrivateTicketAction } from "@/lib/actions/public";
@@ -96,12 +95,18 @@ function ResponseLanguageField({ initial, error }: { initial?: string; error?: s
   );
 }
 
-export function PrivateSupportFormClient({ uploadRules }: { uploadRules: UploadRules }) {
+export function PrivateSupportFormClient({
+  uploadRules,
+  contact,
+}: {
+  uploadRules: UploadRules;
+  contact: { phone: string; phoneHref: string };
+}) {
   const [state, action] = useActionState(submitPrivateTicketAction, initialFormState);
   const { formRef, successRef } = useFormFeedback(state);
 
   if (state.status === "success") {
-    return <PrivateSupportSuccess state={state} boxRef={successRef} />;
+    return <PrivateSupportSuccess state={state} boxRef={successRef} contact={contact} />;
   }
 
   const values = state.values ?? {};
@@ -258,7 +263,15 @@ export function PrivateSupportFormClient({ uploadRules }: { uploadRules: UploadR
   );
 }
 
-function PrivateSupportSuccess({ state, boxRef }: { state: FormState; boxRef: React.Ref<HTMLDivElement> }) {
+function PrivateSupportSuccess({
+  state,
+  boxRef,
+  contact,
+}: {
+  state: FormState;
+  boxRef: React.Ref<HTMLDivElement>;
+  contact: { phone: string; phoneHref: string };
+}) {
   const data = state.data ?? {};
 
   return (
@@ -310,8 +323,8 @@ function PrivateSupportSuccess({ state, boxRef }: { state: FormState; boxRef: Re
         <p className="mt-6 text-[0.9375rem] leading-relaxed text-ink-soft">
           Wir sehen uns Ihr Anliegen an und melden uns in der Regel innerhalb eines Werktags, meistens mit einem kurzen
           Anruf. Es eilt?{" "}
-          <a href={`tel:${site.phoneHref}`} className="font-semibold whitespace-nowrap text-brand-700 hover:underline">
-            {site.phone}
+          <a href={`tel:${contact.phoneHref}`} className="font-semibold whitespace-nowrap text-brand-700 hover:underline">
+            {contact.phone}
           </a>
         </p>
       ) : null}

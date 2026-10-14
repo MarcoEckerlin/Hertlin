@@ -15,7 +15,7 @@ import { formatFileSize } from "@/lib/format";
  * Der Dateityp wird am Inhalt erkannt, nicht an der Endung.
  */
 
-export const MEDIA_DIR = path.join(UPLOAD_DIR, "media");
+export const MEDIA_DIR = path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, "media");
 export const MAX_MEDIA_SIZE = 5 * 1024 * 1024;
 export const MAX_MEDIA_FILES = 10;
 export const MEDIA_ACCEPT = "image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif";
@@ -79,7 +79,7 @@ export async function storeMedia(file: File, opts: { alt?: string | null; upload
 
   await mkdir(MEDIA_DIR, { recursive: true });
   const storedName = `${randomBytes(16).toString("hex")}${kind.ext}`;
-  await writeFile(path.join(MEDIA_DIR, storedName), data);
+  await writeFile(path.join(/*turbopackIgnore: true*/ MEDIA_DIR, storedName), data);
   try {
     return await db.mediaFile.create({
       data: {
@@ -92,7 +92,7 @@ export async function storeMedia(file: File, opts: { alt?: string | null; upload
       },
     });
   } catch (e) {
-    await unlink(path.join(MEDIA_DIR, storedName)).catch(() => undefined);
+    await unlink(path.join(/*turbopackIgnore: true*/ MEDIA_DIR, storedName)).catch(() => undefined);
     throw e;
   }
 }
@@ -244,7 +244,7 @@ export async function deleteMedia(id: string, opts: { force?: boolean; userId?: 
   }
 
   await db.mediaFile.delete({ where: { id } });
-  await unlink(path.join(MEDIA_DIR, path.basename(file.storedName))).catch(() => undefined);
+  await unlink(path.join(/*turbopackIgnore: true*/ MEDIA_DIR, path.basename(file.storedName))).catch(() => undefined);
   return { removedFrom: usage.length };
 }
 
@@ -256,7 +256,7 @@ export async function deleteMedia(id: string, opts: { force?: boolean; userId?: 
 export async function mediaResponse(file: Pick<MediaFile, "fileName" | "storedName" | "mimeType">): Promise<Response> {
   let data: Buffer;
   try {
-    data = await readFile(path.join(MEDIA_DIR, path.basename(file.storedName)));
+    data = await readFile(path.join(/*turbopackIgnore: true*/ MEDIA_DIR, path.basename(file.storedName)));
   } catch {
     return new Response("Nicht gefunden", { status: 404, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }

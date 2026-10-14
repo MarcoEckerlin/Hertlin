@@ -5,7 +5,9 @@ import { cn } from "@/lib/cn";
 import { Markdown } from "@/cms/markdown";
 import { BlockSection, hasText, headingId, plain, type BlockProps } from "@/cms/blocks/shared";
 
-const h2 = "mt-10 text-xl font-bold tracking-tight text-ink first:mt-0 sm:text-[1.375rem]";
+const h2Base = "text-xl font-bold tracking-tight text-ink sm:text-[1.375rem]";
+/** Zwischenüberschrift mit Abstand nach oben (nicht als erstes Element) */
+const h2 = `${h2Base} mt-10`;
 const linkClass = "font-semibold text-brand-700 underline decoration-brand-300 underline-offset-2 hover:text-brand-800";
 
 function Lines({ lines, className }: { lines: ReactNode[]; className?: string }) {
@@ -45,7 +47,7 @@ export function CompanyInfoBlock({ block, ctx, layout }: BlockProps<"companyInfo
         <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">{plain(block.eyebrow, ctx)}</p>
       ) : null}
       {hasText(block.title) ? (
-        <h2 id={titleId} className={cn(h2, hasText(block.eyebrow) && "mt-2")}>
+        <h2 id={titleId} className={cn(h2Base, hasText(block.eyebrow) && "mt-2")}>
           {plain(block.title, ctx)}
         </h2>
       ) : null}
@@ -93,7 +95,7 @@ export function CompanyInfoBlock({ block, ctx, layout }: BlockProps<"companyInfo
           {hasText(block.title) || hasText(block.eyebrow) || hasText(block.intro) ? (
             heading
           ) : (
-            <h2 className={h2}>Angaben gemäß § 5 DDG</h2>
+            <h2 className={h2Base}>Angaben gemäß § 5 DDG</h2>
           )}
         </div>
         <address className="mt-3 not-italic">

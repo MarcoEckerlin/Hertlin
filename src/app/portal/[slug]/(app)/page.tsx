@@ -135,8 +135,8 @@ export default async function PortalDashboardPage({
         />
       </section>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-        <div className="space-y-6">
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader
               title="Zuletzt aktualisiert"

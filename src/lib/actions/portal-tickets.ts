@@ -182,6 +182,7 @@ export async function createPortalTicketAction(_prev: FormState, formData: FormD
       authorName: user.name,
       fromStaff: false,
       files,
+      initial: true,
     });
     await recordTicketEvent(ticketId, "CREATED", user.id);
   } catch (error) {

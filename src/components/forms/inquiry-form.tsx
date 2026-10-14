@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { CircleCheck, MessagesSquare } from "lucide-react";
-import { site } from "@/config/site";
 import { initialFormState, type FormState } from "@/lib/forms";
 import { WORKPLACE_LABELS, WORKPLACE_RANGES, type CustomerType, type InquiryTopic } from "@/lib/constants";
 import { submitInquiryAction } from "@/lib/actions/public";
@@ -47,14 +46,22 @@ const MESSAGE_HINT: Record<CustomerType, string> = {
  * Anfrageformular für Neukunden (Unternehmen oder Privatpersonen).
  * defaultType/defaultTopic kommen aus ?typ= und ?thema= der Kontaktseite.
  */
-export function InquiryForm({ defaultType, defaultTopic }: { defaultType?: CustomerType; defaultTopic?: InquiryTopic }) {
+export function InquiryForm({
+  defaultType,
+  defaultTopic,
+  contact,
+}: {
+  defaultType?: CustomerType;
+  defaultTopic?: InquiryTopic;
+  contact: { phone: string; phoneHref: string };
+}) {
   const [state, action] = useActionState(submitInquiryAction, initialFormState);
   const { formRef, successRef } = useFormFeedback(state);
   const [customerType, setCustomerType] = useState<CustomerType>(defaultType ?? "BUSINESS");
   const [contactPreference, setContactPreference] = useState<ContactPreference>("EMAIL");
 
   if (state.status === "success") {
-    return <InquirySuccess state={state} boxRef={successRef} />;
+    return <InquirySuccess state={state} boxRef={successRef} contact={contact} />;
   }
 
   const values = state.values ?? {};
@@ -242,7 +249,15 @@ export function InquiryForm({ defaultType, defaultTopic }: { defaultType?: Custo
   );
 }
 
-function InquirySuccess({ state, boxRef }: { state: FormState; boxRef: React.Ref<HTMLDivElement> }) {
+function InquirySuccess({
+  state,
+  boxRef,
+  contact,
+}: {
+  state: FormState;
+  boxRef: React.Ref<HTMLDivElement>;
+  contact: { phone: string; phoneHref: string };
+}) {
   const data = state.data ?? {};
   const isBusiness = data.customerType === "BUSINESS";
   const byPhone = data.preferredContact === "PHONE";
@@ -314,8 +329,8 @@ function InquirySuccess({ state, boxRef }: { state: FormState; boxRef: React.Ref
 
       <p className="mt-6 text-sm text-ink-soft">
         Es eilt? Rufen Sie uns an:{" "}
-        <a href={`tel:${site.phoneHref}`} className="font-semibold text-brand-700 hover:underline">
-          {site.phone}
+        <a href={`tel:${contact.phoneHref}`} className="font-semibold text-brand-700 hover:underline">
+          {contact.phone}
         </a>
       </p>
       <div className="mt-6">

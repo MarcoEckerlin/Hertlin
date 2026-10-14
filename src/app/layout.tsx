@@ -1,16 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./globals.css";
-import { site } from "@/config/site";
+import { getSiteSettings } from "@/lib/settings";
 
-export const metadata: Metadata = {
-  title: {
-    default: `${site.name} – ${site.tagline}`,
-    template: `%s | ${site.name}`,
-  },
-  description:
-    "Hertlin betreut die IT kleiner und mittlerer Unternehmen und hilft Privatkunden bei Problemen mit PC, WLAN und Drucker. Mit eigenem Kundenportal und festen Ansprechpartnern.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getSiteSettings();
+  return {
+    title: {
+      default: `${site.name} – ${site.tagline}`,
+      template: `%s | ${site.name}`,
+    },
+    description:
+      "Hertlin betreut die IT kleiner und mittlerer Unternehmen und hilft Privatkunden bei Problemen mit PC, WLAN und Drucker. Mit eigenem Kundenportal und festen Ansprechpartnern.",
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#66b9ec",

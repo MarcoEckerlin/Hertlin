@@ -39,21 +39,21 @@ export async function storeFiles(files: File[]): Promise<StoredFile[]> {
   for (const file of files) {
     const ext = path.extname(file.name).toLowerCase();
     const storedName = `${randomBytes(16).toString("hex")}${ext}`;
-    await writeFile(path.join(UPLOAD_DIR, storedName), Buffer.from(await file.arrayBuffer()));
+    await writeFile(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, storedName), Buffer.from(await file.arrayBuffer()));
     stored.push({ fileName: safeFileName(file.name), storedName, mimeType: ALLOWED[ext], size: file.size });
   }
   return stored;
 }
 
 export async function removeStoredFiles(storedNames: string[]): Promise<void> {
-  await Promise.all(storedNames.map((n) => unlink(path.join(UPLOAD_DIR, path.basename(n))).catch(() => undefined)));
+  await Promise.all(storedNames.map((n) => unlink(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, path.basename(n))).catch(() => undefined)));
 }
 
 /** Antwort zum Herunterladen eines Anhangs. Rechte vorher prüfen! */
 export async function attachmentResponse(att: { fileName: string; storedName: string; mimeType: string }): Promise<Response> {
   let data: Buffer;
   try {
-    data = await readFile(path.join(UPLOAD_DIR, path.basename(att.storedName)));
+    data = await readFile(path.join(/*turbopackIgnore: true*/ UPLOAD_DIR, path.basename(att.storedName)));
   } catch {
     return new Response("Datei nicht gefunden", { status: 404 });
   }

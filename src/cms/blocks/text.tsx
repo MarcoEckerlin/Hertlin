@@ -31,17 +31,19 @@ export function TextBlock({ block, ctx, layout }: BlockProps<"text">) {
   }
 
   const wide = block.width === "wide";
+  // Nur eine Dachzeile (z. B. „Hinweis“): Text direkt darunter
+  const bodySpacing = hasText(block.title) || hasText(block.intro) ? "mt-8" : withHeading ? "mt-3" : undefined;
   return (
     <BlockSection block={block} layout={layout} labelledBy={titleId}>
       <div className={wide ? "max-w-4xl" : "max-w-[44rem]"}>
-        <BlockHeading block={block} ctx={ctx} id={titleId} className={wide ? undefined : "max-w-none"} />
+        <BlockHeading block={block} ctx={ctx} id={titleId} />
         <Markdown
           text={block.body}
           ctx={ctx.text}
           variant="prose"
           listStyle={wide ? "check" : "bullet"}
           headingBase={headingBase}
-          className={cn(withHeading && "mt-8")}
+          className={cn(bodySpacing)}
         />
       </div>
     </BlockSection>

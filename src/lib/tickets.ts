@@ -19,6 +19,8 @@ export async function createTicketMessage(opts: {
   fromStaff?: boolean;
   internal?: boolean;
   files?: File[];
+  /** Erste Nachricht beim Anlegen eines Tickets – der Hinweis „Neues Ticket“ folgt über recordTicketEvent */
+  initial?: boolean;
 }): Promise<{ id: string }> {
   const stored = await storeFiles(opts.files ?? []);
   try {
@@ -41,7 +43,7 @@ export async function createTicketMessage(opts: {
     });
     // Live: alle offenen Ansichten des Tickets laden den Verlauf neu (interne Notizen nur bei Mitarbeitern)
     publish({ type: "ticket.message", ticketId: opts.ticketId, internal: opts.internal ?? false, fromStaff: opts.fromStaff ?? false });
-    if (!opts.fromStaff) {
+    if (!opts.fromStaff && !opts.initial) {
       let author = opts.authorName ?? null;
       if (!author && opts.authorId) {
         author = (await db.user.findUnique({ where: { id: opts.authorId }, select: { name: true } }))?.name ?? null;

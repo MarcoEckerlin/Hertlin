@@ -19,9 +19,12 @@ export function TranslatedBody({
 }) {
   const [showOriginal, setShowOriginal] = useState(false);
   if (!translation) return <div className={className}>{original}</div>;
+  // Nachrichtentext nicht vom Website-Übersetzer anfassen lassen, die Schaltfläche schon
   return (
     <div>
-      <div className={className}>{showOriginal ? original : translation.text}</div>
+      <div className={className} data-no-translate>
+        {showOriginal ? original : translation.text}
+      </div>
       <button
         type="button"
         onClick={() => setShowOriginal((v) => !v)}

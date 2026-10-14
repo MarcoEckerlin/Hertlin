@@ -1,3 +1,4 @@
+import { portalHost } from "@/lib/hosts";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
@@ -54,6 +55,10 @@ export default async function EditWebsitePage({
     { token: "{support_email}", label: "E-Mail-Adresse für den Support", value: settings.supportEmail },
     { token: "{region}", label: "Einsatzgebiet", value: settings.region },
     { token: "{adresse}", label: "Anschrift", value: address },
+    { token: "{firmierung}", label: "Vollständige Firmierung (z. B. in AGB und Datenschutz)", value: settings.legalName },
+    { token: "{hosting}", label: "Hosting-Anbieter (Datenschutzerklärung)", value: settings.hostingProvider },
+    { token: "{log_tage}", label: "Speicherdauer der Server-Logs in Tagen", value: String(settings.logRetentionDays) },
+    { token: "{portal_beispiel}", label: "Beispieladresse eines Kundenportals", value: portalHost("ihrefirma") },
     { token: "{fernwartung}", label: "Nur als Link-Ziel: Link zur Fernwartung", value: settings.remoteSupportUrl },
   ];
 

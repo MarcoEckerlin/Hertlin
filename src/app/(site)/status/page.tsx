@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { site } from "@/config/site";
+import { getSiteSettings } from "@/lib/settings";
 import { StatusLinkForm } from "@/components/forms/status-link-form";
 
 export const metadata: Metadata = {
@@ -9,7 +9,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function StatusLinkPage() {
+export default async function StatusLinkPage() {
+  const site = await getSiteSettings();
   return (
     <section className="bg-brand-50">
       <div className="mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1fr_26rem] lg:px-8 lg:py-24">

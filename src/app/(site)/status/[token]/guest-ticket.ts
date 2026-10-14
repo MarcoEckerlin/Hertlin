@@ -18,7 +18,7 @@ export function isPlausibleGuestToken(token: string): boolean {
 }
 
 export function guestTicketWhere(token: string) {
-  return { guestToken: token, source: "PRIVATE_FORM", companyId: null } satisfies Prisma.TicketWhereInput;
+  return { guestToken: token, companyId: null } satisfies Prisma.TicketWhereInput;
 }
 
 /**

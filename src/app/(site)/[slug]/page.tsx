@@ -23,7 +23,6 @@ function isPageSlug(slug: string): boolean {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  await connection();
   const { slug } = await params;
   if (!isPageSlug(slug)) return {};
   const [page, settings] = await Promise.all([getPublishedPage(slug), getSiteSettings()]);

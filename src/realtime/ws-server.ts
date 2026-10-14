@@ -330,9 +330,24 @@ export function attachRealtime(
   markServerAttached();
   onBusEvent(dispatch);
 
-  server.on("upgrade", (req, socket, head) => {
-    const path = (req.url ?? "").split("?")[0];
-    if (path !== WS_PATH) {
+  const isRealtimePath = (url: string | undefined) => (url ?? "").split("?")[0] === WS_PATH;
+
+  // Next.js hängt beim ersten Request selbst einen "upgrade"-Listener an den Server und schließt
+  // dort unbekannte WebSocket-Verbindungen. Alle später angemeldeten Listener lassen /_ws deshalb aus.
+  const original = server.on.bind(server);
+  const guard = ((event: string, listener: (...args: unknown[]) => void) => {
+    if (event !== "upgrade") return original(event, listener);
+    return original(event, (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+      if (!isRealtimePath(req.url)) listener(req, socket, head);
+    });
+  }) as typeof server.on;
+  server.on = guard;
+  server.addListener = guard;
+
+  original("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+    if (!isRealtimePath(req.url)) {
+      // Andere Upgrades (z. B. Hot Reload im Entwicklungsmodus) gehören Next.js
+      if (server.listenerCount("upgrade") > 1) return;
       if (nextUpgrade) void nextUpgrade(req, socket, head);
       else socket.destroy();
       return;

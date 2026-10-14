@@ -74,13 +74,15 @@ export function SiteHeader({
           </Link>
           <DesktopNav items={nav} />
           <div className="flex items-center gap-1.5 sm:gap-2">
-            <ButtonLink href="/login" variant="ghost" className="hidden xl:inline-flex">
-              Kundenportal
-            </ButtonLink>
+            <div className="hidden xl:block">
+              <ButtonLink href="/login" variant="ghost">
+                Kundenportal
+              </ButtonLink>
+            </div>
             <PageTranslator enabled={translationEnabled} compact />
-            <ButtonLink href="/kontakt" className="hidden md:inline-flex">
-              Anfrage stellen
-            </ButtonLink>
+            <div className="hidden md:block">
+              <ButtonLink href="/kontakt">Anfrage stellen</ButtonLink>
+            </div>
             <MobileNav items={nav} phone={contact.phone} phoneHref={contact.phoneHref} />
           </div>
         </div>

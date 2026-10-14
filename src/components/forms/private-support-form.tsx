@@ -1,5 +1,6 @@
 import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } from "@/lib/uploads";
 import { PrivateSupportFormClient } from "@/components/forms/private-support-form-client";
+import { getSiteSettings } from "@/lib/settings";
 
 /**
  * Hilfe-Formular für Privatkunden (eingebunden auf /privatkunden#hilfe-anfordern).
@@ -8,9 +9,11 @@ import { PrivateSupportFormClient } from "@/components/forms/private-support-for
  * Server-Komponente, weil die Upload-Regeln aus @/lib/uploads (server-only) kommen.
  * Bitte nur aus Server-Komponenten (z. B. einer page.tsx) rendern.
  */
-export function PrivateSupportForm() {
+export async function PrivateSupportForm() {
+  const settings = await getSiteSettings();
   return (
     <PrivateSupportFormClient
+      contact={{ phone: settings.phone, phoneHref: settings.phoneHref }}
       uploadRules={{
         accept: ACCEPT_ATTRIBUTE,
         maxFiles: MAX_FILES,

@@ -4,7 +4,7 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { LoginForm } from "@/components/auth/login-form";
 import { getPortalCompany, getPortalContext } from "@/lib/auth";
 import { mainUrl } from "@/lib/hosts";
-import { site } from "@/config/site";
+import { getSiteSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Anmeldung" };
 
@@ -19,6 +19,7 @@ export default async function PortalLoginPage({
   const { slug } = await params;
   const { next } = await searchParams;
   const company = await getPortalCompany(slug);
+  const site = await getSiteSettings();
 
   return (
     <AuthCard
