@@ -130,7 +130,7 @@ export default function PrivatkundenPage() {
             },
           ]}
         />
-        <div className="mt-10 max-w-3xl rounded-2xl border border-line bg-white p-6 shadow-card">
+        <div className="mt-10 max-w-xl rounded-2xl border border-line bg-white p-6 shadow-card">
           <h3 className="font-bold text-ink">Was der Status-Link kann</h3>
           <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-soft">
             Über den Link aus unserer E-Mail sehen Sie jederzeit, wie weit wir sind, lesen unsere Antworten und können selbst

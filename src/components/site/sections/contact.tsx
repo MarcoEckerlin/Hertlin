@@ -96,7 +96,7 @@ export function CtaBand({
             <h2 id="cta-titel" className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">
               {title}
             </h2>
-            <p className="mt-4 text-lg leading-relaxed text-ink">{text}</p>
+            <p className="mt-4 max-w-xl text-lg leading-relaxed text-ink">{text}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href="/kontakt" variant="dark" size="lg">
                 Anfrage stellen

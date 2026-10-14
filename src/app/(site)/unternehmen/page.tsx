@@ -19,12 +19,30 @@ export const metadata: Metadata = {
 };
 
 const careItems = [
-  "Wir überwachen Datensicherung, Virenschutz und Speicherplatz und reagieren, wenn etwas nicht stimmt – oft, bevor Sie es bemerken.",
-  "Updates für Windows, Server und Programme spielen wir geplant ein – außerhalb Ihrer Kernarbeitszeit, wenn ein Neustart nötig ist.",
-  "Neue Mitarbeiter bekommen pünktlich ihren Arbeitsplatz und ihre Zugänge. Wer geht, wird am letzten Tag überall gesperrt.",
-  "Wir sprechen für Sie mit dem Internetanbieter, dem Kopierer-Service oder dem Hersteller Ihrer Branchensoftware.",
-  "Wir behalten Garantien, Lizenzen und das Alter Ihrer Geräte im Blick und sagen rechtzeitig, was bald ersetzt werden sollte.",
-  "Ihre IT ist dokumentiert: Geräte, Netzwerk, Zugänge, Sicherungen. Die Dokumentation gehört Ihnen.",
+  {
+    title: "Überwachung",
+    text: "Wir behalten Datensicherung, Virenschutz und Speicherplatz im Blick und reagieren, wenn etwas nicht stimmt – oft, bevor Sie es bemerken.",
+  },
+  {
+    title: "Updates",
+    text: "Updates für Windows, Server und Programme spielen wir geplant ein. Muss neu gestartet werden, dann außerhalb Ihrer Kernarbeitszeit.",
+  },
+  {
+    title: "Kommen und Gehen",
+    text: "Neue Mitarbeiter bekommen pünktlich ihren Arbeitsplatz und ihre Zugänge. Wer das Unternehmen verlässt, wird am letzten Tag überall gesperrt.",
+  },
+  {
+    title: "Ein Ansprechpartner für alles",
+    text: "Wir sprechen für Sie mit dem Internetanbieter, dem Kopierer-Service oder dem Hersteller Ihrer Branchensoftware.",
+  },
+  {
+    title: "Vorausplanen",
+    text: "Garantien, Lizenzen und das Alter Ihrer Geräte haben wir im Blick und sagen rechtzeitig, was bald ersetzt werden sollte.",
+  },
+  {
+    title: "Dokumentation",
+    text: "Geräte, Netzwerk, Zugänge und Sicherungen sind dokumentiert. Die Dokumentation gehört Ihnen.",
+  },
 ];
 
 const roles = [
@@ -188,8 +206,9 @@ export default async function UnternehmenPage() {
           </SectionHeading>
           <ul className="grid gap-4 sm:grid-cols-2">
             {careItems.map((item) => (
-              <li key={item} className="rounded-2xl bg-brand-50 p-5 text-[0.9375rem] leading-relaxed text-ink-soft">
-                {item}
+              <li key={item.title} className="rounded-2xl bg-brand-50 p-5 sm:p-6">
+                <h3 className="font-bold text-ink">{item.title}</h3>
+                <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-ink-soft">{item.text}</p>
               </li>
             ))}
           </ul>
@@ -216,7 +235,7 @@ export default async function UnternehmenPage() {
 
         <div className="mt-16">
           <h3 className="text-2xl font-bold tracking-tight text-ink">Wer im Portal was sieht</h3>
-          <p className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-ink-soft">
+          <p className="mt-3 max-w-xl text-[0.9375rem] leading-relaxed text-ink-soft">
             Jeder bekommt einen eigenen Zugang. Was jemand sehen und tun darf, hängt von seiner Rolle ab.
           </p>
           <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -296,7 +315,7 @@ export default async function UnternehmenPage() {
       <CtaBand
         tone="brand"
         title="Erzählen Sie uns von Ihrer Firma."
-        text="Erzählen Sie uns kurz, wie viele Arbeitsplätze Sie haben und was Sie gerade beschäftigt. Wir melden uns und vereinbaren ein erstes Gespräch – am Telefon oder bei Ihnen vor Ort."
+        text="Schreiben Sie uns kurz, wie viele Arbeitsplätze Sie haben und was Sie gerade beschäftigt. Wir melden uns und vereinbaren ein erstes Gespräch – am Telefon oder bei Ihnen vor Ort."
       />
     </>
   );

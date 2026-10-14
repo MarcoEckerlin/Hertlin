@@ -65,7 +65,7 @@ export function SectionHeading({
       >
         {title}
       </h2>
-      {children ? <div className="mt-4 space-y-3 text-lg leading-relaxed text-ink-soft">{children}</div> : null}
+      {children ? <div className="mt-4 max-w-xl space-y-3 text-lg leading-relaxed text-ink-soft">{children}</div> : null}
     </div>
   );
 }
@@ -97,7 +97,7 @@ export function PageHero({
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-ink hyphens-auto sm:text-5xl sm:hyphens-manual">
             {title}
           </h1>
-          {children ? <div className="mt-5 space-y-4 text-lg leading-relaxed text-ink-soft">{children}</div> : null}
+          {children ? <div className="mt-5 max-w-xl space-y-4 text-lg leading-relaxed text-ink-soft">{children}</div> : null}
           {actions ? <div className="mt-8 flex flex-wrap gap-3">{actions}</div> : null}
         </div>
         {aside ? <div>{aside}</div> : null}

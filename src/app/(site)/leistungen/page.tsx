@@ -105,7 +105,7 @@ export default function LeistungenPage() {
                     ))}
                   </div>
                 </div>
-                <div className="max-w-2xl">
+                <div className="max-w-xl">
                   <div className="space-y-4 text-[1.0625rem] leading-relaxed text-ink-soft">
                     {s.text.map((p) => (
                       <p key={p}>{p}</p>

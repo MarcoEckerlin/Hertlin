@@ -177,7 +177,7 @@ export default async function SupportPage() {
             </a>
           </div>
         </div>
-        <p className="mt-8 max-w-2xl text-[0.9375rem] leading-relaxed text-ink-soft">
+        <p className="mt-8 max-w-xl text-[0.9375rem] leading-relaxed text-ink-soft">
           Wie schnell wir uns bei Firmenkunden mit Betreuungsvertrag melden, steht in der Übersicht der{" "}
           <Link href="/unternehmen#reaktionszeiten" className="font-semibold text-brand-700 hover:underline">
             Reaktionszeiten

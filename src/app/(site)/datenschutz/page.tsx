@@ -99,9 +99,16 @@ export default function DatenschutzPage() {
         DSGVO (unser Interesse, Anfragen zu beantworten).
       </p>
       <p>
+        Beim Absenden bestätigen Sie außerdem Ihre Einwilligung, dass wir Ihre Angaben dafür speichern (Art. 6 Abs. 1 lit. a
+        DSGVO). Sie können diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen, eine formlose E-Mail genügt.
+        Angaben, die wir für einen laufenden Auftrag oder aufgrund gesetzlicher Pflichten weiter benötigen, löschen wir
+        erst, wenn diese Gründe entfallen.
+      </p>
+      <p>
         Wenn Sie Privatkunde sind und über das <Link href="/privatkunden#hilfe-anfordern">Formular für Privatkunden</Link>{" "}
-        Hilfe anfordern, verarbeiten wir zusätzlich Ihre Problembeschreibung, gegebenenfalls Ihre Anschrift für einen Termin
-        vor Ort und die Dateien, die Sie anhängen. Daraus entsteht ein Ticket, das wir zur Erfüllung des Auftrags bearbeiten
+        Hilfe anfordern, verarbeiten wir Ihren Namen, Ihre E-Mail-Adresse und Telefonnummer, die Problembeschreibung,
+        gegebenenfalls Ihre Anschrift für einen Termin vor Ort und Ihre Angaben dazu, wann wir Sie am besten erreichen,
+        sowie die Dateien, die Sie anhängen. Daraus entsteht ein Ticket, das wir zur Erfüllung des Auftrags bearbeiten
         (Art. 6 Abs. 1 lit. b DSGVO).
       </p>
 
@@ -211,6 +218,7 @@ export default function DatenschutzPage() {
         <li>Löschung (Art. 17 DSGVO), soweit keine Aufbewahrungspflicht entgegensteht</li>
         <li>Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
         <li>Datenübertragbarkeit (Art. 20 DSGVO)</li>
+        <li>Widerruf einer erteilten Einwilligung mit Wirkung für die Zukunft (Art. 7 Abs. 3 DSGVO)</li>
         <li>
           Widerspruch gegen Verarbeitungen, die auf Art. 6 Abs. 1 lit. f DSGVO beruhen, aus Gründen, die sich aus Ihrer
           besonderen Situation ergeben (Art. 21 DSGVO)
