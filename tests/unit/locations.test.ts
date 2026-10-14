@@ -271,6 +271,8 @@ describe("Standort: Hilfen für die Website", () => {
   it("baut Telefon-Links nur aus gültigen Nummern", () => {
     expect(locationTelHref("0731 / 12 34-50")).toBe("tel:0731123450");
     expect(locationTelHref("+49 (731) 12345")).toBe("tel:+4973112345");
+    expect(locationTelHref("+49 (0) 731 12345")).toBe("tel:+4973112345");
+    expect(locationTelHref("+49 (0)731 / 12 34-50")).toBe("tel:+49731123450");
     expect(locationTelHref("auf Anfrage")).toBeNull();
     expect(locationTelHref(null)).toBeNull();
   });

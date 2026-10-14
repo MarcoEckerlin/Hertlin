@@ -351,7 +351,7 @@ export function AppShell({
           {/* Klick auf den abgedunkelten Hintergrund schließt; per Tastatur gibt es den Knopf im Menü */}
           <button
             type="button"
-            className="absolute inset-0 bg-navy/50 transition-opacity duration-200 starting:opacity-0"
+            className="absolute inset-0 bg-scrim transition-opacity duration-200 starting:opacity-0"
             onClick={closeMenu}
             tabIndex={-1}
             aria-hidden

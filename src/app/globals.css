@@ -32,8 +32,10 @@
   --color-mist: var(--mist);
   /* Bleibt immer weiß (Hintergrund hinter hochgeladenen Bildern/Logos) */
   --color-paper: #ffffff;
-  /* Bleibt dunkel (dunkle Bänder, Abdunklung hinter Dialogen) */
+  /* Bleibt dunkel (dunkle Bänder) */
   --color-navy: var(--navy);
+  /* Abdunklung hinter Menüs und Dialogen (im Dunkelmodus schwärzer, nicht heller) */
+  --color-scrim: var(--scrim);
 
   /* Text und Linien */
   --color-ink: var(--ink);
@@ -98,6 +100,7 @@
   --surface-raised: #ffffff;
   --mist: #f6fafd;
   --navy: #10243a;
+  --scrim: rgb(16 36 58 / 0.45);
 
   --ink: #10243a;
   --ink-soft: #46596e;
@@ -140,10 +143,10 @@
 /* Dunkle Werte – zweimal: ausdrücklich gewählt und „wie das System“ */
 [data-theme="dark"] {
   color-scheme: dark;
-  --brand-50: #0f2233;
-  --brand-100: #132e46;
-  --brand-200: #1a3e5c;
-  --brand-300: #255a83;
+  --brand-50: #13283d;
+  --brand-100: #18344f;
+  --brand-200: #1f4467;
+  --brand-300: #2a5f8a;
   --brand-400: #4ea8e0;
   --brand-500: #6dbcee;
   --brand-600: #84c8f2;
@@ -155,6 +158,7 @@
   --surface-raised: #172738;
   --mist: #0a1520;
   --navy: #15304b;
+  --scrim: rgb(0 0 0 / 0.6);
 
   --ink: #e6eef5;
   --ink-soft: #b4c3d1;
@@ -197,10 +201,10 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --brand-50: #0f2233;
-    --brand-100: #132e46;
-    --brand-200: #1a3e5c;
-    --brand-300: #255a83;
+    --brand-50: #13283d;
+    --brand-100: #18344f;
+    --brand-200: #1f4467;
+    --brand-300: #2a5f8a;
     --brand-400: #4ea8e0;
     --brand-500: #6dbcee;
     --brand-600: #84c8f2;
@@ -212,6 +216,7 @@
     --surface-raised: #172738;
     --mist: #0a1520;
     --navy: #15304b;
+    --scrim: rgb(0 0 0 / 0.6);
 
     --ink: #e6eef5;
     --ink-soft: #b4c3d1;
@@ -369,9 +374,15 @@
 @media (max-width: 39.99rem) {
   .table-stack table,
   .table-stack tbody,
-  .table-stack tr {
+  .table-stack tfoot,
+  .table-stack tr,
+  .table-stack tr > th {
     display: block;
     min-width: 0;
+  }
+  /* Zellen, die auf dem Handy nichts beitragen (z. B. eine Spalte, deren Inhalt schon in der Hauptzelle steht) */
+  .table-stack .stack-hide {
+    display: none;
   }
   .table-stack thead {
     position: absolute;

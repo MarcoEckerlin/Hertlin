@@ -39,6 +39,8 @@ export type PreviewRecipient = {
   description: string;
   name: string;
   addressLines: string[];
+  /** Straße sowie PLZ und Ort vorhanden (Pflicht auf der Rechnung) */
+  addressComplete: boolean;
   email: string | null;
   emailSource: "billing" | "company" | "contact" | null;
   vatId: string | null;
@@ -138,6 +140,8 @@ export function InvoiceCreateForm({
       {chosen.map((e) => (
         <input key={e.id} type="hidden" name="ids" value={e.id} />
       ))}
+      {/* Nettosumme der Vorschau: Ändert jemand inzwischen eine Position, wird die Rechnung nicht erstellt */}
+      <input type="hidden" name="expectedNetCents" value={amounts.netCents} />
       {/* Leistungszeitraum: nur mitschicken, wenn er von Hand geändert wurde – sonst ergibt er sich aus den Positionen */}
       {period ? (
         <>
@@ -199,6 +203,10 @@ export function InvoiceCreateForm({
                 {recipient.addressLines.length === 0 ? (
                   <span className="mt-1 block text-sm font-medium text-danger-ink">
                     Keine Anschrift hinterlegt – bitte unter „Rechnungsdaten ändern“ ergänzen.
+                  </span>
+                ) : !recipient.addressComplete ? (
+                  <span className="mt-1 block text-sm font-medium text-danger-ink">
+                    Anschrift unvollständig (Straße, PLZ und Ort nötig) – bitte unter „Rechnungsdaten ändern“ ergänzen.
                   </span>
                 ) : null}
                 <span className="mt-2 block text-sm text-ink-muted">

@@ -82,7 +82,7 @@ export function MobileNav({ items, phone, phoneHref }: { items: SiteNavLink[]; p
           <div
             aria-hidden="true"
             onClick={() => setOpen(false)}
-            className="absolute inset-x-0 top-full h-dvh bg-navy/50 transition-opacity duration-200 ease-out starting:opacity-0"
+            className="absolute inset-x-0 top-full h-dvh bg-scrim transition-opacity duration-200 ease-out starting:opacity-0"
           />
           <div
             id="mobile-nav"

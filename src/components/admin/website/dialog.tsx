@@ -58,7 +58,7 @@ export function Modal({
         pressedOnBackdrop.current = false;
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-surface-raised p-0 text-ink shadow-lift backdrop:bg-navy/50",
+        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-surface-raised p-0 text-ink shadow-lift backdrop:bg-scrim",
         size === "sm" && "max-w-md",
         size === "md" && "max-w-xl",
         size === "lg" && "max-w-3xl",

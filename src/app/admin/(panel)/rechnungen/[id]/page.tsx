@@ -11,7 +11,12 @@ import { FlashToast } from "@/components/ui/toaster";
 import { Missing } from "@/components/admin/companies/detail-list";
 import { cleanId, firstParam } from "@/components/admin/companies/list-tools";
 import { InvoiceStatusBadge, OverdueNote } from "@/components/admin/invoices/invoice-badges";
-import { InvoiceCancelForm, InvoicePaymentForm, InvoiceSendForm } from "@/components/admin/invoices/invoice-actions";
+import {
+  InvoiceCancelForm,
+  InvoiceMarkSentForm,
+  InvoicePaymentForm,
+  InvoiceSendForm,
+} from "@/components/admin/invoices/invoice-actions";
 import { InvoiceLines } from "@/components/admin/invoices/invoice-lines";
 import { getStaffUser, requireAdmin } from "@/lib/auth";
 import { costAccountHref } from "@/lib/costs";
@@ -115,6 +120,11 @@ export default async function InvoicePage({
         }}
       />
       <FlashToast
+        param="versendet"
+        value={firstParam(sp.versendet)}
+        messages={{ "1": `Die Rechnung ${invoice.number} ist als versendet markiert (${invoice.sentTo ?? "selbst verschickt"}).` }}
+      />
+      <FlashToast
         param="storniert"
         value={firstParam(sp.storniert)}
         messages={
@@ -177,6 +187,11 @@ export default async function InvoicePage({
                 alreadySent={Boolean(invoice.sentAt)}
                 attachmentName={fileName}
               />
+              {invoice.status === "OPEN" ? (
+                <div className="mt-4">
+                  <InvoiceMarkSentForm invoiceId={invoice.id} />
+                </div>
+              ) : null}
             </CardBody>
           </Card>
 

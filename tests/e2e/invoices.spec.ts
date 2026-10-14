@@ -181,19 +181,26 @@ test.describe("Rechnungen", () => {
     await expect(page.getByRole("row").filter({ hasText: UNPRICED })).toContainText("Preis fehlt");
   });
 
-  test("Per E-Mail senden – an die Rechnungs-E-Mail des Kunden mit PDF im Anhang", async ({ page }) => {
+  test("Per E-Mail senden – ohne Mailserver nicht „versendet“, selbst verschickt lässt sie sich markieren", async ({ page }) => {
     await loginStaff(page, ACCOUNTS.admin.email);
     await page.goto(main(`/admin/rechnungen/${state.musterInvoiceId}`));
     await expect(page.getByLabel("An", { exact: true })).toHaveValue("buchhaltung@muster.example");
     await page.getByRole("button", { name: "Per E-Mail senden" }).click();
-    await expect(page.getByText(`Die Rechnung ${state.musterNumber} ist an buchhaltung@muster.example verschickt.`)).toBeVisible();
-    await expect(page.getByText("Versendet", { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Erneut senden" })).toBeVisible();
+    // Der Testserver hat keinen Mailserver: Die Mail steht nur im Protokoll, die Rechnung bleibt unversendet
+    await expect(page.getByText(/Es ist kein Mailserver eingerichtet/)).toBeVisible();
+    await expect(page.getByText("Noch nicht versendet", { exact: true }).first()).toBeVisible();
 
     const mail = await lastMailTo("buchhaltung@muster.example");
     expect(mail?.subject).toBe(`Rechnung ${state.musterNumber} von Hertlin`);
     expect(mail?.body).toContain(`Anhang: Rechnung-${state.musterNumber}.pdf (`);
     expect(mail?.body).toMatch(/über 193,36\s€/);
+
+    // Selbst verschickt: als versendet markieren
+    await page.getByLabel("Wie verschickt").fill("per Post");
+    await page.getByRole("button", { name: "Als versendet markieren" }).click();
+    await expect(page.getByText(`Die Rechnung ${state.musterNumber} ist als versendet markiert (per Post).`)).toBeVisible();
+    await expect(page.getByText("Versendet", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Erneut senden" })).toBeVisible();
   });
 
   test("Büro Ulm mit eigener Rechnung ist ein eigener Empfänger", async ({ page }) => {

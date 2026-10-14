@@ -12,7 +12,7 @@ import { getInvoiceIssuer } from "@/lib/billing-settings";
 import { COST_KIND_LABELS, labelOf } from "@/lib/constants";
 import { parseCostAccount } from "@/lib/costs";
 import { formatDate, formatMoney, formatQuantity, formatTicketNumber, toDateInput } from "@/lib/format";
-import { openEntriesFor, resolveRecipient, sameRecipientKey } from "@/lib/invoices/recipients";
+import { openEntriesFor, resolveRecipient, sameRecipientKey, isCompleteAddress } from "@/lib/invoices/recipients";
 
 export const metadata: Metadata = { title: "Neue Rechnung" };
 
@@ -138,6 +138,7 @@ export default async function NewInvoicePage({
               description: recipient.description,
               name: recipient.name,
               addressLines: recipient.addressLines,
+              addressComplete: isCompleteAddress(recipient.addressLines),
               email: recipient.email,
               emailSource: recipient.emailSource,
               vatId: recipient.vatId,

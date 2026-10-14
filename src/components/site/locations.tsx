@@ -53,7 +53,11 @@ export function routeUrl(l: Pick<SiteLocation, "street" | "zip" | "city">): stri
 /** Anrufbare Adresse aus einer frei eingegebenen Nummer (z. B. „0731 / 12 34-50“), sonst null. */
 export function locationTelHref(phone: string | null | undefined): string | null {
   if (!phone) return null;
-  const digits = phone.trim().replace(/(?!^\+)[^\d]/g, "");
+  // „+49 (0) 731 …“: die eingeklammerte 0 gehört nicht zur internationalen Nummer
+  const digits = phone
+    .trim()
+    .replace(/\(\s*0\s*\)/g, "")
+    .replace(/(?!^\+)[^\d]/g, "");
   return /^\+?\d{3,20}$/.test(digits) ? `tel:${digits}` : null;
 }
 

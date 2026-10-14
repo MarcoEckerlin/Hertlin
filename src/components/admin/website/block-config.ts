@@ -247,6 +247,8 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   ],
   steps: [
     ...headingFields(),
+    link("cta", "Button unter der Überschrift", "Optional, z. B. „Fernwartung herunterladen“ → {fernwartung}"),
+    { kind: "textarea", name: "note", label: "Hinweis neben dem Button", max: 600, rows: 3, markdown: true, optional: "omit" },
     {
       kind: "select",
       name: "layout",

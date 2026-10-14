@@ -5,7 +5,7 @@ import { Checkbox, Field, Input, Textarea } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { fieldProps, useFormFocus } from "@/components/admin/companies/form-helpers";
-import { cancelInvoiceAction, invoicePaymentAction, sendInvoiceAction } from "@/lib/actions/admin-invoices";
+import { cancelInvoiceAction, invoicePaymentAction, markInvoiceSentAction, sendInvoiceAction } from "@/lib/actions/admin-invoices";
 import { initialFormState } from "@/lib/forms";
 
 /** Formulare auf der Rechnungsseite: senden, Zahlung, Storno. Nur für Administratoren. */
@@ -80,6 +80,27 @@ export function InvoiceSendForm({
       <SubmitButton pendingText="Wird gesendet …" className="w-full sm:w-auto">
         {alreadySent ? "Erneut senden" : "Per E-Mail senden"}
       </SubmitButton>
+    </form>
+  );
+}
+
+/** Auf anderem Weg verschickt (Post, eigenes Mailprogramm): als versendet markieren. */
+export function InvoiceMarkSentForm({ invoiceId }: { invoiceId: string }) {
+  const [state, formAction] = useActionState(markInvoiceSentAction, initialFormState);
+  const formRef = useFormFocus(state);
+  return (
+    <form ref={formRef} action={formAction} noValidate className="space-y-3 border-t border-line pt-4">
+      <input type="hidden" name="id" value={invoiceId} />
+      <FormMessage state={state} />
+      <p className="text-sm text-ink-soft">Selbst verschickt, z. B. per Post?</p>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="Wie verschickt" htmlFor="sent-note" className="min-w-0 flex-1">
+          <Input id="sent-note" name="note" maxLength={120} placeholder="z. B. per Post" defaultValue={state.values?.note ?? ""} />
+        </Field>
+        <SubmitButton variant="secondary" pendingText="Wird gespeichert …">
+          Als versendet markieren
+        </SubmitButton>
+      </div>
     </form>
   );
 }

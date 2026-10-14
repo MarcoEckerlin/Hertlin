@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { LogoMark } from "@/components/ui/logo";
 import { buttonClasses } from "@/components/ui/button";
 import { PhoneLink } from "@/components/site/sections/contact";
+import { Eyebrow } from "@/components/site/sections/layout";
 import { getPortalCompany } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { mainUrl, parseHost } from "@/lib/hosts";
@@ -31,7 +32,7 @@ export default async function NotFound() {
       <main className="grid min-h-dvh place-items-center bg-brand-50 px-6">
         <div className="max-w-md text-center">
           <LogoMark className="mx-auto size-12" />
-          <p className="mt-6 text-sm font-bold tracking-wider text-brand-700 uppercase">Kundenportal</p>
+          <Eyebrow className="mt-6 justify-center">Kundenportal</Eyebrow>
           <h1 className="mt-2 text-3xl font-bold text-ink">Dieser Zugang ist gesperrt</h1>
           <p className="mt-3 text-ink-soft">
             Das Kundenportal unter dieser Adresse ist derzeit nicht freigeschaltet. Wenn Sie Fragen dazu haben oder Hilfe
@@ -50,7 +51,7 @@ export default async function NotFound() {
     <main className="grid min-h-dvh place-items-center bg-brand-50 px-6">
       <div className="max-w-md text-center">
         <LogoMark className="mx-auto size-12" />
-        <p className="mt-6 text-sm font-bold tracking-wider text-brand-700 uppercase">Fehler 404</p>
+        <Eyebrow className="mt-6 justify-center">Fehler 404</Eyebrow>
         <h1 className="mt-2 text-3xl font-bold text-ink">Diese Seite gibt es nicht</h1>
         {portal ? (
           <p className="mt-3 text-ink-soft">
