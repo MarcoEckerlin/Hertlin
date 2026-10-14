@@ -23,6 +23,12 @@ Website, Kundenportal und interne Verwaltung für den IT-Dienstleister Hertlin. 
 - Beliebig viele Unterkunden (z. B. Filialen, Standorte, Tochterfirmen), jede mit eigenen Benutzern und Tickets
 - Benutzerverwaltung mit zwei Rollen: Hauptansprechpartner (sieht alle Tickets der Firma) und Mitarbeiter (sieht nur eigene Tickets)
 
+**Live und mehrsprachig**
+- Ticket- und Anfragen-Chats sind per WebSocket live verbunden: neue Nachrichten erscheinen sofort, mit Anzeige „schreibt gerade …“ und wer gerade im Gespräch ist
+- Wer live dabei ist, bekommt keine zusätzliche E-Mail
+- Chat-Übersetzer: Nachrichten werden automatisch in die Sprache des Lesers übersetzt, das Original bleibt abrufbar
+- Website-Übersetzer: Sprachauswahl übersetzt die sichtbaren Texte der Website und des Kundenportals maschinell
+
 **Verwaltung**
 - Übersicht, Ticketliste mit Filtern, Tickets im Namen von Kunden anlegen
 - Antworten an Kunden und interne Notizen, Status, Priorität, Bearbeiter, Ereignisprotokoll
@@ -31,6 +37,8 @@ Website, Kundenportal und interne Verwaltung für den IT-Dienstleister Hertlin. 
 - Anfragen von Neukunden bearbeiten und direkt als Firmenkunden anlegen
 - Kunden, Subdomains, Unterkunden und Benutzer verwalten, Einladungen per E-Mail
 - Team-Verwaltung (Administratoren und Techniker)
+- Website-Editor: Seiten aus Modulen zusammensetzen (Kopfbereich, Text, Kacheln, Ablauf, FAQ, Formulare …), Entwurf, Vorschau, Veröffentlichen; eigene Seiten, AGB, Impressum, Datenschutz; Firmendaten und Bilder
+- Telefonanlage: eingehende Anrufe erscheinen live mit erkanntem Kunden, Anrufliste, verpasste Anrufe, „Ticket aus Anruf“
 
 ## Rollen und Rechte
 
@@ -82,6 +90,29 @@ Datenbank neu aufsetzen: `npm run db:reset`
    ```
    Der ausgegebene Link führt zur Seite, auf der das Passwort festgelegt wird.
 
+## Telefonanlage
+
+Die Anrufe selbst nimmt Ihre Telefonanlage an – Ihre Mitarbeiter nutzen dafür die App des Anbieters (z. B. sipgate, Placetel, 3CX) oder einen SIP-Softphone-Client wie Linphone oder Zoiper auf Handy und PC. Die Anlage meldet jeden Anruf per Webhook an `https://hertlin.de/api/telefonie?token=…`. Die Verwaltung zeigt den Anruf sofort an, erkennt den Kunden an der Telefonnummer und führt eine Anrufliste.
+
+- Einrichtung und Anleitung (sipgate.io Push-API, JSON-Format für Asterisk/FreePBX/3CX): Verwaltung → Anrufe → Einrichtung
+- Zugang: `TELEPHONY_WEBHOOK_TOKEN` setzen (z. B. `openssl rand -hex 32`); optional `TELEPHONY_ALLOWED_IPS`
+- Mit „Testanruf simulieren“ lässt sich die Live-Anzeige ohne Anlage prüfen
+
+## Übersetzung
+
+Mit einem Schlüssel für DeepL (`DEEPL_API_KEY`, empfohlen) oder Claude (`ANTHROPIC_API_KEY`) werden Chat-Nachrichten automatisch übersetzt und der Sprachumschalter auf der Website erscheint. Ohne Schlüssel bleibt alles auf Deutsch. Übersetzungen werden in der Datenbank zwischengespeichert, jeder Text wird also nur einmal übersetzt. Der Website-Übersetzer ist pro Besucher und Tag begrenzt (`TRANSLATION_DAILY_LIMIT`).
+
+Kunden stellen ihre Sprache im Kundenportal unter „Profil“ ein, Privatkunden auf ihrer Statusseite, Interessenten im Anfragen-Chat.
+
+## Website bearbeiten
+
+Unter Verwaltung → Website (nur Administratoren):
+- **Seiten**: Module hinzufügen, verschieben, ausblenden; als Entwurf speichern, in der Vorschau ansehen, veröffentlichen. Eigene Seiten mit eigener Adresse anlegen.
+- **Firmendaten**: Anschrift, Telefon, Öffnungszeiten, Reaktionszeiten – erscheinen auf der Website, im Impressum und in E-Mails.
+- **Medien**: Bilder für die Website hochladen.
+
+In Texten lassen sich Platzhalter verwenden, z. B. `{telefon}`, `{email}`, `{firma}`, `{adresse}`; als Link-Ziel `{fernwartung}`.
+
 ## Konfiguration
 
 | Variable | Bedeutung |
@@ -92,7 +123,9 @@ Datenbank neu aufsetzen: `npm run db:reset`
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Mailserver für Benachrichtigungen |
 | `MAIL_FROM` | Absender, z. B. `Hertlin <support@hertlin.de>` |
 | `STAFF_NOTIFY_EMAIL` | Empfänger für neue Tickets und Anfragen |
-| `UPLOAD_DIR` | Ablage für Ticket-Anhänge |
+| `UPLOAD_DIR` | Ablage für Ticket-Anhänge und Website-Bilder |
+| `DEEPL_API_KEY` / `ANTHROPIC_API_KEY` | Übersetzung (siehe oben), `TRANSLATION_PROVIDER` erzwingt einen Anbieter |
+| `TELEPHONY_WEBHOOK_TOKEN` | Zugang für die Telefonanlage, `TELEPHONY_ALLOWED_IPS` optional |
 
 ## Betrieb
 
@@ -170,7 +203,9 @@ npm run build && npm run test:e2e   # Ende-zu-Ende-Tests (Playwright, eigene Dat
 
 ## Technik
 
-Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS 4, Prisma mit SQLite, Zod, Nodemailer.
+Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS 4, Prisma mit SQLite, Zod, Nodemailer, ws (WebSocket).
+
+- `server.ts` startet Next.js und den WebSocket-Server (`/_ws`) in einem Prozess. Über den Socket laufen nur Signale (neue Nachricht, Status, tippt gerade); Inhalte lädt der Browser über die rechtegeprüften Seiten nach.
 
 - `src/proxy.ts` ordnet Anfragen anhand des Hostnamens der Website oder einem Kundenportal zu (intern `/portal/<kuerzel>/…`).
 - Sitzungen sind an den Host gebunden: Eine Anmeldung im Portal `muster` gilt nicht für andere Portale oder die Verwaltung.
