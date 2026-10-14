@@ -126,6 +126,7 @@ In Texten lassen sich Platzhalter verwenden, z. B. `{telefon}`, `{email}`, `{fir
 | `UPLOAD_DIR` | Ablage für Ticket-Anhänge und Website-Bilder |
 | `DEEPL_API_KEY` / `ANTHROPIC_API_KEY` | Übersetzung (siehe oben), `TRANSLATION_PROVIDER` erzwingt einen Anbieter |
 | `TELEPHONY_WEBHOOK_TOKEN` | Zugang für die Telefonanlage, `TELEPHONY_ALLOWED_IPS` optional |
+| `SESSION_IDLE_HOURS` | Abmeldung nach so vielen Stunden ohne Aktivität (Standard 72; Sitzungen gelten höchstens 14 Tage) |
 
 ## Betrieb
 
@@ -172,6 +173,14 @@ map $http_upgrade $connection_upgrade {
     ''      close;
 }
 ```
+
+### Sicherheit im Betrieb
+
+- Sitzungs-Cookie unter HTTPS als `__Host-hertlin_session` (nur Secure, nur für genau diesen Host), HttpOnly, SameSite=Lax
+- Header: HSTS (inkl. Subdomains), Content-Security-Policy, X-Frame-Options, nosniff, Referrer-Policy
+- Anmeldungen, Formulare, Webhook und Übersetzer sind pro IP begrenzt; der Reverse Proxy muss dafür `X-Forwarded-For` setzen (siehe oben)
+- Uploads: höchstens 5 Dateien à 10 MB pro Nachricht. Begrenzen Sie die Größe zusätzlich im Reverse Proxy (`client_max_body_size`) und – bei Bedarf – die Zahl gleichzeitiger Verbindungen pro IP (`limit_conn`)
+- Regelmäßige Sicherung des Verzeichnisses `/data` (Datenbank, Anhänge, Website-Bilder)
 
 ### Docker
 

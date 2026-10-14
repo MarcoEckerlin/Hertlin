@@ -15,10 +15,10 @@ import { createHash, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { WebSocketServer, type WebSocket } from "ws";
 import { parseHost, normalizeHost } from "@/lib/hosts";
+import { sessionCookieName, sessionIsActive } from "@/lib/session-policy";
 import { getPresence, markServerAttached, onBusEvent, setPresence, type BusEvent, type PresenceEntry } from "@/realtime/bus";
 import { WS_PATH, type ChannelKey, type ClientMessage, type ServerMessage } from "@/realtime/protocol";
 
-const SESSION_COOKIE = "hertlin_session";
 const MAX_CHANNELS_PER_CONNECTION = 20;
 const MAX_MESSAGE_BYTES = 2048;
 const SESSION_RECHECK_MS = 60_000;
@@ -84,7 +84,7 @@ function originAllowed(req: IncomingMessage, host: string): boolean {
 }
 
 async function identify(req: IncomingMessage, host: string): Promise<Identity> {
-  const token = readCookie(req, SESSION_COOKIE);
+  const token = readCookie(req, sessionCookieName());
   if (!token) return { kind: "anonymous" };
   return loadIdentity(sha256(token), host);
 }
@@ -96,6 +96,7 @@ async function loadIdentity(sessionHash: string, host: string): Promise<Identity
     select: {
       host: true,
       expiresAt: true,
+      lastSeenAt: true,
       user: {
         select: {
           id: true,
@@ -107,7 +108,7 @@ async function loadIdentity(sessionHash: string, host: string): Promise<Identity
       },
     },
   });
-  if (!session || session.expiresAt.getTime() < Date.now() || session.host !== host || !session.user.active) {
+  if (!session || !sessionIsActive(session) || session.host !== host || !session.user.active) {
     return { kind: "anonymous" };
   }
   const user = session.user;

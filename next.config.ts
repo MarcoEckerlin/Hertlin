@@ -1,5 +1,22 @@
 import type { NextConfig } from "next";
 
+/**
+ * Content-Security-Policy: nur eigene Skripte/Styles (Next.js braucht Inline-Skripte für die Hydration),
+ * Bilder und Verbindungen nur zur eigenen Adresse (inkl. WebSocket), keine Einbettung in fremde Seiten.
+ */
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self' ws: wss:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   turbopack: {
@@ -23,6 +40,9 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
+          // HSTS wird von Browsern nur über HTTPS beachtet; includeSubDomains deckt alle Kundenportale ab
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+          ...(process.env.NODE_ENV === "production" ? [{ key: "Content-Security-Policy", value: CONTENT_SECURITY_POLICY }] : []),
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Frame-Options", value: "SAMEORIGIN" },

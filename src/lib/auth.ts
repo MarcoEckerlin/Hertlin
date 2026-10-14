@@ -7,9 +7,8 @@ import { db } from "@/lib/db";
 import { generateToken, sha256 } from "@/lib/crypto";
 import { REQUEST_PATH_HEADER, appProtocol, loginRedirectTarget, normalizeHost, parseHost } from "@/lib/hosts";
 import type { Role } from "@/lib/constants";
+import { SESSION_TTL_MS, sessionCookieName, sessionIsActive } from "@/lib/session-policy";
 
-export const SESSION_COOKIE = "hertlin_session";
-const SESSION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
 const sessionUserSelect = {
   id: true,
@@ -62,7 +61,7 @@ export async function createSession(userId: string): Promise<void> {
   await db.session.create({ data: { tokenHash: sha256(token), userId, host, expiresAt, userAgent } });
   await db.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } });
 
-  (await cookies()).set(SESSION_COOKIE, token, {
+  (await cookies()).set(sessionCookieName(), token, {
     httpOnly: true,
     sameSite: "lax",
     secure: appProtocol() === "https",
@@ -74,16 +73,18 @@ export async function createSession(userId: string): Promise<void> {
 /** Beendet die aktuelle Sitzung. Nur in Server Actions/Route Handlern aufrufen. */
 export async function destroySession(): Promise<void> {
   const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
+  const name = sessionCookieName();
+  const token = store.get(name)?.value;
   if (token) await db.session.deleteMany({ where: { tokenHash: sha256(token) } });
-  store.delete(SESSION_COOKIE);
+  // Mit denselben Attributen überschreiben, sonst verwirft der Browser das Löschen bei __Host-Cookies
+  store.set(name, "", { httpOnly: true, sameSite: "lax", secure: appProtocol() === "https", path: "/", maxAge: 0 });
 }
 
 /** Beendet alle Sitzungen eines Benutzers, z. B. nach Passwortänderung oder Sperrung. */
 export async function destroyAllSessions(userId: string, exceptCurrent = false): Promise<void> {
   let keepHash: string | undefined;
   if (exceptCurrent) {
-    const token = (await cookies()).get(SESSION_COOKIE)?.value;
+    const token = (await cookies()).get(sessionCookieName())?.value;
     keepHash = token ? sha256(token) : undefined;
   }
   await db.session.deleteMany({ where: { userId, ...(keepHash ? { NOT: { tokenHash: keepHash } } : {}) } });
@@ -94,14 +95,14 @@ export async function destroyAllSessions(userId: string, exceptCurrent = false):
  * Sitzungen gelten nur auf dem Host, auf dem sie angelegt wurden.
  */
 export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(sessionCookieName())?.value;
   if (!token) return null;
 
   const session = await db.session.findUnique({
     where: { tokenHash: sha256(token) },
     select: { id: true, host: true, expiresAt: true, lastSeenAt: true, user: { select: sessionUserSelect } },
   });
-  if (!session || session.expiresAt.getTime() < Date.now()) return null;
+  if (!session || !sessionIsActive(session)) return null;
   if (session.host !== (await getRequestHost())) return null;
 
   const user = session.user as SessionUser;
