@@ -72,9 +72,9 @@ async function deliver(message: MailMessage): Promise<MailResult> {
     ];
     const entry = `${lines.join("\n")}\n\n${text}\n\n`;
     try {
-      const dir = path.join(process.cwd(), "storage");
-      await mkdir(dir, { recursive: true });
-      await appendFile(path.join(dir, "mails.log"), entry, "utf8");
+      const file = process.env.MAIL_LOG_FILE || path.join(process.cwd(), "storage", "mails.log");
+      await mkdir(path.dirname(file), { recursive: true });
+      await appendFile(file, entry, "utf8");
     } catch {
       // Ohne Schreibrechte reicht die Konsolenausgabe
     }
@@ -102,7 +102,7 @@ async function deliver(message: MailMessage): Promise<MailResult> {
 /**
  * Verschickt eine E-Mail. Fehler werden protokolliert, aber nicht geworfen,
  * damit z. B. ein Ticket auch dann angelegt wird, wenn der Mailserver hakt.
- * Ohne SMTP-Konfiguration landen Mails in storage/mails.log.
+ * Ohne SMTP-Konfiguration landen Mails in storage/mails.log (oder MAIL_LOG_FILE).
  */
 export async function sendMail(message: MailMessage): Promise<void> {
   await deliver(message);
