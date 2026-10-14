@@ -150,13 +150,13 @@ In Texten lassen sich Platzhalter verwenden, z. B. `{telefon}`, `{email}`, `{fir
 
 - `A`/`AAAA`-Eintrag für `hertlin.de` und `www.hertlin.de` auf den Server
 - **Wildcard-Eintrag** `*.hertlin.de` auf denselben Server – damit funktioniert jede Kunden-Subdomain sofort, ohne DNS-Änderung pro Kunde
-- Ein Wildcard-Zertifikat für `*.hertlin.de` (Let's Encrypt per DNS-Challenge, z. B. mit Caddy und dem Plugin Ihres DNS-Anbieters oder certbot)
+- Ein Wildcard-Zertifikat für `*.hertlin.de` (Let's Encrypt per DNS-Challenge, z. B. mit Caddy und dem Plugin Ihres DNS-Anbieters oder certbot). Mit dem mitgelieferten Docker-Setup entfällt das: Caddy holt für jede Kunden-Subdomain beim ersten Aufruf ein eigenes Zertifikat (siehe [DOCKER.md](DOCKER.md)).
 
 Reservierte Kürzel, die nie an Kunden vergeben werden (z. B. `www`, `admin`, `mail`, `autodiscover`), stehen in `src/lib/hosts.ts`.
 
 ### Reverse Proxy
 
-Die Anwendung erwartet den originalen Hostnamen (`Host` oder `X-Forwarded-Host`) und die Client-IP in `X-Forwarded-For`. Der Proxy muss `X-Forwarded-For` **selbst setzen** (nicht vom Client übernehmen), sonst greifen die Schutzgrenzen gegen zu viele Anmeldeversuche nicht zuverlässig. Ausgewertet wird der letzte Eintrag. Die Anwendung selbst darf nur für den Proxy erreichbar sein (Docker: Port nur an `127.0.0.1`, ohne Docker: `LISTEN_HOST=127.0.0.1`) – direkt aus dem Netz könnte jeder Client die IP frei angeben.
+Die Anwendung erwartet den originalen Hostnamen (`Host` oder `X-Forwarded-Host`) und die Client-IP in `X-Forwarded-For`. Der Proxy muss `X-Forwarded-For` **selbst setzen** (nicht vom Client übernehmen), sonst greifen die Schutzgrenzen gegen zu viele Anmeldeversuche nicht zuverlässig. Ausgewertet wird der letzte Eintrag. Die Anwendung selbst darf nur für den Proxy erreichbar sein (Docker: Port 3000 ist standardmäßig nur an `127.0.0.1` gebunden, siehe [DOCKER.md](DOCKER.md); ohne Docker: `LISTEN_HOST=127.0.0.1`) – direkt aus dem Netz könnte jeder Client die IP frei angeben.
 
 Beispiel nginx:
 
@@ -201,12 +201,13 @@ map $http_upgrade $connection_upgrade {
 ### Docker
 
 ```bash
-cp .env.example .env.production   # Werte für Produktion eintragen (ROOT_DOMAIN, APP_PROTOCOL=https, SMTP …)
+cp docker.env.example docker.env      # ROOT_DOMAIN, APP_PROTOCOL=https, ADMIN_EMAIL, SMTP … eintragen
+echo "COMPOSE_PROFILES=https" > .env  # startet Caddy für automatisches HTTPS
 docker compose up -d --build
-docker compose exec hertlin npm run create-admin -- --email anna@hertlin.de --name "Anna Hertlin"
+docker compose logs hertlin           # Link zum Passwort-Setzen für den ersten Administrator
 ```
 
-Datenbank und Anhänge liegen im Volume `hertlin-data` (`/data`). Sichern Sie dieses Verzeichnis regelmäßig.
+Beispieldaten gibt es nur im Test über `http`; im HTTPS-Betrieb sperrt der Container Demo-Zugänge mit dem öffentlichen Demo-Passwort. Ausführliche Anleitung für Test im Heimnetz, eigene Domain mit automatischem HTTPS (Caddy), vorhandenen Reverse Proxy, Updates und Sicherung: [DOCKER.md](DOCKER.md). Datenbank, Anhänge und Website-Bilder liegen im Volume `hertlin-data` (`/data`).
 
 ### Ohne Docker
 

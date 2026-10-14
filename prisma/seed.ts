@@ -28,7 +28,7 @@ const daysAgo = (d: number, h = 9) => {
 
 async function main() {
   if ((await db.user.count()) > 0) {
-    console.log("Datenbank enthält bereits Daten – Seed übersprungen. Zum Neuaufsetzen: npm run db:reset");
+    console.log("Datenbank enthält bereits Daten – Beispieldaten werden nicht erneut geladen.");
     return;
   }
   const passwordHash = await hashPassword(PASSWORD);

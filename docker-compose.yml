@@ -1,12 +1,46 @@
+# Hertlin auf einem Docker-Server – Anleitung: DOCKER.md
+#
+# Einstellungen der App: docker.env (Vorlage docker.env.example)
+# Einstellungen für docker compose selbst: .env neben dieser Datei
+#
+#   Test im Heimnetz (ohne eigene Domain, ohne HTTPS) – .env:
+#     HERTLIN_PUBLISH=3000
+#
+#   Produktion mit eigener Domain und automatischem HTTPS (Caddy) – .env:
+#     COMPOSE_PROFILES=https
+#
+#   Starten und nach jeder Änderung an docker.env oder .env:
+#     docker compose up -d --build
+
 services:
   hertlin:
     build: .
+    image: hertlin:latest
     restart: unless-stopped
-    env_file: .env.production
+    init: true
+    env_file: docker.env
     volumes:
       - hertlin-data:/data
     ports:
-      - "127.0.0.1:3000:3000"
+      # Standard: nur auf dem Server selbst erreichbar (für Caddy oder einen anderen Reverse Proxy).
+      # Für den Test im Heimnetz HERTLIN_PUBLISH=3000 in .env setzen.
+      - "${HERTLIN_PUBLISH:-127.0.0.1:3000}:3000"
+
+  caddy:
+    image: caddy:2.10
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on:
+      - hertlin
+    # Host-Netz: Caddy sieht die echten Besucher-IPs (auch über IPv6) und erreicht die App unter 127.0.0.1:3000.
+    # Belegt die Ports 80 und 443 des Servers direkt.
+    network_mode: host
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
 
 volumes:
   hertlin-data:
+  caddy-data:
+  caddy-config:

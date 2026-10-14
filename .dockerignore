@@ -1,9 +1,23 @@
 node_modules
 .next
 .git
+.github
 storage
 prisma/*.db
 prisma/*.db-journal
 test-results
 playwright-report
+tests
+playwright.config.ts
+vitest.config.mts
 .env
+.env.*
+!.env.example
+docker.env
+docker-compose.yml
+docker-compose.override.yml
+DOCKER.md
+*.tsbuildinfo
+# Sicherungen gehören nicht ins Image
+*.tar.gz
+*.tgz
