@@ -12,6 +12,7 @@ import { TD, TH, THead, TR, Table } from "@/components/ui/table";
 import { Detail, DetailList, Missing } from "@/components/admin/companies/detail-list";
 import { cleanId, firstParam } from "@/components/admin/companies/list-tools";
 import { AccessBadge, CompanyActiveBadge } from "@/components/admin/companies/status-badges";
+import { RecentCallsCard, recentCallSelect } from "@/components/admin/companies/recent-calls-card";
 import { requireStaff } from "@/lib/auth";
 import { CUSTOMER_ROLES, OPEN_STATUSES } from "@/lib/constants";
 import { getCompanyCostSummary } from "@/lib/costs";
@@ -74,70 +75,85 @@ export default async function CompanyPage({
   const slug = company.parent?.slug ?? company.slug;
   const treeIds = isSub ? [company.id] : [company.id, ...company.children.map((c) => c.id)];
   const ticketWhere = { companyId: { in: treeIds } };
+  const callWhere = { companyId: { in: treeIds } };
 
-  const [users, invitedIds, openTickets, openCount, doneTickets, ticketTotal, userGroups, ticketGroups, costs] =
-    await Promise.all([
-      db.user.findMany({
-        where: { companyId: { in: treeIds }, role: { in: [...CUSTOMER_ROLES] } },
-        orderBy: [{ active: "desc" }, { name: "asc" }],
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          position: true,
-          role: true,
-          active: true,
-          lastLoginAt: true,
-          company: { select: { id: true, name: true, parentId: true } },
-        },
-      }),
-      db.user.findMany({ where: { companyId: { in: treeIds }, passwordHash: null }, select: { id: true } }),
-      db.ticket.findMany({
-        where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
-        orderBy: { updatedAt: "desc" },
-        take: 10,
-        select: {
-          id: true,
-          subject: true,
-          status: true,
-          priority: true,
-          updatedAt: true,
-          company: { select: { name: true, parentId: true } },
-          assignee: { select: { name: true } },
-        },
-      }),
-      db.ticket.count({ where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } } }),
-      db.ticket.findMany({
-        where: { ...ticketWhere, status: { notIn: [...OPEN_STATUSES] } },
-        orderBy: { updatedAt: "desc" },
-        take: 5,
-        select: {
-          id: true,
-          subject: true,
-          status: true,
-          updatedAt: true,
-          company: { select: { name: true, parentId: true } },
-        },
-      }),
-      db.ticket.count({ where: ticketWhere }),
-      isSub
-        ? Promise.resolve([])
-        : db.user.groupBy({
-            by: ["companyId"],
-            where: { companyId: { in: treeIds }, active: true, role: { in: [...CUSTOMER_ROLES] } },
-            _count: { _all: true },
-          }),
-      isSub
-        ? Promise.resolve([])
-        : db.ticket.groupBy({
-            by: ["companyId"],
-            where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
-            _count: { _all: true },
-          }),
-      // Kosten nur für Administratoren laden
-      isAdmin ? getCompanyCostSummary(treeIds) : Promise.resolve(null),
-    ]);
+  const [
+    users,
+    invitedIds,
+    openTickets,
+    openCount,
+    doneTickets,
+    ticketTotal,
+    userGroups,
+    ticketGroups,
+    costs,
+    recentCalls,
+    callTotal,
+  ] = await Promise.all([
+    db.user.findMany({
+      where: { companyId: { in: treeIds }, role: { in: [...CUSTOMER_ROLES] } },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        position: true,
+        role: true,
+        active: true,
+        lastLoginAt: true,
+        company: { select: { id: true, name: true, parentId: true } },
+      },
+    }),
+    db.user.findMany({ where: { companyId: { in: treeIds }, passwordHash: null }, select: { id: true } }),
+    db.ticket.findMany({
+      where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        subject: true,
+        status: true,
+        priority: true,
+        updatedAt: true,
+        company: { select: { name: true, parentId: true } },
+        assignee: { select: { name: true } },
+      },
+    }),
+    db.ticket.count({ where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } } }),
+    db.ticket.findMany({
+      where: { ...ticketWhere, status: { notIn: [...OPEN_STATUSES] } },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        subject: true,
+        status: true,
+        updatedAt: true,
+        company: { select: { name: true, parentId: true } },
+      },
+    }),
+    db.ticket.count({ where: ticketWhere }),
+    isSub
+      ? Promise.resolve([])
+      : db.user.groupBy({
+          by: ["companyId"],
+          where: { companyId: { in: treeIds }, active: true, role: { in: [...CUSTOMER_ROLES] } },
+          _count: { _all: true },
+        }),
+    isSub
+      ? Promise.resolve([])
+      : db.ticket.groupBy({
+          by: ["companyId"],
+          where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
+          _count: { _all: true },
+        }),
+    // Kosten nur für Administratoren laden
+    isAdmin ? getCompanyCostSummary(treeIds) : Promise.resolve(null),
+    // Anrufe des Kunden (bei Firmenkunden inklusive Unterkunden)
+    db.phoneCall.findMany({ where: callWhere, orderBy: { startedAt: "desc" }, take: 5, select: recentCallSelect }),
+    db.phoneCall.count({ where: callWhere }),
+  ]);
 
   const invited = new Set(invitedIds.map((u) => u.id));
   const usersByCompany = new Map(userGroups.map((g) => [g.companyId, g._count._all]));
@@ -590,6 +606,13 @@ export default async function CompanyPage({
               </DetailList>
             </CardBody>
           </Card>
+
+          <RecentCallsCard
+            calls={recentCalls}
+            total={callTotal}
+            showCompany={!isSub && hasChildren}
+            searchHref={`/admin/anrufe?zeitraum=alle&q=${encodeURIComponent(company.name.slice(0, 80))}`}
+          />
 
           <Card>
             <CardHeader

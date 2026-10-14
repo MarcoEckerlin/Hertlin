@@ -8,9 +8,11 @@ import { hashPassword, verifyPassword } from "@/lib/crypto";
 import { errorState, fromZodError, successState, type FormState } from "@/lib/forms";
 import { optionalText, password as passwordSchema, phone, requiredText } from "@/lib/validation";
 import { rateLimit } from "@/lib/rate-limit";
+import { isLangCode, languageLabel } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
 
 /**
- * Eigenes Profil in der Verwaltung: Kontaktdaten und Passwort.
+ * Eigenes Profil in der Verwaltung: Kontaktdaten, Sprache für Kundennachrichten und Passwort.
  * Die E-Mail-Adresse ist der Anmeldename; sie ändert ein Administrator unter „Team“.
  */
 
@@ -48,6 +50,30 @@ export async function updateStaffProfileAction(_prev: FormState, formData: FormD
   // Name steht auch in der Seitenleiste
   revalidatePath("/admin", "layout");
   return successState("Ihre Angaben sind gespeichert.");
+}
+
+/** Sprache, in die Nachrichten von Kunden und Interessenten für diesen Mitarbeiter übersetzt werden. */
+export async function updateStaffLanguageAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const user = await requireStaff();
+
+  if (!translationEnabled()) {
+    return errorState("Die automatische Übersetzung ist zurzeit nicht eingerichtet. Ein Administrator kann sie aktivieren.");
+  }
+  const language = text(formData, "language");
+  if (!isLangCode(language)) {
+    return errorState("Bitte prüfen Sie die Auswahl.", formData, { language: "Bitte eine Sprache aus der Liste wählen." });
+  }
+
+  try {
+    await db.user.update({ where: { id: user.id }, data: { language } });
+  } catch (error) {
+    console.error("[verwaltung] Sprache konnte nicht gespeichert werden:", error instanceof Error ? error.message : error);
+    return errorState("Die Einstellung konnte gerade nicht gespeichert werden. Bitte versuchen Sie es noch einmal.", formData);
+  }
+
+  // Tickets und Anfragen zeigen Kundennachrichten ab jetzt in der neuen Sprache
+  revalidatePath("/admin", "layout");
+  return successState(`Gespeichert. Nachrichten in anderen Sprachen sehen Sie ab jetzt auf ${languageLabel(language)}.`);
 }
 
 const passwordChangeSchema = z

@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState, useState, type KeyboardEvent } from "react";
-import { Lock, MessageSquare } from "lucide-react";
+import { Languages, Lock, MessageSquare } from "lucide-react";
 import { staffReplyAction } from "@/lib/actions/admin-tickets";
 import { initialFormState } from "@/lib/forms";
 import { cn } from "@/lib/cn";
 import { STATUS_LABELS_STAFF, type TicketStatus } from "@/lib/constants";
-import { useTypingSignal } from "@/realtime/client";
+import { useChannel, useTypingSignal } from "@/realtime/client";
 import { Field, Label, Select, Textarea } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -22,12 +22,16 @@ const AFTER_OPTIONS: TicketStatus[] = ["IN_PROGRESS", "WAITING_CUSTOMER", "RESOL
  * Antwort an den Kunden oder interne Notiz – mit deutlich sichtbarem Umschalter.
  * Die gewählte Art bleibt nach dem Absenden erhalten, damit eine zweite Notiz nicht
  * versehentlich als Antwort beim Kunden landet.
+ *
+ * Live: Ist der Kunde gerade im Ticket, steht das über dem Textfeld – die Antwort erscheint dann sofort bei
+ * ihm und die E-Mail entfällt. Bei einer internen Notiz wird das Tippen nur Kollegen angezeigt.
  */
 export function StaffReplyForm({
   ticketId,
   status,
   recipient,
   customerChannel,
+  customerLanguage = null,
   uploadRules,
 }: {
   ticketId: number;
@@ -36,6 +40,8 @@ export function StaffReplyForm({
   recipient: { name: string; email: string } | null;
   /** Wo der Kunde die Antwort sieht, z. B. „im Kundenportal“ oder „über seinen Status-Link“ */
   customerChannel: string;
+  /** Sprache, in der der Kunde Antworten übersetzt liest (z. B. „Türkisch“); null = Deutsch bzw. keine Übersetzung */
+  customerLanguage?: string | null;
   uploadRules: UploadRules;
 }) {
   const [state, action] = useActionState(staffReplyAction, initialFormState);
@@ -43,6 +49,9 @@ export function StaffReplyForm({
   const [mode, setMode] = useState<Mode>("reply");
   const internal = mode === "internal";
   const signalTyping = useTypingSignal(`ticket:${ticketId}`, internal);
+  // Gleicher Kanal wie die Live-Leiste am Verlauf; die Verbindung wird geteilt
+  const { presence } = useChannel({ t: "sub", ch: "ticket", id: ticketId });
+  const customerOnline = presence.customers.length > 0;
   const errors = state.fieldErrors ?? {};
   const values = state.status === "error" ? (state.values ?? {}) : {};
 
@@ -112,21 +121,38 @@ export function StaffReplyForm({
               </span>
             </label>
           </div>
-          <p className="mt-2 text-sm text-ink-soft" aria-live="polite">
+          <div className="mt-2 space-y-1.5 text-sm text-ink-soft" aria-live="polite">
             {internal ? (
-              <>
+              <p>
                 <span className="font-semibold text-amber-900">Nur für das Hertlin-Team sichtbar.</span> Es wird keine E-Mail
                 verschickt.
-              </>
+              </p>
+            ) : customerOnline ? (
+              <p className="flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-emerald-900 ring-1 ring-emerald-200 ring-inset">
+                <span className="mt-1.5 size-2 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+                <span>
+                  <span className="font-semibold">Kunde ist online</span> – Ihre Antwort erscheint sofort bei ihm, keine E-Mail
+                  nötig.
+                </span>
+              </p>
             ) : recipient ? (
-              <>
+              <p>
                 Der Kunde sieht die Antwort {customerChannel} und bekommt eine E-Mail an{" "}
                 <span className="font-semibold text-ink">{recipient.email}</span>.
-              </>
+              </p>
             ) : (
-              <>Der Kunde sieht die Antwort {customerChannel}. Eine E-Mail-Adresse ist nicht hinterlegt.</>
+              <p>Der Kunde sieht die Antwort {customerChannel}. Eine E-Mail-Adresse ist nicht hinterlegt.</p>
             )}
-          </p>
+            {!internal && customerLanguage ? (
+              <p className="flex items-start gap-2">
+                <Languages className="mt-0.5 size-4 shrink-0 text-ink-muted" aria-hidden />
+                <span>
+                  Der Kunde liest Ihre Antwort auf {customerLanguage} (automatisch übersetzt). Schreiben Sie einfach wie
+                  gewohnt.
+                </span>
+              </p>
+            ) : null}
+          </div>
         </fieldset>
 
         <FormMessage state={state} />
@@ -172,7 +198,8 @@ export function StaffReplyForm({
               Status danach
             </Label>
             <Select
-              key={mode}
+              // Neu aufbauen, wenn die Art wechselt oder sich der Status live ändert (z. B. durch einen Kollegen)
+              key={`${mode}-${status}`}
               id="antwort-status"
               name="statusAfter"
               defaultValue={values.statusAfter ?? suggested}

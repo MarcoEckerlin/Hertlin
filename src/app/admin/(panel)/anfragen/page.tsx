@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
+import { MessageSquare } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Badge, InquiryStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -103,6 +104,13 @@ export default async function InquiriesPage({
         status: true,
         createdAt: true,
         company: { select: { id: true, name: true } },
+        _count: { select: { messages: true } },
+        // Letzte Chat-Nachricht: Kommt sie vom Interessenten, wartet er auf Antwort
+        messages: {
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: 1,
+          select: { fromStaff: true, createdAt: true },
+        },
       },
     }),
     db.inquiry.count({ where: { status: { in: ["NEW", "CONTACTED", "OFFER_SENT"] } } }),
@@ -189,43 +197,79 @@ export default async function InquiriesPage({
                 <TH>Thema</TH>
                 <TH>Typ</TH>
                 <TH>Status</TH>
+                <TH>Chat</TH>
                 <TH className="text-right">Eingang</TH>
               </tr>
             </THead>
             <tbody>
-              {inquiries.map((i) => (
-                <TR key={i.id}>
-                  <TD className="whitespace-nowrap">
-                    <Link href={`/admin/anfragen/${i.id}`} className="font-semibold text-brand-700 hover:underline">
-                      {formatInquiryNumber(i.id)}
-                    </Link>
-                  </TD>
-                  <TD className="min-w-[12rem]">
-                    <Link href={`/admin/anfragen/${i.id}`} className="font-semibold break-words text-ink hover:underline">
-                      {i.companyName || i.name}
-                    </Link>
-                    <p className="text-xs break-words text-ink-muted">
-                      {i.companyName ? i.name : i.email}
-                      {i.zipCity ? ` · ${i.zipCity}` : ""}
-                    </p>
-                  </TD>
-                  <TD className="min-w-[12rem]">{labelOf(INQUIRY_TOPIC_LABELS, i.topic)}</TD>
-                  <TD>
-                    <Badge tone={i.customerType === "BUSINESS" ? "blue" : "gray"}>
-                      {i.customerType === "BUSINESS" ? "Unternehmen" : "Privat"}
-                    </Badge>
-                  </TD>
-                  <TD>
-                    <InquiryStatusBadge status={i.status} />
-                    {i.company ? <p className="mt-1 text-xs text-ink-muted">Kunde: {i.company.name}</p> : null}
-                  </TD>
-                  <TD className="text-right whitespace-nowrap">
-                    <time dateTime={i.createdAt.toISOString()} title={formatDateTime(i.createdAt)}>
-                      {formatRelative(i.createdAt, now)}
-                    </time>
-                  </TD>
-                </TR>
-              ))}
+              {inquiries.map((i) => {
+                const chatCount = i._count.messages;
+                const lastChat = i.messages[0] ?? null;
+                const awaitingReply = lastChat !== null && !lastChat.fromStaff;
+                return (
+                  <TR key={i.id}>
+                    <TD className="whitespace-nowrap">
+                      <Link href={`/admin/anfragen/${i.id}`} className="font-semibold text-brand-700 hover:underline">
+                        {formatInquiryNumber(i.id)}
+                      </Link>
+                    </TD>
+                    <TD className="min-w-[12rem]">
+                      <Link href={`/admin/anfragen/${i.id}`} className="font-semibold break-words text-ink hover:underline">
+                        {i.companyName || i.name}
+                      </Link>
+                      <p className="text-xs break-words text-ink-muted">
+                        {i.companyName ? i.name : i.email}
+                        {i.zipCity ? ` · ${i.zipCity}` : ""}
+                      </p>
+                    </TD>
+                    <TD className="min-w-[12rem]">{labelOf(INQUIRY_TOPIC_LABELS, i.topic)}</TD>
+                    <TD>
+                      <Badge tone={i.customerType === "BUSINESS" ? "blue" : "gray"}>
+                        {i.customerType === "BUSINESS" ? "Unternehmen" : "Privat"}
+                      </Badge>
+                    </TD>
+                    <TD>
+                      <InquiryStatusBadge status={i.status} />
+                      {i.company ? <p className="mt-1 text-xs text-ink-muted">Kunde: {i.company.name}</p> : null}
+                    </TD>
+                    <TD className="whitespace-nowrap">
+                      {chatCount === 0 ? (
+                        <span className="text-ink-muted" title="Noch keine Chat-Nachrichten">
+                          –
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/admin/anfragen/${i.id}`}
+                          className="inline-flex items-center gap-1.5 text-ink-soft hover:text-ink"
+                          aria-label={`${chatCount === 1 ? "1 Chat-Nachricht" : `${chatCount} Chat-Nachrichten`}${
+                            awaitingReply ? ", letzte vom Interessenten – noch unbeantwortet" : ""
+                          }`}
+                        >
+                          <MessageSquare className="size-4 shrink-0" aria-hidden />
+                          <span className="font-semibold tabular-nums">{chatCount}</span>
+                        </Link>
+                      )}
+                      {awaitingReply && lastChat ? (
+                        <p className="mt-1">
+                          <Badge tone="amber">Antwort offen</Badge>
+                          <time
+                            dateTime={lastChat.createdAt.toISOString()}
+                            title={`Letzte Nachricht des Interessenten: ${formatDateTime(lastChat.createdAt)}`}
+                            className="ml-1.5 text-xs text-ink-muted"
+                          >
+                            {formatRelative(lastChat.createdAt, now)}
+                          </time>
+                        </p>
+                      ) : null}
+                    </TD>
+                    <TD className="text-right whitespace-nowrap">
+                      <time dateTime={i.createdAt.toISOString()} title={formatDateTime(i.createdAt)}>
+                        {formatRelative(i.createdAt, now)}
+                      </time>
+                    </TD>
+                  </TR>
+                );
+              })}
             </tbody>
           </Table>
           <Pagination

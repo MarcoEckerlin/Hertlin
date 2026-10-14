@@ -5,11 +5,13 @@ import { db } from "@/lib/db";
 import { requirePortalContext } from "@/lib/auth";
 import { ROLE_DESCRIPTIONS } from "@/lib/constants";
 import { portalHost, portalUrl } from "@/lib/hosts";
+import { isLangCode } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
 import { RoleBadge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { PageHeader } from "@/components/ui/page-header";
-import { PasswordForm, ProfileForm } from "@/components/portal/profile-forms";
+import { LanguageForm, PasswordForm, ProfileForm } from "@/components/portal/profile-forms";
 
 export const metadata: Metadata = { title: "Mein Profil" };
 
@@ -19,7 +21,7 @@ export default async function PortalProfilePage() {
   // Frisch aus der Datenbank, damit nach dem Speichern die neuen Werte im Formular stehen
   const user = await db.user.findUnique({
     where: { id: ctx.user.id },
-    select: { name: true, email: true, phone: true, position: true },
+    select: { name: true, email: true, phone: true, position: true, language: true },
   });
   if (!user) notFound();
 
@@ -47,7 +49,7 @@ export default async function PortalProfilePage() {
       <PageHeader
         breadcrumbs={[{ label: "Übersicht", href: "/" }, { label: "Mein Profil" }]}
         title="Mein Profil"
-        description="Ihre Kontaktdaten und Ihr Passwort für das Kundenportal."
+        description="Ihre Kontaktdaten, die Sprache für Nachrichten und Ihr Passwort für das Kundenportal."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
@@ -59,6 +61,16 @@ export default async function PortalProfilePage() {
             />
             <CardBody>
               <ProfileForm name={user.name} phone={user.phone} position={user.position} />
+            </CardBody>
+          </Card>
+
+          <Card id="sprache" className="scroll-mt-24">
+            <CardHeader
+              title="Sprache für Nachrichten"
+              description="Antworten von Hertlin werden automatisch in diese Sprache übersetzt; was Sie schreiben, sieht Hertlin auf Deutsch."
+            />
+            <CardBody>
+              <LanguageForm language={isLangCode(user.language) ? user.language : "de"} enabled={translationEnabled()} />
             </CardBody>
           </Card>
 

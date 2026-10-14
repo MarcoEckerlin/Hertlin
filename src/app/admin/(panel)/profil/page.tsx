@@ -3,10 +3,13 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
+import { isLangCode } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
 import { RoleBadge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { StaffPasswordForm, StaffProfileForm } from "@/components/admin/profile/profile-forms";
+import { StaffLanguageForm, StaffPasswordForm, StaffProfileForm } from "@/components/admin/profile/profile-forms";
+import { NotificationPermission } from "@/components/admin/calls/notification-permission";
 
 export const metadata: Metadata = { title: "Mein Profil" };
 
@@ -15,18 +18,29 @@ export default async function StaffProfilePage() {
   const [account, sessionCount] = await Promise.all([
     db.user.findUnique({
       where: { id: user.id },
-      select: { name: true, email: true, phone: true, position: true, role: true, lastLoginAt: true, createdAt: true },
+      select: {
+        name: true,
+        email: true,
+        phone: true,
+        position: true,
+        role: true,
+        language: true,
+        lastLoginAt: true,
+        createdAt: true,
+      },
     }),
     db.session.count({ where: { userId: user.id, expiresAt: { gt: new Date() } } }),
   ]);
   if (!account) return null;
+  // Die Spracheinstellung zeigen wir nur, wenn ein Übersetzungsdienst eingerichtet ist
+  const translate = translationEnabled();
 
   return (
     <>
       <PageHeader
         breadcrumbs={[{ label: "Übersicht", href: "/admin" }, { label: "Mein Profil" }]}
         title="Mein Profil"
-        description="Ihre Kontaktdaten und Ihr Passwort für die Verwaltung."
+        description="Ihre Kontaktdaten, Einstellungen und Ihr Passwort für die Verwaltung."
       />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
@@ -35,6 +49,25 @@ export default async function StaffProfilePage() {
             <CardHeader title="Angaben" />
             <CardBody>
               <StaffProfileForm name={account.name} phone={account.phone} position={account.position} />
+            </CardBody>
+          </Card>
+
+          {translate ? (
+            <Card>
+              <CardHeader title="Übersetzung" />
+              <CardBody>
+                <StaffLanguageForm language={isLangCode(account.language) ? account.language : "de"} />
+              </CardBody>
+            </Card>
+          ) : null}
+
+          <Card>
+            <CardHeader
+              title="Desktop-Hinweise"
+              description="Für eingehende Anrufe und neue Tickets. Die Erlaubnis gilt nur für diesen Browser."
+            />
+            <CardBody>
+              <NotificationPermission />
             </CardBody>
           </Card>
 

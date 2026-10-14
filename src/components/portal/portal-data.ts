@@ -5,6 +5,9 @@ import { db } from "@/lib/db";
 import type { PortalContext } from "@/lib/auth";
 import { customerMessagesWhere, customerTicketSelect, portalAssignableCompanyIds } from "@/lib/permissions";
 import { parseTicketNumber } from "@/lib/format";
+import { isLangCode, type LangCode } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
+import { translateForViewer } from "@/lib/chat-translation";
 
 /**
  * Gemeinsame Abfragen für die Kundenportal-Seiten und -Actions (Übersicht, Tickets, Profil).
@@ -118,3 +121,53 @@ export type PortalTicketEvent = PortalTicketDetail["events"][number];
 
 /** Ticketzeile für Listen. */
 export type PortalTicketRow = Prisma.TicketGetPayload<{ select: typeof customerTicketSelect }>;
+
+/* ------------------------------------------------------------------ */
+/* Übersetzung der Nachrichten                                         */
+/* ------------------------------------------------------------------ */
+
+/** Nachrichten-ID -> Übersetzung in die Sprache des Lesers (nur Nachrichten, die übersetzt werden mussten). */
+export type MessageTranslations = Record<string, { text: string; from: string | null }>;
+
+/** Länger warten wir beim Seitenaufbau nicht auf den Übersetzungsdienst. */
+const TRANSLATION_WAIT_MS = 6000;
+
+/** Sprache, in der ein Portalbenutzer Nachrichten liest (Standard Deutsch). */
+export function viewerLanguage(language: string | null | undefined): LangCode {
+  return isLangCode(language) ? language : "de";
+}
+
+/**
+ * Übersetzt die Nachrichten eines Tickets in die Sprache des Lesers (User.language).
+ * - Eigene Nachrichten bleiben, wie sie geschrieben wurden.
+ * - Bei Deutsch als Lesesprache werden nur Nachrichten von Kundenseite geprüft (Hertlin schreibt Deutsch).
+ * - Dauert der Dienst zu lange oder fällt aus, bleiben die Originale stehen. Die Übersetzung läuft im
+ *   Hintergrund weiter und liegt beim nächsten Laden im Zwischenspeicher.
+ */
+export async function portalMessageTranslations(
+  messages: Pick<PortalTicketMessage, "id" | "body" | "authorId" | "fromStaff">[],
+  viewer: { id: string; language: string | null | undefined },
+): Promise<MessageTranslations> {
+  const lang = viewerLanguage(viewer.language);
+  if (!translationEnabled()) return {};
+  const items = messages
+    .filter((m) => m.authorId !== viewer.id && m.body.trim() !== "" && (lang !== "de" || !m.fromStaff))
+    .map((m) => ({ id: m.id, body: m.body }));
+  if (items.length === 0) return {};
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<MessageTranslations>((resolve) => {
+    timer = setTimeout(() => resolve({}), TRANSLATION_WAIT_MS);
+  });
+  try {
+    return await Promise.race([
+      translateForViewer(items, lang).catch((error: unknown) => {
+        console.error("[portal] Übersetzung der Nachrichten fehlgeschlagen:", error instanceof Error ? error.message : error);
+        return {};
+      }),
+      timeout,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}

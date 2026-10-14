@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireStaff } from "@/lib/auth";
 import { OPEN_STATUSES } from "@/lib/constants";
 import { formatMoney } from "@/lib/format";
+import { startOfBerlinDay } from "@/lib/phone";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -49,6 +50,9 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
     latest,
     inquiries,
     inquiryCount,
+    missedCalls,
+    missedToday,
+    anyCall,
   ] = await Promise.all([
     db.ticket.count({ where: { status: "NEW" } }),
     db.ticket.count({ where: { status: "NEW", assigneeId: null } }),
@@ -73,6 +77,11 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       select: { id: true, name: true, companyName: true, customerType: true, topic: true, createdAt: true },
     }),
     db.inquiry.count({ where: { status: "NEW" } }),
+    // Verpasste Anrufe, um die sich noch niemand gekümmert hat (wie der Zähler in der Navigation)
+    db.phoneCall.count({ where: { status: "MISSED", handledAt: null } }),
+    db.phoneCall.count({ where: { status: "MISSED", handledAt: null, startedAt: { gte: startOfBerlinDay() } } }),
+    // Gibt es überhaupt schon Anrufe? Ohne Telefonanlage wäre „alle erledigt“ irreführend
+    db.phoneCall.count({ take: 1 }),
   ]);
 
   // Kosten nur für Administratoren abfragen und anzeigen
@@ -115,7 +124,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         </Alert>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <StatCard
           href={ticketListHref({ status: "NEW" })}
           label="Neu"
@@ -146,6 +155,22 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           value={criticalOpen}
           hint={highOpen > 0 ? `dazu ${plural(highOpen, "Ticket", "Tickets")} mit hoher Priorität` : "keine mit hoher Priorität"}
           alert={criticalOpen > 0}
+        />
+        <StatCard
+          href="/admin/anrufe?verpasst=1&zeitraum=alle"
+          label="Verpasste Anrufe"
+          value={missedCalls}
+          hint={
+            anyCall === 0
+              ? "noch keine Anrufe erfasst"
+              : missedCalls === 0
+                ? "alle zurückgerufen oder erledigt"
+                : missedToday > 0
+                  ? `${missedToday} davon heute`
+                  : "noch nicht zurückgerufen"
+          }
+          alert={missedCalls > 0}
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 

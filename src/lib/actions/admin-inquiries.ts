@@ -14,6 +14,7 @@ import { publish } from "@/realtime/bus";
 /**
  * Anfragen von Interessenten bearbeiten.
  * Status und interne Notiz: alle Hertlin-Mitarbeiter. Löschen: nur Administratoren.
+ * Nach jeder Änderung geht ein Live-Signal (inquiry.updated) an alle offenen Ansichten der Anfrage.
  */
 
 function inquiryId(formData: FormData): number | null {
@@ -68,6 +69,8 @@ export async function deleteInquiryAction(_prev: FormState, formData: FormData):
 
   await db.inquiry.delete({ where: { id: inquiry.id } });
 
+  // Offene Ansichten (Kollegen, Chat-Seite des Interessenten) laden neu und sehen, dass es die Anfrage nicht mehr gibt
+  publish({ type: "inquiry.updated", inquiryId: inquiry.id });
   revalidatePath("/admin", "layout");
   redirect(`/admin/anfragen?geloescht=${encodeURIComponent(formatInquiryNumber(inquiry.id))}`);
 }

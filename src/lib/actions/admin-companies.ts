@@ -12,6 +12,7 @@ import { emptyToUndefined, errorState, fromZodError, successState, type FormStat
 import { isValidSlug, portalHost, portalUrl, RESERVED_SLUGS } from "@/lib/hosts";
 import { sendInviteMail, sendPasswordResetMail } from "@/lib/notifications";
 import { checkbox, email as emailSchema, optionalText, phone as phoneSchema, requiredText, slugField } from "@/lib/validation";
+import { publish } from "@/realtime/bus";
 
 /**
  * Kundenverwaltung in der Verwaltung: Firmenkunden, Unterkunden und Kundenbenutzer.
@@ -231,7 +232,11 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
   const inquiryRaw = str(formData, "inquiryId")?.trim() ?? "";
   const inquiryId = /^\d{1,9}$/.test(inquiryRaw) ? Number(inquiryRaw) : null;
 
-  let created: { company: { id: string; name: string; slug: string }; user: { id: string; name: string; email: string } | null };
+  let created: {
+    company: { id: string; name: string; slug: string };
+    user: { id: string; name: string; email: string } | null;
+    linkedInquiryId: number | null;
+  };
   try {
     created = await db.$transaction(async (tx) => {
       const company = await tx.company.create({
@@ -251,13 +256,15 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
             select: { id: true, name: true, email: true },
           })
         : null;
+      let linkedInquiryId: number | null = null;
       if (inquiryId) {
-        await tx.inquiry.updateMany({
+        const linked = await tx.inquiry.updateMany({
           where: { id: inquiryId, companyId: null },
           data: { companyId: company.id, status: "WON" },
         });
+        if (linked.count > 0) linkedInquiryId = inquiryId;
       }
-      return { company: { id: company.id, name: company.name, slug: company.slug ?? data.slug }, user };
+      return { company: { id: company.id, name: company.name, slug: company.slug ?? data.slug }, user, linkedInquiryId };
     });
   } catch (error) {
     if (isUniqueViolation(error)) {
@@ -269,6 +276,8 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
     throw error;
   }
 
+  // Anfrage ist jetzt dem neuen Kunden zugeordnet: offene Ansichten der Anfrage live aktualisieren
+  if (created.linkedInquiryId) publish({ type: "inquiry.updated", inquiryId: created.linkedInquiryId });
   revalidateCustomers();
 
   if (!created.user) redirect(`/admin/kunden/${created.company.id}?angelegt=1`);

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { site } from "@/config/site";
@@ -12,6 +13,10 @@ import { checkbox, email, optionalText, phone, requiredText } from "@/lib/valida
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { filesFromFormData, validateFiles } from "@/lib/uploads";
 import { formatInquiryNumber, formatTicketNumber, parseTicketNumber } from "@/lib/format";
+import { LANGUAGE_COOKIE, isLangCode, languageLabel, type LangCode } from "@/lib/languages";
+import { ensureInquiryToken, inquiryChatUrl } from "@/lib/inquiry-chat";
+import { sendInquiryConfirmationWithChat } from "@/lib/notifications-chat";
+import { publish } from "@/realtime/bus";
 import {
   canCustomerReply,
   createTicketMessage,
@@ -32,7 +37,7 @@ import { PRIVATE_TICKET_CATEGORIES, inquiryTopicsFor } from "@/components/forms/
 
 /**
  * Öffentliche Formulare der Hauptdomain (ohne Anmeldung):
- * Anfrage von Neukunden, Hilfe-Formular für Privatkunden, Antworten über den Status-Link
+ * Anfrage von Neukunden, Hilfe-Formular für Privatkunden, Antworten und Sprachwahl über den Status-Link
  * und das erneute Zusenden des Status-Links.
  *
  * Schutz: Honeypot-Feld, Rate-Limit pro IP, serverseitige Prüfung aller Eingaben.
@@ -82,6 +87,21 @@ function invalidState(
 function filesNote(files: File[]): string {
   return files.length > 0 ? " Ihre Dateien müssen Sie danach bitte noch einmal auswählen." : "";
 }
+
+/**
+ * Sprache, die der Besucher im Website-Übersetzer gewählt hat (Cookie hertlin_lang).
+ * Deutsch und ungültige Werte ergeben null.
+ */
+async function visitorLanguage(): Promise<LangCode | null> {
+  try {
+    const value = (await cookies()).get(LANGUAGE_COOKIE)?.value;
+    return isLangCode(value) && value !== "de" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+const INVALID_STATUS_LINK = "Dieser Status-Link ist ungültig. Bitte öffnen Sie ihn direkt aus unserer E-Mail.";
 
 const consent = checkbox.refine((v) => v, "Bitte bestätigen Sie die Einwilligung. Ohne sie dürfen wir Ihre Angaben nicht speichern.");
 
@@ -158,6 +178,8 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
 
   const data = parsed.data;
   const business = parsedBusiness?.success ? parsedBusiness.data : null;
+  // Nutzt der Besucher den Website-Übersetzer, zeigt der Anfragen-Chat unsere Antworten gleich in dieser Sprache
+  const language = await visitorLanguage();
 
   let inquiry: { id: number };
   try {
@@ -173,6 +195,7 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
         topic: data.topic,
         message: data.message,
         preferredContact: data.preferredContact,
+        language,
       },
       select: { id: true },
     });
@@ -180,6 +203,17 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
     console.error("[kontakt] Anfrage konnte nicht gespeichert werden:", error);
     return errorState(SAVE_FAILED, formData);
   }
+
+  // Persönlicher Chat-Link zur Anfrage. Klappt das nicht, ist die Anfrage trotzdem gespeichert.
+  let chatToken: string | null = null;
+  try {
+    chatToken = await ensureInquiryToken(inquiry.id);
+  } catch (error) {
+    console.error("[kontakt] Chat-Link zur Anfrage konnte nicht angelegt werden:", error);
+  }
+
+  // Live-Hinweis an das Team (Verwaltung)
+  publish({ type: "staff.notice", notice: { kind: "inquiry.created", inquiryId: inquiry.id, name: data.name } });
 
   // E-Mails erst nach der Antwort verschicken, damit niemand auf den Mailserver warten muss.
   after(async () => {
@@ -189,17 +223,32 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
       data.zipCity ? `PLZ und Ort: ${data.zipCity}` : null,
       `Rückmeldung gewünscht: ${data.preferredContact === "PHONE" ? "telefonisch" : "per E-Mail"}`,
     ].filter((line) => line !== null);
-    await notifyStaffNewInquiry({
-      id: inquiry.id,
-      customerType: data.customerType,
-      name: data.name,
-      companyName: business?.companyName ?? null,
-      email: data.email,
-      phone: data.phone ?? null,
-      topic: data.topic,
-      message: `${details.join("\n")}\n\n${data.message}`,
-    });
-    await sendInquiryConfirmation({ id: inquiry.id, name: data.name, email: data.email, customerType: data.customerType });
+    try {
+      await notifyStaffNewInquiry({
+        id: inquiry.id,
+        customerType: data.customerType,
+        name: data.name,
+        companyName: business?.companyName ?? null,
+        email: data.email,
+        phone: data.phone ?? null,
+        topic: data.topic,
+        message: `${details.join("\n")}\n\n${data.message}`,
+      });
+    } catch (error) {
+      console.error("[kontakt] Benachrichtigung an das Team fehlgeschlagen:", error);
+    }
+
+    // Bestätigung mit Chat-Link; ohne Link (oder wenn das schiefgeht) die einfache Bestätigung
+    const confirmation = { id: inquiry.id, name: data.name, email: data.email, customerType: data.customerType };
+    if (chatToken) {
+      try {
+        await sendInquiryConfirmationWithChat({ ...confirmation, token: chatToken });
+        return;
+      } catch (error) {
+        console.error("[kontakt] Bestätigung mit Chat-Link fehlgeschlagen:", error);
+      }
+    }
+    await sendInquiryConfirmation(confirmation);
   });
 
   return successState("Vielen Dank, Ihre Anfrage ist angekommen.", {
@@ -207,6 +256,7 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
     email: data.email,
     customerType: data.customerType,
     preferredContact: data.preferredContact,
+    ...(chatToken ? { chatUrl: inquiryChatUrl(chatToken), chatPath: `/anfrage/${chatToken}` } : {}),
   });
 }
 
@@ -273,6 +323,9 @@ export async function submitPrivateTicketAction(_prev: FormState, formData: Form
   const priority = data.category === "SICHERHEIT" ? "HIGH" : "NORMAL";
   const body = data.availability ? `${data.description}\n\nGut erreichbar: ${data.availability}` : data.description;
   const token = generateToken(24);
+  // Sprache für unsere Antworten: Auswahl im Formular, sonst die Sprache des Website-Übersetzers
+  const requestedLanguage = text(formData, "language").trim();
+  const contactLanguage = isLangCode(requestedLanguage) ? requestedLanguage : await visitorLanguage();
 
   let ticketId: number;
   try {
@@ -289,6 +342,7 @@ export async function submitPrivateTicketAction(_prev: FormState, formData: Form
         contactEmail: data.email,
         contactPhone: data.phone,
         contactAddress: data.address ?? null,
+        contactLanguage,
         guestToken: token,
       },
       select: { id: true },
@@ -356,7 +410,7 @@ const guestReplySchema = z.object({
 export async function replyAsGuestAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const token = text(formData, "token");
   if (!GUEST_TOKEN_PATTERN.test(token)) {
-    return errorState("Dieser Status-Link ist ungültig. Bitte öffnen Sie ihn direkt aus unserer E-Mail.");
+    return errorState(INVALID_STATUS_LINK);
   }
 
   let ticket;
@@ -370,7 +424,7 @@ export async function replyAsGuestAction(_prev: FormState, formData: FormData): 
     return errorState(SAVE_FAILED, formData);
   }
   if (!ticket) {
-    return errorState("Dieser Status-Link ist ungültig. Bitte öffnen Sie ihn direkt aus unserer E-Mail.");
+    return errorState(INVALID_STATUS_LINK);
   }
   if (!canCustomerReply(ticket.status)) {
     return errorState(
@@ -428,6 +482,48 @@ export async function replyAsGuestAction(_prev: FormState, formData: FormData): 
     return successState("Danke für Ihre Antwort. Damit können wir weitermachen.");
   }
   return successState("Danke, Ihre Nachricht ist bei uns angekommen.");
+}
+
+/* ======================================================================
+ * Sprache für unsere Antworten über den Status-Link (/status/[token])
+ * Aufruf über ChatLanguageSelect: "" = nicht übersetzen (Deutsch).
+ * ==================================================================== */
+
+export async function guestTicketLanguageAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const token = text(formData, "token");
+  if (!GUEST_TOKEN_PATTERN.test(token)) return errorState(INVALID_STATUS_LINK);
+
+  const raw = text(formData, "language").trim();
+  // Ausdrücklich Deutsch speichern, damit nicht wieder die Sprache aus dem Website-Übersetzer greift
+  const language = raw === "" ? "de" : raw;
+  if (!isLangCode(language)) return errorState("Bitte wählen Sie eine Sprache aus der Liste.");
+
+  const limited = await rateLimitMessage("guest-language", 30, HOUR / 6);
+  if (limited) return errorState(limited);
+
+  try {
+    const ticket = await db.ticket.findFirst({
+      where: { guestToken: token, source: "PRIVATE_FORM", companyId: null },
+      select: { id: true, contactLanguage: true, updatedAt: true },
+    });
+    if (!ticket) return errorState(INVALID_STATUS_LINK);
+    if (ticket.contactLanguage !== language) {
+      // Die Sprachwahl ist keine Änderung am Anliegen: „Letzte Änderung“ bleibt, wie sie war
+      await db.ticket.update({ where: { id: ticket.id }, data: { contactLanguage: language, updatedAt: ticket.updatedAt } });
+      // Offene Ansichten (z. B. das Ticket in der Verwaltung) zeigen die neue Sprache gleich an
+      publish({ type: "ticket.updated", ticketId: ticket.id });
+    }
+  } catch (error) {
+    console.error("[status] Sprache konnte nicht gespeichert werden:", error);
+    return errorState(SAVE_FAILED);
+  }
+
+  revalidatePath(`/status/${token}`);
+  return successState(
+    language === "de"
+      ? "Gespeichert. Sie sehen unsere Antworten auf Deutsch."
+      : `Gespeichert. Sie sehen unsere Antworten ab jetzt auf ${languageLabel(language)}.`,
+  );
 }
 
 /* ======================================================================

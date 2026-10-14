@@ -38,6 +38,9 @@ export function InquiryUpdateForm({ id, status, internalNote }: { id: number; st
       <FormMessage state={state} />
       <Field label="Status" htmlFor="inquiry-status" error={errors.status} hint={STATUS_HINTS[selected]}>
         <Select
+          // Ändert sich der Status live (z. B. durch die erste Chat-Antwort oder einen Kollegen), die Auswahl nachziehen –
+          // sonst würde „Speichern“ den alten Status zurückschreiben
+          key={defaultStatus}
           {...fieldProps("inquiry-status", errors.status, true)}
           name="status"
           defaultValue={defaultStatus}
@@ -58,6 +61,8 @@ export function InquiryUpdateForm({ id, status, internalNote }: { id: number; st
         optional
       >
         <Textarea
+          // Neu aufbauen, wenn ein Kollege die Notiz geändert hat; eigene, noch nicht gespeicherte Eingaben bleiben sonst stehen
+          key={internalNote ?? ""}
           {...fieldProps("inquiry-note", errors.internalNote, true)}
           name="internalNote"
           rows={5}

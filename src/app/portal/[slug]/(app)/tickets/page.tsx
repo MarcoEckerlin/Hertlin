@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requirePortalContext } from "@/lib/auth";
 import { customerTicketSelect, portalTicketWhere } from "@/lib/permissions";
 import { parseTicketNumber } from "@/lib/format";
+import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -104,6 +106,14 @@ export default async function PortalTicketsPage({ searchParams }: { searchParams
       />
 
       <div className="space-y-4">
+        {counts.wartet > 0 && status !== "wartet" ? (
+          <Alert tone="warning" title={counts.wartet === 1 ? "Bei einem Ticket wartet eine Rückfrage auf Sie" : `Bei ${counts.wartet} Tickets warten Rückfragen auf Sie`}>
+            Sobald Sie geantwortet haben, machen wir weiter.{" "}
+            <Link href={ticketListHref({ art, suche, firma, status: "wartet" })} className="font-semibold underline underline-offset-2">
+              {counts.wartet === 1 ? "Rückfrage ansehen" : "Rückfragen ansehen"}
+            </Link>
+          </Alert>
+        ) : null}
         <TicketStatusTabs active={status} counts={counts} query={{ art, suche, firma }} />
         <TicketFilterForm status={status} art={art} suche={suche} firma={firma} companies={companies} />
       </div>

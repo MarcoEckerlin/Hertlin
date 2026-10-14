@@ -2,8 +2,9 @@
 
 import { useActionState } from "react";
 import { initialFormState } from "@/lib/forms";
-import { changeStaffPasswordAction, updateStaffProfileAction } from "@/lib/actions/admin-profile";
-import { Field, Input } from "@/components/ui/field";
+import { changeStaffPasswordAction, updateStaffLanguageAction, updateStaffProfileAction } from "@/lib/actions/admin-profile";
+import { LANGUAGES } from "@/lib/languages";
+import { Field, Input, Select } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { fieldA11y, useStaffForm } from "@/components/admin/tickets/use-staff-form";
@@ -51,6 +52,37 @@ export function StaffProfileForm({ name, phone, position }: { name: string; phon
         </Field>
       </div>
       <SubmitButton pendingText="Wird gespeichert …">Angaben speichern</SubmitButton>
+    </form>
+  );
+}
+
+/** Sprache, in die Nachrichten von Kunden und Interessenten übersetzt angezeigt werden (User.language). */
+export function StaffLanguageForm({ language }: { language: string }) {
+  const [state, action] = useActionState(updateStaffLanguageAction, initialFormState);
+  const { formRef, formKey } = useStaffForm(state);
+  const errors = state.fieldErrors ?? {};
+  const value = state.status === "error" ? (state.values?.language ?? language) : language;
+
+  return (
+    <form key={formKey} ref={formRef} action={action} noValidate className="space-y-5">
+      <FormMessage state={state} />
+      <Field
+        label="Sprache für Kundennachrichten"
+        htmlFor="profil-sprache"
+        hint="Schreibt ein Kunde oder Interessent in einer anderen Sprache, sehen Sie seine Nachricht übersetzt. Das Original lässt sich jederzeit einblenden."
+        error={errors.language}
+      >
+        <div className="sm:max-w-sm">
+          <Select {...fieldA11y("profil-sprache", errors.language, true)} name="language" defaultValue={value}>
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code}>
+                {l.code === "de" ? "Deutsch (Standard)" : `${l.label} – ${l.native}`}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </Field>
+      <SubmitButton pendingText="Wird gespeichert …">Sprache speichern</SubmitButton>
     </form>
   );
 }

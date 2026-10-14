@@ -10,6 +10,8 @@ import { formatDateTime, formatRelative, formatTicketNumber } from "@/lib/format
 import { canCustomerReply } from "@/lib/tickets";
 import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } from "@/lib/uploads";
 import { getSiteSettings } from "@/lib/settings";
+import { languageLabel } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
 import { Alert } from "@/components/ui/alert";
 import { Badge, PriorityBadge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
@@ -18,12 +20,15 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LiveConversation } from "@/components/realtime/live-conversation";
 import {
   parseTicketParam,
+  portalMessageTranslations,
   portalTicketDetailSelect,
+  viewerLanguage,
   type PortalTicketDetail,
 } from "@/components/portal/portal-data";
+import { LiveTimeline } from "@/components/portal/live-timeline";
 import { ReplyForm } from "@/components/portal/reply-form";
 import { TicketStatusActions } from "@/components/portal/ticket-status-actions";
-import { TicketTimeline } from "@/components/portal/ticket-timeline";
+import { TicketTimeline, timelineTail } from "@/components/portal/ticket-timeline";
 
 type Params = Promise<{ slug: string; id: string }>;
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -56,7 +61,14 @@ export default async function PortalTicketPage({ params, searchParams }: { param
   const ticket = await loadTicket(ticketId);
   if (!ticket) notFound();
 
-  const site = await getSiteSettings();
+  // Nachrichten in der Sprache des Lesers (Profil → „Sprache für Nachrichten“)
+  const lang = viewerLanguage(ctx.user.language);
+  const translating = lang !== "de" && translationEnabled();
+  const [site, translations] = await Promise.all([
+    getSiteSettings(),
+    portalMessageTranslations(ticket.messages, { id: ctx.user.id, language: lang }),
+  ]);
+  const tail = timelineTail(ticket.messages, ticket.events, ctx.user.id, ticket.contactName);
   const number = formatTicketNumber(ticket.id);
   const canReply = canCustomerReply(ticket.status);
   const isNew = query.neu === "1" && ticket.messages.filter((m) => !m.fromStaff).length <= 1;
@@ -119,24 +131,41 @@ export default async function PortalTicketPage({ params, searchParams }: { param
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <section aria-labelledby="verlauf-titel">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
               <h2 id="verlauf-titel" className="text-lg font-bold text-ink">
                 Verlauf
               </h2>
-              <LiveConversation spec={{ t: "sub", ch: "ticket", id: ticket.id }} audience="customer" selfName={ctx.user.name} />
+              {translating ? (
+                <p className="text-sm text-ink-muted">
+                  Antworten von Hertlin auf {languageLabel(lang)} ·{" "}
+                  <Link href="/profil#sprache" className="font-semibold text-brand-700 hover:underline">
+                    Sprache ändern
+                  </Link>
+                </p>
+              ) : null}
             </div>
-            {ticket.messages.length > 0 || ticket.events.length > 0 ? (
-              <TicketTimeline
-                messages={ticket.messages}
-                events={ticket.events}
-                currentUserId={ctx.user.id}
-                fallbackAuthor={ticket.contactName}
-              />
-            ) : (
-              <p className="rounded-2xl border border-dashed border-line-strong bg-white px-5 py-8 text-center text-sm text-ink-soft">
-                Zu diesem Ticket gibt es noch keine Nachrichten.
-              </p>
-            )}
+            <LiveTimeline lastKey={tail.key} lastFromSelf={tail.fromSelf} announcement={tail.announcement}>
+              {ticket.messages.length > 0 || ticket.events.length > 0 ? (
+                <TicketTimeline
+                  messages={ticket.messages}
+                  events={ticket.events}
+                  currentUserId={ctx.user.id}
+                  fallbackAuthor={ticket.contactName}
+                  translations={translations}
+                />
+              ) : (
+                <p className="rounded-2xl border border-dashed border-line-strong bg-white px-5 py-8 text-center text-sm text-ink-soft">
+                  Zu diesem Ticket gibt es noch keine Nachrichten.
+                </p>
+              )}
+            </LiveTimeline>
+            {/* Live-Leiste direkt unter der letzten Nachricht: dort, wo Neues erscheint */}
+            <LiveConversation
+              spec={{ t: "sub", ch: "ticket", id: ticket.id }}
+              audience="customer"
+              selfName={ctx.user.name}
+              className="mt-4 min-h-5 px-1"
+            />
           </section>
 
           <section id="antworten" aria-labelledby="antworten-titel" className="scroll-mt-24">
@@ -152,7 +181,11 @@ export default async function PortalTicketPage({ params, searchParams }: { param
                           : "Nachricht schreiben"}
                     </span>
                   }
-                  description="Ihre Nachricht landet direkt im Ticket. Screenshots und Dateien können Sie gleich mitschicken."
+                  description={
+                    translating
+                      ? `Ihre Nachricht landet direkt im Ticket. Schreiben Sie gern auf ${languageLabel(lang)} – wir lesen sie automatisch übersetzt.`
+                      : "Ihre Nachricht landet direkt im Ticket. Screenshots und Dateien können Sie gleich mitschicken."
+                  }
                 />
                 <CardBody>
                   <ReplyForm

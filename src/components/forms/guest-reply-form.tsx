@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { initialFormState } from "@/lib/forms";
 import { replyAsGuestAction } from "@/lib/actions/public";
+import { useTypingSignal } from "@/realtime/client";
 import { Field, Textarea } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -20,10 +21,22 @@ const PLACEHOLDER: Record<string, string> = {
 /**
  * Antwort eines Privatkunden über den Status-Link.
  * Das Token steckt im versteckten Feld und wird in der Action erneut geprüft.
+ * Während des Tippens sieht das Team „schreibt gerade …“ (Live-Verbindung über den Status-Link).
  */
-export function GuestReplyForm({ token, status, uploadRules }: { token: string; status: string; uploadRules: UploadRules }) {
+export function GuestReplyForm({
+  token,
+  ticketId,
+  status,
+  uploadRules,
+}: {
+  token: string;
+  ticketId: number;
+  status: string;
+  uploadRules: UploadRules;
+}) {
   const [state, action] = useActionState(replyAsGuestAction, initialFormState);
   const { formRef } = useFormFeedback(state);
+  const signalTyping = useTypingSignal(`ticket:${ticketId}`);
   const errors = state.fieldErrors ?? {};
 
   return (
@@ -38,6 +51,7 @@ export function GuestReplyForm({ token, status, uploadRules }: { token: string; 
           maxLength={5000}
           placeholder={PLACEHOLDER[status] ?? "Schreiben Sie uns, was es Neues gibt oder was Sie wissen möchten."}
           defaultValue={state.status === "error" ? state.values?.body : undefined}
+          onInput={signalTyping}
         />
       </Field>
       <AttachmentInput

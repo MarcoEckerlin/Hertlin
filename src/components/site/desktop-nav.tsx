@@ -2,28 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { mainNav } from "@/components/site/nav";
 import { cn } from "@/lib/cn";
-
-function isActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { isActivePath, type SiteNavLink } from "@/components/site/nav-types";
 
 /** Hauptnavigation ab xl-Breite (darunter reicht der Platz nicht), markiert die aktuelle Seite. */
-export function DesktopNav() {
+export function DesktopNav({ items }: { items: SiteNavLink[] }) {
   const pathname = usePathname();
+  if (items.length === 0) return null;
   return (
     <nav aria-label="Hauptnavigation" className="hidden xl:block">
       <ul className="flex items-center gap-1">
-        {mainNav.map((item) => {
-          const active = isActive(pathname, item.href);
+        {items.map((item) => {
+          const active = isActivePath(pathname, item.href);
           return (
             <li key={item.href}>
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "rounded-full px-3.5 py-2 text-[0.9375rem] font-semibold transition-colors",
+                  "rounded-full px-3.5 py-2 text-[0.9375rem] font-semibold whitespace-nowrap transition-colors",
                   active ? "bg-brand-100 text-ink" : "text-ink-soft hover:bg-brand-50 hover:text-ink",
                 )}
               >

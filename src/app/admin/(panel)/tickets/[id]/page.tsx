@@ -9,6 +9,9 @@ import { CATEGORY_LABELS, SOURCE_LABELS, TYPE_LABELS, labelOf } from "@/lib/cons
 import { formatDateTime, formatMoney, formatRelative, formatTicketNumber } from "@/lib/format";
 import { customerRecipient } from "@/lib/tickets";
 import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } from "@/lib/uploads";
+import { isLangCode, languageLabel } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
+import { translateForViewer } from "@/lib/chat-translation";
 import { takeTicketAction } from "@/lib/actions/admin-tickets";
 import { Alert } from "@/components/ui/alert";
 import { Badge, PriorityBadge, StatusBadge } from "@/components/ui/badge";
@@ -28,10 +31,9 @@ import {
 } from "@/components/admin/tickets/data";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { ContactCard } from "@/components/admin/tickets/contact-card";
-import { CostSection } from "@/components/admin/tickets/cost-section";
 import { LinkedCallsCard } from "@/components/admin/tickets/linked-calls-card";
 import { StaffReplyForm } from "@/components/admin/tickets/staff-reply-form";
-import { StaffTimeline } from "@/components/admin/tickets/staff-timeline";
+import { StaffTimeline, type TimelineTranslations } from "@/components/admin/tickets/staff-timeline";
 import { TicketMetaForm, type MetaCompanyGroup } from "@/components/admin/tickets/ticket-meta-form";
 
 type Params = Promise<{ id: string }>;
@@ -72,14 +74,27 @@ export default async function AdminTicketPage({ params, searchParams }: { params
   const ticket = await loadTicket(ticketId);
   if (!ticket) notFound();
 
-  // Kosten ausschließlich für Administratoren laden
+  // Kosten ausschließlich für Administratoren laden – die Kostenkomponente wird für Techniker gar nicht erst importiert
   const showCosts = user.role === "ADMIN";
-  const [staff, customerGroups, recipient, costs] = await Promise.all([
+  const translate = translationEnabled();
+  const viewerLang = isLangCode(user.language) ? user.language : "de";
+  const customerItems = ticket.messages.filter((m) => !m.fromStaff && !m.internal).map((m) => ({ id: m.id, body: m.body }));
+
+  const [staff, customerGroups, recipient, costs, costModule, translations] = await Promise.all([
     loadStaffOptions({ includeId: ticket.assigneeId }),
     loadCustomerGroups({ activeOnly: true, withUsers: false }),
     customerRecipient(ticket.id),
     showCosts ? loadTicketCosts(ticket.id) : Promise.resolve(null),
+    showCosts ? import("@/components/admin/tickets/cost-section") : Promise.resolve(null),
+    // Kundennachrichten in die Sprache des Mitarbeiters; ohne Dienst oder bei Fehlern bleibt es beim Original
+    translate && customerItems.length > 0
+      ? translateForViewer(customerItems, viewerLang).catch((error: unknown): TimelineTranslations => {
+          console.error("[verwaltung] Übersetzung im Ticket fehlgeschlagen:", error instanceof Error ? error.message : error);
+          return {};
+        })
+      : Promise.resolve<TimelineTranslations>({}),
   ]);
+  const CostSection = costModule?.CostSection ?? null;
 
   const number = formatTicketNumber(ticket.id);
   const company = ticket.company;
@@ -122,6 +137,11 @@ export default async function AdminTicketPage({ params, searchParams }: { params
       ...companyGroups,
     ];
   }
+
+  // Sprache, in der der Kunde unsere Antworten liest: Konto des Erstellers, sonst Angabe im Ticket (Privatkunden)
+  const readerLanguage = creator ? creator.language : ticket.contactLanguage;
+  const customerLanguage =
+    translate && isLangCode(readerLanguage) && readerLanguage !== "de" ? languageLabel(readerLanguage) : null;
 
   const isNew = first(query.neu) === "1";
   const mail = first(query.mail);
@@ -214,6 +234,7 @@ export default async function AdminTicketPage({ params, searchParams }: { params
                 events={ticket.events}
                 customerName={ticket.contactName ?? creator?.name ?? null}
                 currentUserId={user.id}
+                translations={translations}
               />
             ) : (
               <p className="rounded-2xl border border-dashed border-line-strong bg-white px-5 py-8 text-center text-sm text-ink-soft">
@@ -227,6 +248,7 @@ export default async function AdminTicketPage({ params, searchParams }: { params
             status={ticket.status}
             recipient={recipient ? { name: recipient.name, email: recipient.email } : null}
             customerChannel={company ? "im Kundenportal" : "über seinen Status-Link"}
+            customerLanguage={customerLanguage}
             uploadRules={{
               accept: ACCEPT_ATTRIBUTE,
               maxFiles: MAX_FILES,
@@ -235,7 +257,7 @@ export default async function AdminTicketPage({ params, searchParams }: { params
             }}
           />
 
-          {costs ? <CostSection ticketId={ticket.id} costs={costs} flash={first(query.kosten)} /> : null}
+          {costs && CostSection ? <CostSection ticketId={ticket.id} costs={costs} flash={first(query.kosten)} /> : null}
         </div>
 
         <aside aria-label="Bearbeitung und Kontakt" className="space-y-6">

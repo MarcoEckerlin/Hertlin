@@ -34,6 +34,7 @@ import {
   sendPrivateStatusLink,
   sendPrivateTicketConfirmation,
 } from "@/lib/notifications";
+import { isCustomerWatchingTicket } from "@/realtime/bus";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { parseTicketIdParam } from "@/components/admin/tickets/data";
 
@@ -527,6 +528,11 @@ export async function staffReplyAction(_prev: FormState, formData: FormData): Pr
   revalidateAdmin();
 
   if (internal) return successState("Interne Notiz gespeichert.");
+
+  // Kunde ist gerade live im Ticket: Die Antwort erscheint sofort bei ihm, die E-Mail entfällt (siehe notifyCustomerStaffReply)
+  if (isCustomerWatchingTicket(ticket.id)) {
+    return successState("Antwort gesendet. Der Kunde ist gerade online und sieht sie sofort – eine E-Mail war nicht nötig.");
+  }
 
   const recipient = await customerRecipient(ticket.id);
   if (!recipient) {

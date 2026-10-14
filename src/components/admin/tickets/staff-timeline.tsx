@@ -8,11 +8,24 @@ import {
   labelOf,
 } from "@/lib/constants";
 import { formatDateTime, formatFileSize, formatRelative, initials } from "@/lib/format";
+import { TranslatedBody } from "@/components/translate/translated-body";
 import type { StaffTicketEvent, StaffTicketMessage } from "@/components/admin/tickets/data";
+import { TimelineFollower } from "@/components/admin/tickets/timeline-follower";
 
 type Item =
   | { kind: "message"; at: Date; message: StaffTicketMessage; first: boolean }
   | { kind: "event"; at: Date; event: StaffTicketEvent };
+
+/** Übersetzungen von Kundennachrichten: Nachrichten-ID -> übersetzter Text und erkannte Ausgangssprache */
+export type TimelineTranslations = Record<string, { text: string; from: string | null }>;
+
+/** Gemeinsame Klassen der Verlaufseinträge (Abstand beim Hinscrollen wegen der festen Kopfzeile) */
+const ITEM_CLASS = "scroll-mt-24 scroll-mb-6";
+
+const BODY_CLASS = "text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap text-ink-soft";
+
+/** Liegt eine Nachricht so kurz vor dem letzten Eintrag, gehört dieser dazu (z. B. Statuswechsel nach einer Antwort). */
+const SAME_UPDATE_MS = 10_000;
 
 function isStaffRole(role: string | null | undefined): boolean {
   return role === "ADMIN" || role === "TECHNICIAN";
@@ -22,18 +35,23 @@ function isStaffRole(role: string | null | undefined): boolean {
  * Verlauf eines Tickets für die Verwaltung: alle Nachrichten inklusive interner Notizen
  * und das Ereignisprotokoll (Status, Priorität, Bearbeiter …) in zeitlicher Reihenfolge.
  * Kunde weiß (links), Antworten von Hertlin hellblau, interne Notizen gelb abgesetzt (rechts).
+ * Kundennachrichten erscheinen auf Wunsch übersetzt (translations); das Original bleibt abrufbar.
+ * Kommen live neue Einträge dazu, scrollt der Verlauf weich mit (TimelineFollower).
  */
 export function StaffTimeline({
   messages,
   events,
   customerName,
   currentUserId,
+  translations = {},
 }: {
   messages: StaffTicketMessage[];
   events: StaffTicketEvent[];
   /** Name für Kundennachrichten ohne Benutzerkonto */
   customerName: string | null;
   currentUserId: string;
+  /** Nur für Kundennachrichten – interne Notizen und Antworten von Hertlin werden nie übersetzt */
+  translations?: TimelineTranslations;
 }) {
   // „Ticket angelegt“ steht immer ganz oben, auch wenn die erste Nachricht ein paar Millisekunden früher gespeichert wurde
   const firstAt = messages[0]?.createdAt;
@@ -46,22 +64,43 @@ export function StaffTimeline({
     })),
   ].sort((a, b) => a.at.getTime() - b.at.getTime() || (a.kind === b.kind ? 0 : a.kind === "event" ? -1 : 1));
 
+  const last = items[items.length - 1];
+  const lastKey = last ? (last.kind === "message" ? last.message.id : last.event.id) : "leer";
+  const lastFromSelf = last
+    ? last.kind === "message"
+      ? last.message.authorId === currentUserId
+      : last.event.actorId === currentUserId
+    : false;
+  const lastMessage = messages[messages.length - 1];
+  const endsWithMessage =
+    last?.kind === "message" ||
+    (last !== undefined && lastMessage !== undefined && last.at.getTime() - lastMessage.createdAt.getTime() < SAME_UPDATE_MS);
+
   return (
-    <ol className="space-y-4">
-      {items.map((item) =>
-        item.kind === "message" ? (
-          <MessageItem
-            key={item.message.id}
-            message={item.message}
-            first={item.first}
-            customerName={customerName}
-            own={item.message.authorId === currentUserId}
-          />
-        ) : (
-          <EventItem key={item.event.id} event={item.event} />
-        ),
-      )}
-    </ol>
+    <TimelineFollower
+      lastKey={lastKey}
+      lastFromSelf={lastFromSelf}
+      jumpLabel={endsWithMessage ? "Neue Nachricht" : "Neuer Eintrag im Verlauf"}
+    >
+      <ol className="space-y-4">
+        {items.map((item) =>
+          item.kind === "message" ? (
+            <MessageItem
+              key={item.message.id}
+              message={item.message}
+              first={item.first}
+              customerName={customerName}
+              own={item.message.authorId === currentUserId}
+              translation={
+                !item.message.fromStaff && !item.message.internal ? (translations[item.message.id] ?? null) : null
+              }
+            />
+          ) : (
+            <EventItem key={item.event.id} event={item.event} />
+          ),
+        )}
+      </ol>
+    </TimelineFollower>
   );
 }
 
@@ -70,11 +109,13 @@ function MessageItem({
   first,
   customerName,
   own,
+  translation,
 }: {
   message: StaffTicketMessage;
   first: boolean;
   customerName: string | null;
   own: boolean;
+  translation: { text: string; from: string | null } | null;
 }) {
   const variant = message.internal ? "note" : message.fromStaff ? "staff" : "customer";
   const name =
@@ -91,7 +132,7 @@ function MessageItem({
           : "Nachricht des Kunden";
 
   return (
-    <li className={cn("flex", variant === "customer" ? "justify-start" : "justify-end")}>
+    <li data-timeline-item className={cn(ITEM_CLASS, "flex", variant === "customer" ? "justify-start" : "justify-end")}>
       <article
         className={cn(
           "w-full max-w-3xl rounded-2xl border p-4 sm:p-5",
@@ -133,7 +174,15 @@ function MessageItem({
           </time>
         </header>
 
-        <div className="mt-3 text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap text-ink-soft">{message.body}</div>
+        {translation ? (
+          <div className="mt-3" dir="auto">
+            <TranslatedBody original={message.body} translation={translation} className={BODY_CLASS} />
+          </div>
+        ) : (
+          <div className={cn("mt-3", BODY_CLASS)} dir="auto">
+            {message.body}
+          </div>
+        )}
 
         {message.attachments.length > 0 ? (
           <ul className="mt-4 flex flex-wrap gap-2" aria-label="Anhänge">
@@ -190,7 +239,7 @@ export function describeEvent(event: Pick<StaffTicketEvent, "type" | "fromValue"
 function EventItem({ event }: { event: StaffTicketEvent }) {
   const actor = event.actor ? (isStaffRole(event.actor.role) ? event.actor.name : `${event.actor.name} (Kunde)`) : null;
   return (
-    <li className="flex items-center gap-3 py-0.5 text-xs text-ink-muted">
+    <li data-timeline-item className={cn(ITEM_CLASS, "flex items-center gap-3 py-0.5 text-xs text-ink-muted")}>
       <span className="h-px flex-1 bg-line" aria-hidden />
       <span className="max-w-[85%] text-center">
         <span className="font-semibold text-ink-soft">{describeEvent(event)}</span>

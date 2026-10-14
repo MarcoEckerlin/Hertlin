@@ -1,6 +1,7 @@
 import { PriorityBadge } from "@/components/ui/badge";
-import { site } from "@/config/site";
 import { cn } from "@/lib/cn";
+
+export type ResponseTime = { priority: string; label: string; time: string };
 
 /** "Kritisch – der Betrieb steht" → "Der Betrieb steht" (Priorität steht schon im Badge). */
 function describe(label: string): string {
@@ -10,10 +11,11 @@ function describe(label: string): string {
 }
 
 /**
- * Übersicht der Reaktionszeiten aus der Firmenkonfiguration.
+ * Übersicht der Reaktionszeiten aus den Firmendaten.
  * Als Beschreibungsliste statt Tabelle, damit die Zeilen auf schmalen Bildschirmen sauber umbrechen.
  */
-export function ResponseTimesTable({ className }: { className?: string }) {
+export function ResponseTimesTable({ items, className }: { items: ResponseTime[]; className?: string }) {
+  if (items.length === 0) return null;
   return (
     <div className={cn("overflow-hidden rounded-3xl border border-line bg-white shadow-card", className)}>
       <div
@@ -24,9 +26,9 @@ export function ResponseTimesTable({ className }: { className?: string }) {
         <span>Wir melden uns</span>
       </div>
       <dl className="divide-y divide-line">
-        {site.responseTimes.map((r) => (
+        {items.map((r, i) => (
           <div
-            key={r.priority}
+            key={`${r.priority}-${i}`}
             className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6"
           >
             <dt className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -40,24 +42,6 @@ export function ResponseTimesTable({ className }: { className?: string }) {
           </div>
         ))}
       </dl>
-    </div>
-  );
-}
-
-/** Erläuterung, was eine Reaktionszeit bedeutet und für wen sie gilt. */
-export function ResponseTimesNote({ className }: { className?: string }) {
-  return (
-    <div className={cn("space-y-3 text-[0.9375rem] leading-relaxed text-ink-soft", className)}>
-      <p>
-        <span className="font-semibold text-ink">Gilt für Firmenkunden mit Betreuungsvertrag, innerhalb der Servicezeiten.</span>{" "}
-        Was nach Ende der Servicezeit eingeht, bearbeiten wir ab Beginn der nächsten, sofern im Vertrag nichts anderes
-        vereinbart ist.
-      </p>
-      <p>
-        Reaktionszeit heißt: In dieser Zeit meldet sich ein Techniker bei Ihnen und fängt mit der Arbeit an. Wie lange die
-        Behebung dauert, hängt von der Ursache ab – ein defektes Netzteil ist schneller getauscht als ein Server neu
-        aufgesetzt.
-      </p>
     </div>
   );
 }

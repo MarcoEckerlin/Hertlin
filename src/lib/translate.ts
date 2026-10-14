@@ -62,7 +62,8 @@ async function translateWithDeepL(texts: string[], target: LangCode, context?: s
       preserve_formatting: true,
       ...(context ? { context } : {}),
     }),
-    signal: AbortSignal.timeout(20_000),
+    // Lieber ohne Übersetzung anzeigen als die Seite lange warten lassen
+    signal: AbortSignal.timeout(8000),
   });
   if (!res.ok) throw new Error(`DeepL antwortet mit ${res.status}`);
   const data = (await res.json()) as { translations?: { text: string; detected_source_language?: string }[] };

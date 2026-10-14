@@ -4,14 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, Phone, X } from "lucide-react";
-import { mainNav } from "@/components/site/nav";
 import { buttonClasses } from "@/components/ui/button";
-import { site } from "@/config/site";
 import { cn } from "@/lib/cn";
+import { isActivePath, telHref, type SiteNavLink } from "@/components/site/nav-types";
 
-const extraLinks = [{ href: "/support", label: "Support für Bestandskunden" }] as const;
+const SUPPORT_LINK: SiteNavLink = { href: "/support", label: "Support für Bestandskunden" };
 
-export function MobileNav() {
+export function MobileNav({ items, phone, phoneHref }: { items: SiteNavLink[]; phone: string; phoneHref: string }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   // Menü schließen, sobald sich die Seite ändert
@@ -20,6 +19,9 @@ export function MobileNav() {
     setLastPath(pathname);
     setOpen(false);
   }
+
+  const links = items.some((i) => i.href === SUPPORT_LINK.href) ? items : [...items, SUPPORT_LINK];
+  const tel = telHref(phoneHref);
 
   return (
     <div className="xl:hidden">
@@ -40,8 +42,8 @@ export function MobileNav() {
         >
           <nav aria-label="Hauptnavigation mobil">
             <ul className="divide-y divide-line">
-              {[...mainNav, ...extraLinks].map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              {links.map((item) => {
+                const active = isActivePath(pathname, item.href);
                 return (
                   <li key={item.href}>
                     <Link
@@ -65,13 +67,19 @@ export function MobileNav() {
               Anfrage stellen
             </Link>
           </div>
-          <a
-            href={`tel:${site.phoneHref}`}
-            className="mt-5 flex items-center justify-center gap-2 text-[0.9375rem] font-semibold text-ink"
-          >
-            <Phone className="size-4 text-brand-700" aria-hidden />
-            {site.phone}
-          </a>
+          {phone.trim() ? (
+            tel ? (
+              <a href={tel} className="mt-5 flex items-center justify-center gap-2 text-[0.9375rem] font-semibold text-ink">
+                <Phone className="size-4 text-brand-700" aria-hidden />
+                {phone}
+              </a>
+            ) : (
+              <p className="mt-5 flex items-center justify-center gap-2 text-[0.9375rem] font-semibold text-ink">
+                <Phone className="size-4 text-brand-700" aria-hidden />
+                {phone}
+              </p>
+            )
+          ) : null}
         </div>
       ) : null}
     </div>

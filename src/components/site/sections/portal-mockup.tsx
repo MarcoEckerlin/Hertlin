@@ -34,7 +34,7 @@ const sideNav = [
  * Nachgebaute Ansicht des Kundenportals für die Startseite.
  * Rein dekorativ: keine Links, keine Fokusziele, für Screenreader ausgeblendet.
  */
-export function PortalMockup({ host, className }: { host: string; className?: string }) {
+export function PortalMockup({ host, companyName, className }: { host: string; companyName: string; className?: string }) {
   return (
     <div aria-hidden="true" className={cn("relative select-none", className)}>
       <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-lift">
@@ -118,7 +118,7 @@ export function PortalMockup({ host, className }: { host: string; className?: st
         <div className="flex items-center gap-2.5">
           <LogoMark className="size-7" />
           <div className="min-w-0 leading-tight">
-            <p className="text-xs font-bold text-ink">Hertlin Technik</p>
+            <p className="truncate text-xs font-bold text-ink">{companyName} Technik</p>
             <p className="text-[0.65rem] text-ink-muted">Antwort zu T-00137 · Mo., 15:05 Uhr</p>
           </div>
         </div>

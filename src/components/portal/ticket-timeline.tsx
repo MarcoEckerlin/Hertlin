@@ -2,7 +2,8 @@ import { Paperclip } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { STATUS_LABELS, labelOf } from "@/lib/constants";
 import { formatDateTime, formatFileSize, initials } from "@/lib/format";
-import type { PortalTicketEvent, PortalTicketMessage } from "@/components/portal/portal-data";
+import { TranslatedBody } from "@/components/translate/translated-body";
+import type { MessageTranslations, PortalTicketEvent, PortalTicketMessage } from "@/components/portal/portal-data";
 
 type Item =
   | { kind: "message"; at: Date; message: PortalTicketMessage; first: boolean }
@@ -10,6 +11,47 @@ type Item =
 
 function isStaffRole(role: string | null | undefined): boolean {
   return role === "ADMIN" || role === "TECHNICIAN";
+}
+
+function sortItems(messages: PortalTicketMessage[], events: PortalTicketEvent[]): Item[] {
+  return [
+    ...messages.map((message, index) => ({ kind: "message" as const, at: message.createdAt, message, first: index === 0 })),
+    ...events.map((event) => ({ kind: "event" as const, at: event.createdAt, event })),
+  ].sort((a, b) => a.at.getTime() - b.at.getTime() || (a.kind === b.kind ? 0 : a.kind === "message" ? -1 : 1));
+}
+
+function messageAuthor(message: PortalTicketMessage, fallbackAuthor: string | null): string | null {
+  return message.author?.name ?? message.authorName ?? (message.fromStaff ? null : fallbackAuthor);
+}
+
+/**
+ * Letzter Eintrag im Verlauf – für die Live-Ansicht (weiches Mitscrollen, Ansage für Screenreader).
+ * fromSelf: selbst ausgelöst (eigene Nachricht, eigener Statuswechsel) – dann wird weder gescrollt noch angesagt.
+ */
+export function timelineTail(
+  messages: PortalTicketMessage[],
+  events: PortalTicketEvent[],
+  currentUserId: string,
+  fallbackAuthor: string | null,
+): { key: string; fromSelf: boolean; announcement: string } {
+  const last = sortItems(messages, events).at(-1);
+  if (!last) return { key: "leer", fromSelf: true, announcement: "" };
+  if (last.kind === "event") {
+    return {
+      key: `e:${last.event.id}`,
+      fromSelf: last.event.actorId === currentUserId,
+      announcement: `Neuer Status: ${labelOf(STATUS_LABELS, last.event.toValue)}`,
+    };
+  }
+  const m = last.message;
+  const name = messageAuthor(m, fallbackAuthor);
+  return {
+    key: `m:${m.id}`,
+    fromSelf: m.authorId === currentUserId,
+    announcement: m.fromStaff
+      ? `Neue Antwort von Hertlin${name ? ` (${name})` : ""}`
+      : `Neue Nachricht von ${name ?? "Kundenseite"}`,
+  };
 }
 
 /**
@@ -21,17 +63,17 @@ export function TicketTimeline({
   events,
   currentUserId,
   fallbackAuthor,
+  translations = {},
 }: {
   messages: PortalTicketMessage[];
   events: PortalTicketEvent[];
   currentUserId: string;
   /** Name für Kundennachrichten ohne Konto (z. B. von Hertlin am Telefon erfasst) */
   fallbackAuthor: string | null;
+  /** Übersetzungen in die Sprache des Lesers (Nachrichten-ID -> Text) */
+  translations?: MessageTranslations;
 }) {
-  const items: Item[] = [
-    ...messages.map((message, index) => ({ kind: "message" as const, at: message.createdAt, message, first: index === 0 })),
-    ...events.map((event) => ({ kind: "event" as const, at: event.createdAt, event })),
-  ].sort((a, b) => a.at.getTime() - b.at.getTime() || (a.kind === b.kind ? 0 : a.kind === "message" ? -1 : 1));
+  const items = sortItems(messages, events);
 
   return (
     <ol className="space-y-4">
@@ -43,6 +85,7 @@ export function TicketTimeline({
             first={item.first}
             own={item.message.authorId === currentUserId}
             fallbackAuthor={fallbackAuthor}
+            translation={translations[item.message.id]}
           />
         ) : (
           <EventItem key={item.event.id} event={item.event} currentUserId={currentUserId} />
@@ -57,14 +100,17 @@ function MessageItem({
   first,
   own,
   fallbackAuthor,
+  translation,
 }: {
   message: PortalTicketMessage;
   first: boolean;
   own: boolean;
   fallbackAuthor: string | null;
+  translation?: { text: string; from: string | null };
 }) {
   const fromStaff = message.fromStaff;
-  const name = message.author?.name ?? message.authorName ?? (fromStaff ? null : fallbackAuthor);
+  const name = messageAuthor(message, fallbackAuthor);
+  const bodyClass = "text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap text-ink-soft";
 
   return (
     <li className={cn("flex", fromStaff ? "justify-start" : "justify-end")}>
@@ -100,7 +146,14 @@ function MessageItem({
           </time>
         </header>
 
-        <div className="mt-3 text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap text-ink-soft">{message.body}</div>
+        {translation ? (
+          // Schon übersetzt: Der Website-Übersetzer soll weder Übersetzung noch Original ein zweites Mal übersetzen
+          <div className="mt-3" data-no-translate>
+            <TranslatedBody original={message.body} translation={translation} className={bodyClass} />
+          </div>
+        ) : (
+          <div className={cn("mt-3", bodyClass)}>{message.body}</div>
+        )}
 
         {message.attachments.length > 0 ? (
           <ul className="mt-4 flex flex-wrap gap-2" aria-label="Anhänge">

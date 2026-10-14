@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import { CircleCheck } from "lucide-react";
 import { site } from "@/config/site";
 import { initialFormState, type FormState } from "@/lib/forms";
+import { LANGUAGES, LANGUAGE_COOKIE, isLangCode, type LangCode } from "@/lib/languages";
 import { submitPrivateTicketAction } from "@/lib/actions/public";
 import { ButtonLink } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -22,6 +23,78 @@ const DESCRIPTION_PLACEHOLDER = [
   "Gibt es eine Fehlermeldung? Am besten wörtlich abschreiben.",
   "Um welches Gerät geht es (z. B. Windows-Notebook, iPad, FritzBox)?",
 ].join("\n");
+
+/* ---------- Sprache für unsere Antworten ---------- */
+
+/** Sprache aus dem Website-Übersetzer (localStorage bzw. Cookie hertlin_lang), sonst null. */
+function readVisitorLanguage(): LangCode | null {
+  try {
+    const stored = localStorage.getItem(LANGUAGE_COOKIE);
+    if (isLangCode(stored)) return stored;
+  } catch {
+    // Ohne localStorage bleibt das Cookie
+  }
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${LANGUAGE_COOKIE}=([^;]*)`));
+  let value: string | null = null;
+  try {
+    value = match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    value = null;
+  }
+  return isLangCode(value) ? value : null;
+}
+
+/** Der Website-Übersetzer setzt beim Umschalten <html lang>; darauf (und auf andere Tabs) hören. */
+function subscribeVisitorLanguage(callback: () => void) {
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+  window.addEventListener("storage", callback);
+  return () => {
+    observer.disconnect();
+    window.removeEventListener("storage", callback);
+  };
+}
+
+/**
+ * Sprache, in der der Kunde unsere Antworten auf der Statusseite lesen möchte (Ticket.contactLanguage).
+ * Sichtbar nur für Besucher, die die Website in einer anderen Sprache lesen – vorausgewählt ist dann diese.
+ * Sonst geht ein leeres Feld mit, und die Action nimmt notfalls die Sprache aus dem Cookie.
+ */
+function ResponseLanguageField({ initial, error }: { initial?: string; error?: string }) {
+  const visitor = useSyncExternalStore(subscribeVisitorLanguage, readVisitorLanguage, () => null);
+  const [choice, setChoice] = useState<string | null>(isLangCode(initial) ? initial : null);
+  const value = choice ?? visitor ?? "de";
+  const visible = (visitor !== null && visitor !== "de") || (choice !== null && choice !== "de");
+
+  if (!visible) return <input type="hidden" name="language" value={choice ?? ""} />;
+
+  return (
+    <Field
+      label="Sprache für unsere Antworten"
+      htmlFor={`${ID}-language`}
+      optional
+      hint="Wir schreiben auf Deutsch. Auf Ihrer Statusseite zeigen wir Ihnen unsere Antworten zusätzlich maschinell übersetzt an."
+      error={error}
+      className="sm:max-w-sm"
+    >
+      {/* Sprachnamen in der eigenen Schrift lassen, auch wenn die Seite übersetzt angezeigt wird */}
+      <div data-no-translate>
+        <Select
+          {...a11yProps(`${ID}-language`, error, true)}
+          name="language"
+          value={value}
+          onChange={(event) => setChoice(event.target.value)}
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code} lang={l.code}>
+              {l.code === "de" ? "Deutsch" : `${l.native} (${l.label})`}
+            </option>
+          ))}
+        </Select>
+      </div>
+    </Field>
+  );
+}
 
 export function PrivateSupportFormClient({ uploadRules }: { uploadRules: UploadRules }) {
   const [state, action] = useActionState(submitPrivateTicketAction, initialFormState);
@@ -168,6 +241,8 @@ export function PrivateSupportFormClient({ uploadRules }: { uploadRules: UploadR
             defaultValue={values.availability}
           />
         </Field>
+
+        <ResponseLanguageField initial={values.language} error={errors.language} />
       </FormSection>
 
       <div className="space-y-6 border-t border-line pt-7">

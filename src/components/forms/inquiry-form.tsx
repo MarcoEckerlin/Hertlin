@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, MessagesSquare } from "lucide-react";
 import { site } from "@/config/site";
 import { initialFormState, type FormState } from "@/lib/forms";
 import { WORKPLACE_LABELS, WORKPLACE_RANGES, type CustomerType, type InquiryTopic } from "@/lib/constants";
 import { submitInquiryAction } from "@/lib/actions/public";
 import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -245,6 +246,7 @@ function InquirySuccess({ state, boxRef }: { state: FormState; boxRef: React.Ref
   const data = state.data ?? {};
   const isBusiness = data.customerType === "BUSINESS";
   const byPhone = data.preferredContact === "PHONE";
+  const chatHref = data.chatPath ?? data.chatUrl;
 
   return (
     <div
@@ -261,13 +263,36 @@ function InquirySuccess({ state, boxRef }: { state: FormState; boxRef: React.Ref
         </p>
       ) : null}
 
+      {chatHref ? (
+        <div className="mt-6 rounded-2xl border border-line bg-white p-5">
+          <p className="flex items-center gap-2 font-semibold text-ink">
+            <MessagesSquare className="size-4 shrink-0 text-brand-700" aria-hidden />
+            Ihr persönlicher Chat zur Anfrage
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-ink-soft">
+            Dort können Sie uns jederzeit schreiben, Fragen nachreichen und unsere Antworten lesen – ohne Konto. Sind wir
+            gerade im Chat, antworten wir sofort. Den Link schicken wir Ihnen auch per E-Mail.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <ButtonLink href={chatHref} size="sm">
+              Chat öffnen
+            </ButtonLink>
+            {data.chatUrl ? <CopyButton value={data.chatUrl} label="Link kopieren" /> : null}
+          </div>
+          <p className="mt-4 text-sm text-ink-muted">
+            Bitte geben Sie den Link nicht weiter: Wer ihn kennt, kann den Chat lesen und darin schreiben.
+          </p>
+        </div>
+      ) : null}
+
       <h4 className="mt-6 text-sm font-bold text-ink">So geht es weiter</h4>
       <ol className="mt-2 space-y-2 text-[0.9375rem] leading-relaxed text-ink-soft">
         {data.email ? (
           <li className="flex gap-3">
             <StepNumber n={1} />
             <span>
-              Eine Bestätigung ist unterwegs an <span className="font-semibold break-all text-ink">{data.email}</span>.
+              {chatHref ? "Eine Bestätigung mit dem Link zu Ihrem Chat" : "Eine Bestätigung"} ist unterwegs an{" "}
+              <span className="font-semibold break-all text-ink">{data.email}</span>.
             </span>
           </li>
         ) : null}

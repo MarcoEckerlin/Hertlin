@@ -2,6 +2,8 @@ import { AppShell, type ShellNavGroup } from "@/components/shell/app-shell";
 import { requirePortalContext } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions/auth";
 import { ROLE_LABELS } from "@/lib/constants";
+import { translationEnabled } from "@/lib/translate";
+import { PageTranslator } from "@/components/translate/page-translator";
 
 export default async function PortalAppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requirePortalContext();
@@ -23,6 +25,9 @@ export default async function PortalAppLayout({ children }: { children: React.Re
 
   const subLabel = ctx.company.parentId ? `${ctx.company.name} · ${ctx.root.name}` : "Kundenportal";
 
+  // Website-Übersetzer, damit fremdsprachige Mitarbeiter die Oberfläche lesen können (nur im Portal, nicht in der Verwaltung)
+  const translator = translationEnabled() ? <PageTranslator enabled compact /> : undefined;
+
   return (
     <AppShell
       areaLabel={ctx.company.parentId ? ctx.company.name : ctx.root.name}
@@ -32,6 +37,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
       user={{ name: ctx.user.name, email: ctx.user.email, roleLabel: ROLE_LABELS[ctx.user.role] }}
       profileHref="/profil"
       logoutAction={logoutAction}
+      toolbar={translator}
     >
       {children}
     </AppShell>

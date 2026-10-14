@@ -2,8 +2,13 @@
 
 import { useActionState } from "react";
 import { initialFormState } from "@/lib/forms";
-import { changePortalPasswordAction, updatePortalProfileAction } from "@/lib/actions/portal-profile";
-import { Field, Input } from "@/components/ui/field";
+import { LANGUAGES } from "@/lib/languages";
+import {
+  changePortalPasswordAction,
+  updatePortalLanguageAction,
+  updatePortalProfileAction,
+} from "@/lib/actions/portal-profile";
+import { Field, Input, Select } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { fieldA11y, usePortalForm } from "@/components/portal/use-portal-form";
@@ -57,6 +62,44 @@ export function ProfileForm({ name, phone, position }: { name: string; phone: st
         </Field>
       </div>
       <SubmitButton pendingText="Wird gespeichert …">Angaben speichern</SubmitButton>
+    </form>
+  );
+}
+
+/**
+ * Sprache für Nachrichten (User.language): Antworten von Hertlin werden in diese Sprache übersetzt.
+ * enabled = false: Übersetzungsdienst nicht eingerichtet – Auswahl nur zur Ansicht.
+ */
+export function LanguageForm({ language, enabled }: { language: string; enabled: boolean }) {
+  const [state, action] = useActionState(updatePortalLanguageAction, initialFormState);
+  const { formRef, formKey } = usePortalForm(state);
+  const errors = state.fieldErrors ?? {};
+  const value = state.status === "error" ? (state.values?.language ?? language) : language;
+  const hint = enabled
+    ? "Ihre eigenen Nachrichten schreiben Sie in der Sprache, die Ihnen am leichtesten fällt."
+    : "Die automatische Übersetzung ist gerade ausgeschaltet. Nachrichten erscheinen so, wie sie geschrieben wurden.";
+
+  return (
+    <form key={formKey} ref={formRef} action={action} noValidate className="space-y-5">
+      <FormMessage state={state} />
+      <Field label="Sprache" htmlFor="profil-language" hint={hint} error={errors.language} className="sm:max-w-sm">
+        {/* Sprachnamen in der eigenen Schrift lassen, auch wenn die Seite übersetzt angezeigt wird */}
+        <div data-no-translate>
+          <Select
+            {...fieldA11y("profil-language", errors.language, true)}
+            name="language"
+            defaultValue={value}
+            disabled={!enabled}
+          >
+            {LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code} lang={l.code}>
+                {l.code === "de" ? "Deutsch (Standard)" : `${l.native} (${l.label})`}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </Field>
+      {enabled ? <SubmitButton pendingText="Wird gespeichert …">Sprache speichern</SubmitButton> : null}
     </form>
   );
 }

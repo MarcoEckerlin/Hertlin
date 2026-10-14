@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Detail, DetailList, Missing } from "@/components/admin/companies/detail-list";
 import { InquiryDeleteForm } from "@/components/admin/inquiries/inquiry-delete-form";
 import { InquiryUpdateForm } from "@/components/admin/inquiries/inquiry-update-form";
+import { InquiryChatPanel } from "@/components/inquiry-chat/inquiry-chat-panel";
 import { requireStaff } from "@/lib/auth";
 import {
   CONTACT_PREFERENCE_LABELS,
@@ -148,12 +149,8 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader title="Nachricht" />
-            <CardBody>
-              <p className="text-[0.9375rem] leading-relaxed break-words whitespace-pre-wrap text-ink">{inquiry.message}</p>
-            </CardBody>
-          </Card>
+          {/* Chat mit dem Interessenten – die ursprüngliche Nachricht aus dem Formular steht als erster Eintrag darin */}
+          <InquiryChatPanel inquiryId={inquiry.id} staffUser={user} />
 
           <Card>
             <CardHeader

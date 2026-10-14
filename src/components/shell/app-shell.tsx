@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useState, useSyncExternalStore, type ReactNode } from "react";
 import {
   Building2,
   ClipboardList,
@@ -61,15 +61,55 @@ type Props = {
   user: { name: string; email: string; roleLabel: string };
   profileHref: string;
   logoutAction: () => Promise<void>;
+  /**
+   * Optionales Element für die Kopfzeile (mobil) bzw. oben rechts in der Seitenleiste (Desktop),
+   * z. B. der Sprachumschalter im Kundenportal. Wird immer nur an einer Stelle eingehängt.
+   */
+  toolbar?: ReactNode;
   children: ReactNode;
 };
+
+/* ---------- Breakpoint für die Werkzeugleiste ---------- */
+
+const DESKTOP_QUERY = "(min-width: 64rem)";
+
+function subscribeDesktop(callback: () => void) {
+  const query = window.matchMedia(DESKTOP_QUERY);
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+
+/**
+ * Hängt children nur ein, wenn der Bildschirm zur gewünschten Stelle passt.
+ * So läuft z. B. der Sprachumschalter nie doppelt (Kopfzeile und Seitenleiste gleichzeitig).
+ * Auf dem Server und während der Hydration ist die Breite unbekannt – dann erscheint nichts.
+ */
+function ResponsiveSlot({ desktop, children }: { desktop: boolean; children: ReactNode }) {
+  const isDesktop = useSyncExternalStore<boolean | null>(
+    subscribeDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => null,
+  );
+  if (isDesktop === null || isDesktop !== desktop) return null;
+  return <>{children}</>;
+}
 
 function isActive(pathname: string, item: ShellNavItem) {
   if (item.exact) return pathname === item.href;
   return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
-export function AppShell({ areaLabel, areaSubLabel, homeHref, groups, user, profileHref, logoutAction, children }: Props) {
+export function AppShell({
+  areaLabel,
+  areaSubLabel,
+  homeHref,
+  groups,
+  user,
+  profileHref,
+  logoutAction,
+  toolbar,
+  children,
+}: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -88,7 +128,7 @@ export function AppShell({ areaLabel, areaSubLabel, homeHref, groups, user, prof
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-3 px-5 pt-5 pb-6">
+      <div className={cn("flex items-center gap-3 px-5 pt-5 pb-6", toolbar ? "pr-20" : null)}>
         <Link href={homeHref} className="flex min-w-0 items-center gap-2.5">
           <LogoMark />
           <span className="min-w-0 leading-tight">
@@ -159,26 +199,51 @@ export function AppShell({ areaLabel, areaSubLabel, homeHref, groups, user, prof
     </div>
   );
 
+  const menuButton = (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="grid size-10 place-items-center rounded-full text-ink hover:bg-brand-50"
+      aria-label="Menü öffnen"
+      aria-expanded={open}
+    >
+      <Menu className="size-5" aria-hidden />
+    </button>
+  );
+
   return (
     <div className="min-h-dvh bg-mist">
       {/* Desktop-Seitenleiste */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-white lg:block">{sidebar}</aside>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-white lg:block">
+        {sidebar}
+        {toolbar ? (
+          <div className="absolute top-5 right-3">
+            <ResponsiveSlot desktop>{toolbar}</ResponsiveSlot>
+          </div>
+        ) : null}
+      </aside>
 
       {/* Mobile Kopfzeile */}
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line bg-white/95 px-4 backdrop-blur lg:hidden">
-        <Link href={homeHref} className="flex items-center gap-2">
+      {/* Mit Werkzeugleiste ohne backdrop-blur: Ein Filter würde fest positionierte Elemente darin
+          (z. B. den Hinweis „Maschinell übersetzt“) an die Kopfzeile statt an das Fenster binden. */}
+      <header
+        className={cn(
+          "sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line px-4 lg:hidden",
+          toolbar ? "bg-white" : "bg-white/95 backdrop-blur",
+        )}
+      >
+        <Link href={homeHref} className="flex min-w-0 items-center gap-2">
           <LogoMark className="size-7" />
           <span className="max-w-[12rem] truncate text-sm font-extrabold">{areaLabel}</span>
         </Link>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="grid size-10 place-items-center rounded-full text-ink hover:bg-brand-50"
-          aria-label="Menü öffnen"
-          aria-expanded={open}
-        >
-          <Menu className="size-5" aria-hidden />
-        </button>
+        {toolbar ? (
+          <div className="flex shrink-0 items-center gap-1">
+            <ResponsiveSlot desktop={false}>{toolbar}</ResponsiveSlot>
+            {menuButton}
+          </div>
+        ) : (
+          menuButton
+        )}
       </header>
 
       {/* Mobile Seitenleiste */}

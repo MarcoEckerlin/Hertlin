@@ -282,6 +282,8 @@ export const staffTicketDetailSelect = {
       position: true,
       role: true,
       active: true,
+      /** Sprache, in der der Kunde Nachrichten liest (Übersetzung im Kundenportal) */
+      language: true,
       company: { select: { id: true, name: true, parent: { select: { id: true, name: true } } } },
     },
   },
@@ -315,7 +317,18 @@ export const staffTicketDetailSelect = {
   phoneCalls: {
     orderBy: { startedAt: "desc" },
     take: 10,
-    select: { id: true, direction: true, status: true, fromNumber: true, toNumber: true, startedAt: true },
+    select: {
+      id: true,
+      direction: true,
+      status: true,
+      fromNumber: true,
+      toNumber: true,
+      callerLabel: true,
+      answeredBy: true,
+      startedAt: true,
+      answeredAt: true,
+      handledAt: true,
+    },
   },
 } satisfies Prisma.TicketSelect;
 

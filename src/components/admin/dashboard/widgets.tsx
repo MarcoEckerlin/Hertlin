@@ -17,6 +17,7 @@ export function StatCard({
   value,
   hint,
   alert = false,
+  className,
 }: {
   href: string;
   label: string;
@@ -24,6 +25,7 @@ export function StatCard({
   hint: string;
   /** Hervorheben (z. B. kritische Tickets > 0) */
   alert?: boolean;
+  className?: string;
 }) {
   return (
     <Link
@@ -31,6 +33,7 @@ export function StatCard({
       className={cn(
         "group flex flex-col rounded-2xl border p-4 shadow-card transition-colors sm:p-5",
         alert ? "border-red-200 bg-red-50 hover:border-red-300" : "border-line bg-white hover:border-brand-300 hover:bg-brand-50/40",
+        className,
       )}
     >
       <span className={cn("text-sm font-semibold", alert ? "text-red-900" : "text-ink-soft")}>{label}</span>

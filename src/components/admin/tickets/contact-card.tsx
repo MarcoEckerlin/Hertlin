@@ -96,6 +96,9 @@ export function ContactCard({ ticket }: { ticket: StaffTicketDetail }) {
                 <MailLink email={creator.email} />
                 {creator.phone ? <PhoneLink phone={creator.phone} /> : null}
               </span>
+              {creator.language && creator.language !== "de" ? (
+                <span className="mt-1.5 block text-xs text-ink-muted">Bevorzugte Sprache: {languageLabel(creator.language)}</span>
+              ) : null}
             </Row>
           ) : null}
 
