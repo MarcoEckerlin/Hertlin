@@ -8,7 +8,7 @@ export default function CatalogNotFound() {
         breadcrumbs={[{ label: "Kostenkatalog", href: "/admin/kosten/katalog" }, { label: "Nicht gefunden" }]}
         title="Diesen Eintrag gibt es nicht"
       />
-      <div className="max-w-2xl rounded-2xl border border-line bg-white p-6 shadow-card sm:p-8">
+      <div className="max-w-2xl rounded-2xl border border-line bg-surface p-6 shadow-card sm:p-8">
         <p className="text-[0.9375rem] leading-relaxed text-ink-soft">
           Vielleicht wurde er inzwischen gelöscht. Im Katalog finden Sie alle Einträge, auch die deaktivierten.
         </p>

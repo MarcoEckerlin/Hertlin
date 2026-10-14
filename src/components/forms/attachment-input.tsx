@@ -112,7 +112,7 @@ export function AttachmentInput({
         onDrop={onDrop}
         className={cn(
           "rounded-xl border border-dashed px-4 py-4 transition-colors",
-          dragging ? "border-brand-500 bg-brand-50" : error ? "border-red-400 bg-white" : "border-line-strong bg-mist",
+          dragging ? "border-brand-500 bg-brand-50" : error ? "border-danger-solid bg-surface" : "border-line-strong bg-mist",
         )}
       >
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -149,11 +149,11 @@ export function AttachmentInput({
             {picked.map((file, index) => (
               <li
                 key={`${file.name}-${file.size}-${index}`}
-                className="flex items-center gap-3 rounded-lg bg-white px-3 py-2 text-sm ring-1 ring-line"
+                className="flex items-center gap-3 rounded-lg bg-surface px-3 py-2 text-sm ring-1 ring-line"
               >
                 <span className="min-w-0 flex-1 truncate text-ink">{file.name}</span>
                 <span
-                  className={cn("shrink-0 tabular-nums", file.size > rules.maxFileSize ? "text-red-700" : "text-ink-muted")}
+                  className={cn("shrink-0 tabular-nums", file.size > rules.maxFileSize ? "text-danger-ink" : "text-ink-muted")}
                 >
                   {formatFileSize(file.size)}
                 </span>
@@ -172,7 +172,7 @@ export function AttachmentInput({
       </div>
 
       {tooMany || tooLarge.length > 0 ? (
-        <p className="mt-1.5 text-sm font-medium text-amber-800" role="status">
+        <p className="mt-1.5 text-sm font-medium text-warning-ink" role="status">
           {tooMany ? `Bitte höchstens ${rules.maxFiles} Dateien anhängen. ` : null}
           {tooLarge.length > 0
             ? `${tooLarge.map((f) => `„${f.name}“`).join(", ")} ${tooLarge.length === 1 ? "ist" : "sind"} größer als ${maxMb} MB.`

@@ -43,6 +43,15 @@ test.describe("Anmeldung und Mandantentrennung", () => {
     await expect(page).toHaveURL(portal("baeckerei", "/login"));
   });
 
+  test("Hell/Dunkel auf der Anmeldeseite umschalten – gilt auch nach dem Neuladen", async ({ page }) => {
+    await page.goto(portal("muster", "/login"));
+    await page.getByRole("radiogroup", { name: "Farbschema" }).getByRole("radio", { name: "Dunkel" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await page.reload();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.getByRole("radio", { name: "Dunkel" })).toHaveAttribute("aria-checked", "true");
+  });
+
   test("Portal-Finder leitet zur richtigen Anmeldeseite", async ({ page }) => {
     await page.goto(main("/login"));
     await page.getByLabel("Adresse Ihres Kundenportals").fill("muster");

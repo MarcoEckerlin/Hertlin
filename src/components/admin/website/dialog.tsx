@@ -58,7 +58,7 @@ export function Modal({
         pressedOnBackdrop.current = false;
       }}
       className={cn(
-        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-white p-0 text-ink shadow-lift backdrop:bg-ink/40",
+        "m-auto w-[calc(100%-2rem)] rounded-2xl border border-line bg-surface-raised p-0 text-ink shadow-lift backdrop:bg-scrim",
         size === "sm" && "max-w-md",
         size === "md" && "max-w-xl",
         size === "lg" && "max-w-3xl",
@@ -144,7 +144,7 @@ export function IconButton({
       title={label}
       className={cn(
         "grid size-9 shrink-0 place-items-center rounded-full transition-colors disabled:pointer-events-none disabled:opacity-35",
-        tone === "danger" ? "text-red-700 hover:bg-red-50" : "text-ink-soft hover:bg-brand-50 hover:text-ink",
+        tone === "danger" ? "text-danger-ink hover:bg-danger-soft" : "text-ink-soft hover:bg-brand-50 hover:text-ink",
         className,
       )}
       {...props}

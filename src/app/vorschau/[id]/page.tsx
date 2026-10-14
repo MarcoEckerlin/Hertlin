@@ -32,10 +32,10 @@ export default async function PreviewPage({
   const hiddenCount = page.blocks.filter((b) => b.hidden).length;
 
   const banner = (
-    <div className="bg-ink text-white" data-no-translate role="region" aria-label="Hinweis zur Vorschau">
+    <div className="bg-navy text-white" data-no-translate role="region" aria-label="Hinweis zur Vorschau">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 text-sm sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-start gap-2.5">
-          <Eye className="mt-0.5 size-4 shrink-0 text-brand-300" aria-hidden />
+          <Eye className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
           <div className="min-w-0">
             <p className="font-semibold">Vorschau – so sieht die Seite nach dem Veröffentlichen aus</p>
             <p className="mt-0.5 text-white/70">
@@ -48,9 +48,11 @@ export default async function PreviewPage({
             </p>
           </div>
         </div>
+        {/* Heller Knopf auf dem dunklen Band – in Hell und Dunkel gleich (helle Insel) */}
         <Link
           href={`/admin/website/seiten/${page.id}`}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-4 py-2 font-semibold text-ink hover:bg-brand-100"
+          data-theme="light"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-surface px-4 py-2 font-semibold text-ink hover:bg-brand-100"
         >
           <ArrowLeft className="size-4" aria-hidden />
           Zurück zum Editor

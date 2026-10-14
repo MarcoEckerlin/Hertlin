@@ -81,6 +81,16 @@ export function billingAddressLines(c: Pick<CompanyRow, "street" | "zip" | "city
   return [street?.trim(), [zip?.trim(), city?.trim()].filter(Boolean).join(" ")].filter((l): l is string => !!l);
 }
 
+/**
+ * Vollständige Anschrift für eine Rechnung (§ 14 Abs. 4 UStG): mindestens Straße und eine Zeile mit PLZ und Ort.
+ * Erwartet die Zeilen, wie sie auf der Rechnung stehen (ohne den Namen).
+ */
+export function isCompleteAddress(address: string | string[]): boolean {
+  const lines = (Array.isArray(address) ? address : address.split("\n")).map((l) => l.trim()).filter(Boolean);
+  if (lines.length < 2) return false;
+  return lines.some((l) => /\b\d{4,5}\s+\S/.test(l)) && lines.some((l) => !/^\d{4,5}\s/.test(l));
+}
+
 /** Freitext-Anschrift eines Privatkunden („Lindenstraße 8, 12345 Musterstadt“) in Zeilen. */
 export function splitAddress(value: string | null | undefined): string[] {
   return (value ?? "")

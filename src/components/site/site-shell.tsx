@@ -30,7 +30,7 @@ export async function SiteShell({ nav, children, banner }: { nav: Navigation; ch
     <div className="flex min-h-dvh flex-col">
       <a
         href="#inhalt"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-on-ink"
       >
         Zum Inhalt springen
       </a>

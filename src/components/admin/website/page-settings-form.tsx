@@ -1,8 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
+import { ChevronDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox, Field, Input } from "@/components/ui/field";
-import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { detailsAnimationClass } from "@/components/admin/companies/disclosure";
+import { cn } from "@/lib/cn";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { initialFormState } from "@/lib/forms";
@@ -22,7 +25,21 @@ export type PageSettingsValues = {
   everPublished: boolean;
 };
 
-/** Menü, Reihenfolge, Sichtbarkeit und Adresse einer Seite – wirkt sofort, ohne Veröffentlichen. */
+/** Kurzfassung der aktuellen Einstellungen für die eingeklappte Zeile */
+function summary(page: PageSettingsValues): string {
+  const linked = [page.showInNav ? "Hauptmenü" : null, page.showInFooter ? "Fußzeile" : null].filter(Boolean);
+  const parts = [
+    linked.length > 0 ? `im ${linked.join(" und in der ")}` : "nicht verlinkt",
+    linked.length > 0 ? `Reihenfolge ${page.navOrder}` : null,
+    !page.system && page.everPublished && !page.published ? "ausgeblendet" : null,
+  ].filter(Boolean);
+  return parts.join(" · ");
+}
+
+/**
+ * Menü, Reihenfolge, Sichtbarkeit und Adresse einer Seite – wirkt sofort, ohne Veröffentlichen.
+ * Eingeklappt, damit es nicht mit dem Entwurf (Speichern/Veröffentlichen oben) verwechselt wird.
+ */
 export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues; siteHost: string }) {
   const [state, formAction] = useActionState(updatePageSettingsAction.bind(null, page.id), initialFormState);
   const v = state.status === "error" ? state.values : undefined;
@@ -30,12 +47,27 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
   const checked = (name: string, fallback: boolean) => (v ? v[name] === "on" : fallback);
 
   return (
-    <Card>
-      <CardHeader
-        title="Menü und Sichtbarkeit"
-        description="Diese Einstellungen gelten sofort nach dem Übernehmen – unabhängig vom Entwurf."
-      />
-      <CardBody>
+    <details
+      id="seiteneinstellungen"
+      className={cn("group scroll-mt-32 rounded-2xl border border-line bg-surface shadow-card", detailsAnimationClass)}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl px-5 py-4 select-none hover:bg-brand-50/50 sm:px-6 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-base font-bold text-ink">Menü und Sichtbarkeit</span>
+            <Badge tone="amber">gilt sofort</Badge>
+          </span>
+          <span className="mt-0.5 block text-sm text-ink-muted">{summary(page)}</span>
+        </span>
+        <ChevronDown
+          className="size-5 shrink-0 text-ink-muted transition-transform duration-200 group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="border-t border-line px-5 py-5 sm:px-6">
+        <p className="mb-5 text-sm text-ink-soft">
+          Diese Einstellungen gelten sofort nach „Einstellungen übernehmen“ – unabhängig vom Entwurf.
+        </p>
         {/* Neu aufbauen, wenn sich der Stand von außen ändert (z. B. erstes Veröffentlichen im Editor):
             defaultChecked/defaultValue wirken nur beim ersten Rendern. Sonst bliebe „Seite anzeigen“
             leer und „Einstellungen übernehmen“ würde die gerade veröffentlichte Seite wieder ausblenden. */}
@@ -52,7 +84,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
               error={e.slug}
               hint="Nur Kleinbuchstaben, Ziffern und Bindestriche. Achtung: Bestehende Links auf die alte Adresse funktionieren danach nicht mehr."
             >
-              <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand-600 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600">
+              <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-surface focus-within:border-brand-600 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600">
                 <span className="hidden items-center border-r border-line bg-mist px-3 text-sm text-ink-muted sm:flex">{siteHost}/</span>
                 <input
                   id="settings-slug"
@@ -153,7 +185,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
             </SubmitButton>
           </div>
         </form>
-      </CardBody>
-    </Card>
+      </div>
+    </details>
   );
 }

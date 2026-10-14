@@ -294,7 +294,7 @@ function ImageField({ def, blockId, values, errors, onChange }: CommonProps & { 
             // eslint-disable-next-line @next/next/no-img-element
             <img src={selected.url} alt="" className="size-full object-cover" />
           ) : imageId ? (
-            <span className="flex flex-col items-center gap-1 px-3 text-center text-xs text-red-700">
+            <span className="flex flex-col items-center gap-1 px-3 text-center text-xs text-danger-ink">
               <ImageOff className="size-5" aria-hidden />
               Bild nicht mehr vorhanden
             </span>
@@ -305,7 +305,7 @@ function ImageField({ def, blockId, values, errors, onChange }: CommonProps & { 
         <div className="min-w-0 flex-1 space-y-3">
           {selected ? <p className="truncate text-sm text-ink-soft">{selected.fileName}</p> : null}
           {imageId && !selected ? (
-            <p className="text-sm text-red-700">Das ausgewählte Bild wurde aus der Mediathek gelöscht. Bitte wählen Sie ein anderes.</p>
+            <p className="text-sm text-danger-ink">Das ausgewählte Bild wurde aus der Mediathek gelöscht. Bitte wählen Sie ein anderes.</p>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button

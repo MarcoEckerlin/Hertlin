@@ -193,6 +193,19 @@ describe("Techniker erfassen Leistungen", () => {
     expect(store.entries[0]).toMatchObject({ presetId: "preset_anfahrt", unitPriceCents: 3500, needsPrice: false });
   });
 
+  it("ein deaktivierter Katalogeintrag liefert über „Neue Position“ keinen Preis mehr", async () => {
+    store.presets[0].active = false;
+    const usage = store.presets[0].usageCount;
+    const state = await addCostAction(
+      initialFormState,
+      form({ ...base, mode: "neu", description: "Anfahrt Stadtgebiet", kind: "TRAVEL", unit: "Pauschale", addToCatalog: "on" }),
+    );
+    expect(state.status).toBe("success");
+    expect(store.presets).toHaveLength(1);
+    expect(store.entries[0]).toMatchObject({ presetId: "preset_anfahrt", needsPrice: true, unitPriceCents: 0 });
+    expect(store.presets[0].usageCount).toBe(usage);
+  });
+
   it("dürfen „erbracht von“ nur auf aktive Mitarbeiter setzen", async () => {
     const state = await addCostAction(
       initialFormState,

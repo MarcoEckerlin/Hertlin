@@ -12,6 +12,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const dir = mkdtempSync(path.join(tmpdir(), "hertlin-invoice-"));
 process.env.DATABASE_URL = `file:${path.join(dir, "test.db")}`;
 process.env.UPLOAD_DIR = path.join(dir, "uploads");
+process.env.MAIL_LOG_FILE = path.join(dir, "mails.log");
+delete process.env.SMTP_HOST;
 
 type Service = typeof import("@/lib/invoices/service");
 type Recipients = typeof import("@/lib/invoices/recipients");
@@ -284,5 +286,85 @@ describe("PDF fehlt", () => {
     expect(file?.pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
     const again = await service.ensureInvoicePdf(invoice.id);
     expect(again?.regenerated).toBe(false);
+  });
+});
+
+describe("Absenderdaten bleiben wie zum Zeitpunkt der Rechnung", () => {
+  it("ein fehlendes PDF entsteht aus der Momentaufnahme, nicht aus geänderten Firmendaten", async () => {
+    const created = await create(rootId, [await entry(rootTicket, "Momentaufnahme", 3100)]);
+    if (!created.ok) throw new Error(created.error);
+    const invoice = await db.invoice.findUniqueOrThrow({ where: { id: created.invoiceId } });
+    expect(invoice.issuerSnapshot).toContain("Hauptstraße 21");
+    expect(invoice.customerNumber).toBe("K-1");
+    expect(invoice.pdfSha256).toMatch(/^[0-9a-f]{64}$/);
+
+    // Hertlin zieht um, danach fehlt die Datei
+    await db.siteSetting.update({ where: { key: "company" }, data: { value: JSON.stringify({ ...SITE, street: "Neue Straße 1" }) } });
+    try {
+      const file = path.join(process.env.UPLOAD_DIR!, invoice.pdfPath!);
+      rmSync(file);
+      const regenerated = await service.ensureInvoicePdf(invoice.id);
+      expect(regenerated?.regenerated).toBe(true);
+      const text = pdfText(file);
+      if (text !== null) {
+        expect(text).toContain("Hauptstraße 21");
+        expect(text).not.toContain("Neue Straße 1");
+      }
+    } finally {
+      await db.siteSetting.update({ where: { key: "company" }, data: { value: JSON.stringify(SITE) } });
+    }
+  });
+
+  it("ohne Momentaufnahme wird kein PDF mit aktuellen Daten erfunden", async () => {
+    const created = await create(rootId, [await entry(rootTicket, "Ohne Momentaufnahme", 1200)]);
+    if (!created.ok) throw new Error(created.error);
+    const invoice = await db.invoice.update({ where: { id: created.invoiceId }, data: { issuerSnapshot: null } });
+    rmSync(path.join(process.env.UPLOAD_DIR!, invoice.pdfPath!));
+    expect(await service.ensureInvoicePdf(invoice.id)).toBeNull();
+  });
+});
+
+describe("Versand", () => {
+  it("ohne Mailserver bleibt die Rechnung „noch nicht versendet“; selbst verschickt lässt sie sich markieren", async () => {
+    const created = await create(rootId, [await entry(rootTicket, "Versandtest", 4200)]);
+    if (!created.ok) throw new Error(created.error);
+
+    const sent = await service.sendInvoice({ invoiceId: created.invoiceId, to: "buchhaltung@muster.example", subject: "Rechnung", text: "Anbei." });
+    expect(sent.ok).toBe(false);
+    if (!sent.ok) expect(sent.error).toContain("kein Mailserver");
+    let invoice = await db.invoice.findUniqueOrThrow({ where: { id: created.invoiceId } });
+    expect(invoice.status).toBe("OPEN");
+    expect(invoice.sentAt).toBeNull();
+    expect(readFileSync(process.env.MAIL_LOG_FILE!, "utf8")).toContain(`Anhang: Rechnung-${created.number}.pdf`);
+
+    expect(await service.markInvoiceSent({ invoiceId: created.invoiceId, note: "per Post" })).toEqual({ ok: true, number: created.number });
+    invoice = await db.invoice.findUniqueOrThrow({ where: { id: created.invoiceId } });
+    expect(invoice.status).toBe("SENT");
+    expect(invoice.sentTo).toBe("per Post");
+  });
+});
+
+describe("Vorschau und Erstellen", () => {
+  it("bricht ab, wenn sich die Positionen seit der Vorschau geändert haben", async () => {
+    const id = await entry(rootTicket, "Vorschau", 9500);
+    const recipient = await recipients.resolveRecipient({ kind: "company", companyId: rootId });
+    if (!recipient) throw new Error("Empfänger fehlt");
+    // Vorschau zeigte 95,00 €, inzwischen wurde die Menge auf 2 Std. geändert
+    await db.costEntry.update({ where: { id }, data: { quantityHundredths: 200, totalCents: 19_000 } });
+    const result = await service.createInvoice({
+      recipient,
+      entryIds: [id],
+      recipientName: recipient.name,
+      recipientAddress: recipient.addressLines.join("\n"),
+      recipientEmail: recipient.email,
+      servicePeriodStart: null,
+      servicePeriodEnd: null,
+      introText: null,
+      createdById: adminId,
+      expectedNetCents: 9500,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Vorschau");
+    expect((await db.costEntry.findUniqueOrThrow({ where: { id } })).invoiceId).toBeNull();
   });
 });

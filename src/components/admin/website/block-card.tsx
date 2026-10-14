@@ -59,8 +59,8 @@ function BlockCardImpl({
       id={fieldDomId(block.id, ["card"])}
       className={cn(
         "scroll-mt-40 rounded-2xl border shadow-card",
-        hidden ? "border-dashed bg-mist" : "bg-white",
-        errorCount > 0 ? "border-red-300 ring-1 ring-red-200" : hidden ? "border-line-strong" : "border-line",
+        hidden ? "border-dashed bg-mist" : "bg-surface",
+        errorCount > 0 ? "border-danger-line ring-1 ring-danger-line" : hidden ? "border-line-strong" : "border-line",
       )}
     >
       <div className="flex flex-col gap-1 p-2 sm:flex-row sm:items-center sm:gap-2 sm:p-3">
@@ -75,7 +75,7 @@ function BlockCardImpl({
           <span
             className={cn(
               "grid size-8 shrink-0 place-items-center rounded-lg text-sm font-bold",
-              hidden ? "bg-white text-ink-muted ring-1 ring-line" : "bg-brand-100 text-brand-800",
+              hidden ? "bg-surface text-ink-muted ring-1 ring-line" : "bg-brand-100 text-brand-800",
             )}
             aria-hidden
           >
@@ -138,7 +138,7 @@ function BlockCardImpl({
       {expanded ? (
         <div id={bodyId} className="space-y-6 border-t border-line px-4 py-5 sm:px-6">
           {hidden ? (
-            <p className="rounded-xl bg-white px-4 py-3 text-sm text-ink-soft ring-1 ring-line ring-inset">
+            <p className="rounded-xl bg-surface px-4 py-3 text-sm text-ink-soft ring-1 ring-line ring-inset">
               Dieses Modul ist ausgeblendet und erscheint nicht auf der Website. Inhalt und Einstellungen bleiben erhalten.
             </p>
           ) : null}

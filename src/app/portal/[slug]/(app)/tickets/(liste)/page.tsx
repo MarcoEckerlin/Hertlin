@@ -1,19 +1,18 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requirePortalContext } from "@/lib/auth";
 import { customerTicketSelect, portalTicketWhere } from "@/lib/permissions";
 import { parseTicketNumber } from "@/lib/format";
-import { Alert } from "@/components/ui/alert";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination, parsePage } from "@/components/ui/pagination";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { scopeCompanies } from "@/components/portal/portal-data";
 import { searchKey } from "@/components/portal/admin/data";
+import { ListNavigation, ListResults } from "@/components/portal/list-navigation";
 import { TicketFilterForm } from "@/components/portal/ticket-filter-form";
-import { TicketStatusTabs } from "@/components/portal/ticket-status-tabs";
 import { TicketTable } from "@/components/portal/ticket-list";
 import {
   STATUS_FILTERS,
@@ -117,6 +116,8 @@ export default async function PortalTicketsPage({ searchParams }: { searchParams
       : `Alle Tickets von ${ctx.company.name}.`
     : "Die Tickets, die Sie selbst gemeldet haben.";
 
+  const query = { art, suche, firma };
+
   return (
     <>
       <PageHeader
@@ -126,48 +127,49 @@ export default async function PortalTicketsPage({ searchParams }: { searchParams
         actions={<ButtonLink href="/tickets/neu">Neues Ticket</ButtonLink>}
       />
 
-      <div className="space-y-4">
-        {counts.wartet > 0 && status !== "wartet" ? (
-          <Alert tone="warning" title={counts.wartet === 1 ? "Bei einem Ticket wartet eine Rückfrage auf Sie" : `Bei ${counts.wartet} Tickets warten Rückfragen auf Sie`}>
-            Sobald Sie geantwortet haben, machen wir weiter.{" "}
-            <Link href={ticketListHref({ art, suche, firma, status: "wartet" })} className="font-semibold underline underline-offset-2">
-              {counts.wartet === 1 ? "Rückfrage ansehen" : "Rückfragen ansehen"}
-            </Link>
-          </Alert>
-        ) : null}
-        <TicketStatusTabs active={status} counts={counts} query={{ art, suche, firma }} />
-        <TicketFilterForm status={status} art={art} suche={suche} firma={firma} companies={companies} />
-      </div>
-
-      <div className="mt-6">
-        {tickets.length > 0 ? (
-          <>
-            <p className="mb-3 text-sm text-ink-muted" aria-live="polite">
-              {total === 1 ? "1 Ticket" : `${total} Tickets`}
-              {hasFilters ? " passend zu Ihrer Auswahl" : null}
-            </p>
-            <TicketTable tickets={tickets} showCompany={multipleCompanies} showCreator={ctx.isAdmin} />
-            <Pagination
-              page={page}
-              pageCount={pageCount}
-              basePath="/tickets"
-              baseQuery={{
-                status: status === "offen" ? undefined : status,
-                art,
-                suche: suche || undefined,
-                firma,
-              }}
+      <ListNavigation>
+        <div className="space-y-3">
+          {/* Offene Rückfragen fallen über die hervorgehobene Zahl am Reiter und die markierten Zeilen auf */}
+          <div data-list-nav>
+            <SegmentedTabs
+              label="Tickets nach Status"
+              tabs={STATUS_FILTERS.map((filter) => ({
+                href: ticketListHref({ ...query, status: filter.key }),
+                label: filter.label,
+                active: filter.key === status,
+                count: counts[filter.key],
+                highlight: filter.key === "wartet",
+              }))}
             />
-          </>
-        ) : (
-          <EmptyResult
-            status={status}
-            hasFilters={hasFilters}
-            anyInScope={counts.alle > 0}
-            query={{ art, suche, firma }}
-          />
-        )}
-      </div>
+          </div>
+          <TicketFilterForm status={status} art={art} suche={suche} firma={firma} companies={companies} />
+        </div>
+
+        <ListResults className="mt-5">
+          {tickets.length > 0 ? (
+            <>
+              <p className="mb-2.5 text-sm text-ink-muted" aria-live="polite">
+                {total === 1 ? "1 Ticket" : `${total} Tickets`}
+                {hasFilters ? " passend zu Ihrer Auswahl" : null}
+              </p>
+              <TicketTable tickets={tickets} showCompany={multipleCompanies} showCreator={ctx.isAdmin} />
+              <Pagination
+                page={page}
+                pageCount={pageCount}
+                basePath="/tickets"
+                baseQuery={{
+                  status: status === "offen" ? undefined : status,
+                  art,
+                  suche: suche || undefined,
+                  firma,
+                }}
+              />
+            </>
+          ) : (
+            <EmptyResult status={status} hasFilters={hasFilters} anyInScope={counts.alle > 0} query={query} />
+          )}
+        </ListResults>
+      </ListNavigation>
     </>
   );
 }

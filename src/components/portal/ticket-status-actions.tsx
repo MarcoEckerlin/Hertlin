@@ -12,7 +12,7 @@ export function TicketStatusActions({ ticketId, status, type }: { ticketId: numb
     return (
       <form action={markResolvedAction.bind(null, ticketId)}>
         <SubmitButton variant="secondary" size="sm" pendingText="Wird gespeichert …">
-          <CircleCheck className="size-4 text-emerald-600" aria-hidden />
+          <CircleCheck className="size-4 text-success-ink" aria-hidden />
           {type === "ANFRAGE" ? "Hat sich erledigt" : "Problem ist gelöst"}
         </SubmitButton>
       </form>

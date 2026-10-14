@@ -37,6 +37,11 @@ test.describe("Kundenportal: Tickets", () => {
     // Ticket steht in der Liste
     await page.goto(portal("muster", "/tickets"));
     await expect(page.getByRole("link", { name: subject })).toBeVisible();
+    // Suche ohne Absende-Knopf: Die Liste filtert kurz nach dem Tippen
+    await page.getByRole("searchbox", { name: "Betreff oder Ticketnummer" }).fill(subject);
+    await expect(page).toHaveURL(/[?&]suche=/);
+    await expect(page.getByRole("link", { name: "Drucker im Empfang druckt nur noch leere Seiten" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: subject })).toBeVisible();
     await page.getByRole("link", { name: subject }).click();
     await expect(page).toHaveURL(portal("muster", `/tickets/${ticketId}`));
 
@@ -58,6 +63,16 @@ test.describe("Kundenportal: Tickets", () => {
   });
 });
 
+test.describe("Kundenportal: Kontakt", () => {
+  test("Übersicht zeigt das Telefon des betreuenden Standorts, nie Platzhalter", async ({ page }) => {
+    await loginPortal(page, "muster", ACCOUNTS.berger.email);
+    // Muster Steuerberatung wird von der Zentrale betreut (Beispieldaten)
+    await expect(page.getByRole("link", { name: "01234 98760" })).toHaveAttribute("href", "tel:+49123498760");
+    await expect(page.getByText("Hertlin Zentrale")).toBeVisible();
+    await expect(page.getByText(/TODO/)).toHaveCount(0);
+  });
+});
+
 test.describe("Kundenportal: Unterkunden und Benutzer", () => {
   test("Hauptansprechpartnerin legt Unterkunde und Benutzer an, der Benutzer sieht nur seine Unterkunde", async ({
     page,
@@ -71,8 +86,10 @@ test.describe("Kundenportal: Unterkunden und Benutzer", () => {
     await page.getByLabel("Name der Unterkunde").fill(subName);
     await page.getByLabel("Ort").fill("Augsburg");
     await page.getByRole("button", { name: "Unterkunde anlegen" }).click();
-    await expect(page).toHaveURL(/\/unterkunden\/[^/?]+\?angelegt=1/);
     await expect(page.getByRole("heading", { level: 1, name: subName })).toBeVisible();
+    // Bestätigung als kurze Meldung; der Hinweis verschwindet danach aus der Adresse (kein erneutes Anzeigen beim Neuladen)
+    await expect(page.getByRole("status").filter({ hasText: "Die Unterkunde ist angelegt" })).toBeVisible();
+    await expect(page).toHaveURL(/\/unterkunden\/(?!neu)[^/?]+$/);
 
     // Benutzer in der Unterkunde anlegen (als Hauptansprechpartner der Unterkunde)
     const email = `filiale-${Date.now()}@muster.example`;

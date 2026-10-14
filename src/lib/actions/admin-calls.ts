@@ -10,6 +10,7 @@ import { generateToken } from "@/lib/crypto";
 import { db } from "@/lib/db";
 import { CUSTOMER_ROLES, TICKET_CATEGORIES, TICKET_PRIORITIES, TICKET_TYPES } from "@/lib/constants";
 import { errorState, fromZodError, successState, type FormState } from "@/lib/forms";
+import { defaultTicketLocationId } from "@/lib/locations";
 import { formatTicketNumber, parseTicketNumber } from "@/lib/format";
 import { sendPortalTicketConfirmation, sendPrivateTicketConfirmation } from "@/lib/notifications";
 import { formatPhoneDisplay, isInternalNumber, normalizePhone } from "@/lib/phone";
@@ -171,6 +172,8 @@ export async function createTicketFromCallAction(callId: string, _prev: FormStat
   const contactPhone = contactUser ? null : (input.contactPhone ?? null);
   const contactEmail = contactUser ? null : (input.contactEmail ?? null);
   const guestToken = company ? null : generateToken(24);
+  // Standort wie bei jedem anderen neuen Ticket: der des Kunden, bei Privatkunden der Hauptsitz
+  const locationId = await defaultTicketLocationId(company?.id ?? null);
 
   const ticket = await db.ticket.create({
     data: {
@@ -182,6 +185,7 @@ export async function createTicketFromCallAction(callId: string, _prev: FormStat
       status: input.assignToMe ? "IN_PROGRESS" : "NEW",
       source: "STAFF",
       companyId: company?.id ?? null,
+      locationId,
       // Mit Ansprechpartner sieht dieser das Ticket auch im Kundenportal
       createdById: contactUser?.id ?? staff.id,
       assigneeId: input.assignToMe ? staff.id : null,

@@ -26,7 +26,7 @@ export function PortalInvoiceList({ invoices, showRecipient }: { invoices: Porta
       {/* Handy: Karten */}
       <ul className="space-y-3 md:hidden">
         {invoices.map((inv) => (
-          <li key={inv.id} className="rounded-2xl border border-line bg-white p-4 shadow-card">
+          <li key={inv.id} className="rounded-2xl border border-line bg-surface p-4 shadow-card">
             <InvoiceSummary invoice={inv} showRecipient={showRecipient} />
             <a
               href={`/rechnungen/${inv.id}/pdf`}
@@ -41,7 +41,7 @@ export function PortalInvoiceList({ invoices, showRecipient }: { invoices: Porta
       </ul>
 
       {/* Ab Tablet: Tabelle */}
-      <div className="relative hidden overflow-x-auto rounded-2xl border border-line bg-white shadow-card md:block">
+      <div className="relative hidden overflow-x-auto rounded-2xl border border-line bg-surface shadow-card md:block">
         <table className="w-full border-collapse text-left text-sm">
           <caption className="sr-only">Rechnungen</caption>
           <thead className="border-b border-line bg-mist text-xs text-ink-muted">
@@ -88,7 +88,7 @@ export function PortalInvoiceList({ invoices, showRecipient }: { invoices: Porta
                   <td className="px-4 py-3 align-top whitespace-nowrap">
                     <Badge tone={status.tone}>{status.label}</Badge>
                     {isUnpaid(inv) ? (
-                      <span className={overdue > 0 ? "block text-xs font-semibold text-red-700" : "block text-xs text-ink-muted"}>
+                      <span className={overdue > 0 ? "block text-xs font-semibold text-danger-ink" : "block text-xs text-ink-muted"}>
                         {overdue > 0 ? overdueLabel(overdue) : `fällig am ${formatDate(inv.dueDate)}`}
                       </span>
                     ) : inv.paidAt ? (
@@ -128,7 +128,7 @@ function InvoiceSummary({ invoice, showRecipient }: { invoice: PortalInvoice; sh
         </p>
         {invoice.cancelsInvoice ? <p className="text-xs text-ink-muted">Storno zu {invoice.cancelsInvoice.number}</p> : null}
         {isUnpaid(invoice) ? (
-          <p className={overdue > 0 ? "text-xs font-semibold text-red-700" : "text-xs text-ink-muted"}>
+          <p className={overdue > 0 ? "text-xs font-semibold text-danger-ink" : "text-xs text-ink-muted"}>
             {overdue > 0 ? overdueLabel(overdue) : `fällig am ${formatDate(invoice.dueDate)}`}
           </p>
         ) : null}

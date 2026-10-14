@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getInvoiceIssuer, type InvoiceIssuer } from "@/lib/billing-settings";
@@ -15,7 +16,7 @@ import {
   type PlaceholderValues,
 } from "@/lib/invoices/calc";
 import { renderInvoicePdf, type InvoicePdfData, type InvoicePdfIssuer } from "@/lib/invoices/pdf";
-import { entryReference, openEntrySelect, type BillingRecipient } from "@/lib/invoices/recipients";
+import { entryReference, isCompleteAddress, openEntrySelect, type BillingRecipient } from "@/lib/invoices/recipients";
 import { CANCELLATION_EMAIL_TEXT, isMissing, issuerVatId } from "@/lib/invoices/settings-schema";
 import { invoicePdfPath, readInvoicePdf, removeInvoicePdf, writeInvoicePdf } from "@/lib/invoices/storage";
 import { sendMailWithResult } from "@/lib/mail";
@@ -96,11 +97,7 @@ export function pdfIssuer({ site, billing }: Pick<InvoiceIssuer, "site" | "billi
   };
 }
 
-export function pdfDataOf(
-  invoice: InvoiceForPdf,
-  issuer: Pick<InvoiceIssuer, "site" | "billing">,
-  customerNumber: string | null,
-): InvoicePdfData {
+export function pdfDataOf(invoice: InvoiceForPdf, issuer: InvoicePdfIssuer, customerNumber: string | null): InvoicePdfData {
   return {
     kind: invoice.kind === "CANCELLATION" ? "CANCELLATION" : "INVOICE",
     number: invoice.number,
@@ -130,15 +127,31 @@ export function pdfDataOf(
     taxCents: invoice.taxCents,
     grossCents: invoice.grossCents,
     smallBusiness: invoice.smallBusiness,
-    issuer: pdfIssuer(issuer),
+    issuer,
   };
 }
 
-async function renderAndStore(invoice: InvoiceForPdf, issuer: InvoiceIssuer, customerNumber: string | null): Promise<string> {
+/** Erzeugt das PDF und legt es ab. Gibt Pfad und SHA-256 zurück. */
+async function renderAndStore(
+  invoice: InvoiceForPdf,
+  issuer: InvoicePdfIssuer,
+  customerNumber: string | null,
+): Promise<{ relative: string; sha256: string }> {
   const pdf = await renderInvoicePdf(pdfDataOf(invoice, issuer, customerNumber));
   const relative = invoicePdfPath(invoice.year, invoice.number);
   await writeInvoicePdf(relative, pdf);
-  return relative;
+  return { relative, sha256: createHash("sha256").update(pdf).digest("hex") };
+}
+
+/** Gespeicherte Absenderangaben einer Rechnung lesen (null bei fehlender oder beschädigter Momentaufnahme). */
+function parseIssuerSnapshot(value: string | null): InvoicePdfIssuer | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as InvoicePdfIssuer;
+    return parsed && typeof parsed.legalName === "string" ? parsed : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Kundennummer des Rechnungsempfängers (Unterkunde ohne eigene Nummer: die des Firmenkunden). */
@@ -153,7 +166,8 @@ export async function customerNumberFor(companyId: string | null): Promise<strin
 
 /**
  * PDF einer Rechnung lesen. Fehlt die Datei (z. B. nach einem Umzug ohne Speicherordner), wird sie aus den
- * gespeicherten Rechnungsdaten neu erzeugt – mit den aktuellen Firmendaten als Absender.
+ * gespeicherten Rechnungsdaten und der Absender-Momentaufnahme neu erzeugt – nie aus den aktuellen Firmendaten.
+ * Gibt es keine Momentaufnahme, liefert die Funktion null: Dann muss die Datei aus der Sicherung zurück.
  */
 export async function ensureInvoicePdf(invoiceId: string): Promise<{ pdf: Buffer; regenerated: boolean } | null> {
   const invoice = await db.invoice.findUnique({ where: { id: invoiceId }, include: invoicePdfInclude });
@@ -161,8 +175,13 @@ export async function ensureInvoicePdf(invoiceId: string): Promise<{ pdf: Buffer
   const stored = await readInvoicePdf(invoice.pdfPath);
   if (stored) return { pdf: stored, regenerated: false };
 
-  const [issuer, customerNumber] = await Promise.all([getInvoiceIssuer(), customerNumberFor(invoice.companyId)]);
-  const relative = await renderAndStore(invoice, issuer, customerNumber);
+  const issuer = parseIssuerSnapshot(invoice.issuerSnapshot);
+  if (!issuer) {
+    console.error(`[rechnungen] PDF zu ${invoice.number} fehlt und kann nicht neu erzeugt werden (keine Absender-Momentaufnahme).`);
+    return null;
+  }
+  console.warn(`[rechnungen] PDF zu ${invoice.number} fehlte und wurde aus den gespeicherten Rechnungsdaten neu erzeugt.`);
+  const { relative } = await renderAndStore(invoice, issuer, invoice.customerNumber);
   await db.invoice.update({ where: { id: invoice.id }, data: { pdfPath: relative } });
   const pdf = await readInvoicePdf(relative);
   return pdf ? { pdf, regenerated: true } : null;
@@ -220,6 +239,11 @@ export type CreateInvoiceInput = {
   servicePeriodEnd: string | null;
   introText: string | null;
   createdById: string;
+  /**
+   * Nettosumme, die die Vorschau gezeigt hat. Weicht die Summe der Positionen beim Erstellen ab (z. B. weil jemand
+   * inzwischen eine Menge geändert hat), wird nichts erstellt – sonst stünde ein ungeprüfter Betrag auf der Rechnung.
+   */
+  expectedNetCents?: number | null;
 };
 
 function positions(count: number): string {
@@ -245,6 +269,14 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<ServiceR
   }
   const { billing, site } = issuer;
   const recipient = input.recipient;
+  if (!isCompleteAddress(input.recipientAddress)) {
+    return {
+      ok: false,
+      error: recipient.editHref
+        ? "Die Rechnungsanschrift ist unvollständig. Bitte beim Kunden unter „Rechnungsdaten“ Straße, PLZ und Ort eintragen."
+        : "Bitte die vollständige Anschrift angeben: Straße und Hausnummer sowie PLZ und Ort.",
+    };
+  }
   const customerNumber = recipient.customerNumber;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
@@ -271,6 +303,13 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<ServiceR
         if (noPrice.length > 0) {
           throw new InvoiceError(
             `Für ${positions(noPrice.length)} fehlt noch der Preis: ${quoteList(noPrice.map((e) => e.description))}. Bitte tragen Sie ihn im Ticket ein.`,
+          );
+        }
+
+        const net = entries.reduce((sum, e) => sum + e.totalCents, 0);
+        if (typeof input.expectedNetCents === "number" && input.expectedNetCents !== net) {
+          throw new InvoiceError(
+            "Die Positionen wurden geändert, seit die Vorschau geladen wurde. Bitte prüfen Sie die Vorschau noch einmal.",
           );
         }
 
@@ -339,8 +378,13 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<ServiceR
           throw new InvoiceError("Die Positionen wurden gerade von jemand anderem geändert. Bitte laden Sie die Seite neu.");
         }
 
-        written = await renderAndStore(invoice, issuer, customerNumber);
-        await tx.invoice.update({ where: { id: invoice.id }, data: { pdfPath: written } });
+        const issuerData = pdfIssuer(issuer);
+        const stored = await renderAndStore(invoice, issuerData, customerNumber);
+        written = stored.relative;
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: { pdfPath: stored.relative, pdfSha256: stored.sha256, issuerSnapshot: JSON.stringify(issuerData), customerNumber },
+        });
         return { invoiceId: invoice.id, number };
       }, TX_OPTIONS);
       return { ok: true, ...created };
@@ -371,9 +415,10 @@ export async function cancelInvoice(input: {
     return { ok: false, error: `Eine Stornorechnung ist noch nicht möglich: ${issuer.problems.map((p) => p.message).join(" ")}` };
   }
   // Außerhalb der Transaktion lesen (SQLite: nur eine schreibende Verbindung)
-  const head = await db.invoice.findUnique({ where: { id: input.invoiceId }, select: { companyId: true } });
+  const head = await db.invoice.findUnique({ where: { id: input.invoiceId }, select: { companyId: true, customerNumber: true } });
   if (!head) return { ok: false, error: "Diese Rechnung gibt es nicht. Bitte laden Sie die Seite neu." };
-  const customerNumber = await customerNumberFor(head.companyId);
+  // Kundennummer wie auf der Originalrechnung
+  const customerNumber = head.customerNumber ?? (await customerNumberFor(head.companyId));
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let written: string | null = null;
@@ -451,8 +496,13 @@ export async function cancelInvoice(input: {
           data: { billed: false, billedAt: null, invoiceId: null },
         });
 
-        written = await renderAndStore(cancellation, issuer, customerNumber);
-        await tx.invoice.update({ where: { id: cancellation.id }, data: { pdfPath: written } });
+        const issuerData = pdfIssuer(issuer);
+        const stored = await renderAndStore(cancellation, issuerData, customerNumber);
+        written = stored.relative;
+        await tx.invoice.update({
+          where: { id: cancellation.id },
+          data: { pdfPath: stored.relative, pdfSha256: stored.sha256, issuerSnapshot: JSON.stringify(issuerData), customerNumber },
+        });
         return { invoiceId: cancellation.id, number, originalNumber: original.number, released: released.count };
       }, TX_OPTIONS);
       return { ok: true, ...created };
@@ -501,6 +551,15 @@ export async function sendInvoice(input: {
   if (!result.ok) {
     return { ok: false, error: `Die E-Mail konnte nicht verschickt werden (${result.error}). Die Rechnung bleibt unverändert.` };
   }
+  if (result.via === "log") {
+    // Ohne Mailserver steht die Mail nur im Mail-Protokoll – der Kunde hat nichts bekommen
+    return {
+      ok: false,
+      error:
+        "Es ist kein Mailserver eingerichtet (SMTP). Die E-Mail steht nur im Mail-Protokoll, beim Kunden ist nichts angekommen. " +
+        "Laden Sie das PDF herunter, schicken Sie es selbst und markieren Sie die Rechnung danach als versendet.",
+    };
+  }
 
   const now = new Date();
   await db.$transaction([
@@ -509,4 +568,20 @@ export async function sendInvoice(input: {
     db.invoice.updateMany({ where: { id: invoice.id, status: "OPEN" }, data: { status: "SENT" } }),
   ]);
   return { ok: true, sentTo: input.to, number: invoice.number };
+}
+
+/**
+ * Rechnung als versendet markieren, wenn sie auf anderem Weg verschickt wurde (Post, eigenes E-Mail-Programm,
+ * oder ohne eingerichteten Mailserver). Nur „noch nicht versendet“ wird zu „versendet“.
+ */
+export async function markInvoiceSent(input: { invoiceId: string; note: string }): Promise<ServiceResult<{ number: string }>> {
+  const invoice = await db.invoice.findUnique({ where: { id: input.invoiceId }, select: { id: true, number: true, status: true } });
+  if (!invoice) return { ok: false, error: "Diese Rechnung gibt es nicht. Bitte laden Sie die Seite neu." };
+  if (invoice.status === "CANCELLED") return { ok: false, error: "Diese Rechnung ist storniert." };
+  const now = new Date();
+  await db.$transaction([
+    db.invoice.update({ where: { id: invoice.id }, data: { sentAt: now, sentTo: input.note } }),
+    db.invoice.updateMany({ where: { id: invoice.id, status: "OPEN" }, data: { status: "SENT" } }),
+  ]);
+  return { ok: true, number: invoice.number };
 }

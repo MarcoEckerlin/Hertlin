@@ -7,6 +7,7 @@ import { FileText } from "lucide-react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
+import { showToast } from "@/components/ui/toaster";
 import { setCostsBilledAction } from "@/lib/actions/admin-billing";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
@@ -85,7 +86,7 @@ function BillingBadge({ entry }: { entry: CostEntryRow }) {
     return (
       <Link
         href={`/admin/rechnungen/${entry.invoice.id}`}
-        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-emerald-800 ring-1 ring-emerald-200 ring-inset hover:bg-emerald-100"
+        className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap text-success-ink ring-1 ring-success-line ring-inset hover:ring-success-ink/40"
       >
         <FileText className="size-3" aria-hidden />
         {entry.invoice.number}
@@ -124,13 +125,18 @@ export function CostEntriesForm({
   // Meldung der letzten Aktion; verschwindet, sobald die Auswahl wieder geändert wird
   const [showMessage, setShowMessage] = useState(false);
 
-  // Nach erfolgreicher Aktion Auswahl leeren (vorherigen Zustand merken statt Effekt)
+  // Nach erfolgreicher Aktion Auswahl leeren (vorherigen Zustand merken statt Effekt).
+  // Erfolg erscheint als kurze Meldung, Fehler bleiben in der Leiste bei der Auswahl.
   const [prevState, setPrevState] = useState(state);
   if (prevState !== state) {
     setPrevState(state);
-    setShowMessage(true);
+    setShowMessage(state.status === "error");
     if (state.status === "success") setSelected(new Set());
   }
+
+  useEffect(() => {
+    if (state.status === "success" && state.message) showToast(state.message);
+  }, [state]);
 
   const allEntries = tickets.flatMap((t) => t.entries);
   const byId = new Map(allEntries.map((e) => [e.id, e]));
@@ -221,9 +227,9 @@ export function CostEntriesForm({
           <section
             key={ticket.id}
             aria-labelledby={headingId}
-            className="overflow-hidden rounded-2xl border border-line bg-white shadow-card"
+            className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card"
           >
-            <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-line bg-mist/60 px-4 py-3 sm:px-5">
+            <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-line bg-mist px-4 py-3 sm:px-5">
               <span className="pt-0.5">
                 <TriStateCheckbox
                   checked={all}
@@ -247,27 +253,15 @@ export function CostEntriesForm({
               </div>
               <p className="text-sm font-semibold whitespace-nowrap text-ink tabular-nums">{ticket.subtotal}</p>
             </header>
-            <div className="relative overflow-x-auto">
-              <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
+            <div className="scroll-shadow-x table-stack relative overflow-x-auto">
+              <table className="w-full min-w-[34rem] border-collapse text-left text-sm">
                 <thead className="text-xs text-ink-muted">
                   <tr className="border-b border-line">
                     <th scope="col" className="w-10 py-2 pl-4 sm:pl-5">
                       <span className="sr-only">Auswahl</span>
                     </th>
                     <th scope="col" className="px-3 py-2 font-semibold">
-                      Datum
-                    </th>
-                    <th scope="col" className="px-3 py-2 font-semibold">
-                      Art
-                    </th>
-                    <th scope="col" className="px-3 py-2 font-semibold">
-                      Beschreibung
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-semibold">
-                      Menge
-                    </th>
-                    <th scope="col" className="px-3 py-2 text-right font-semibold">
-                      Einzelpreis
+                      Leistung
                     </th>
                     <th scope="col" className="px-3 py-2 text-right font-semibold">
                       Gesamt
@@ -280,12 +274,19 @@ export function CostEntriesForm({
                 <tbody>
                   {ticket.entries.map((e) => {
                     const isSelected = selected.has(e.id);
+                    const meta = [e.date, e.kind, e.needsPrice ? e.quantity : `${e.quantity} × ${e.unitPrice}`, e.byLine]
+                      .filter(Boolean)
+                      .join(" · ");
                     return (
                       <tr
                         key={e.id}
-                        className={cn("border-b border-line last:border-0", isSelected ? "bg-brand-50" : "hover:bg-brand-50/40")}
+                        className={cn(
+                          "border-b border-line transition-colors last:border-0",
+                          isSelected ? "bg-brand-50" : "hover:bg-brand-50/40",
+                        )}
                       >
-                        <td className="py-2.5 pl-4 align-top sm:pl-5">
+                        {/* Auf dem Handy steht das Kästchen links neben der Beschreibung */}
+                        <td className="py-2.5 pl-4 align-top max-sm:float-left! max-sm:pr-3! sm:pl-5">
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -294,22 +295,19 @@ export function CostEntriesForm({
                             className="mt-0.5 size-[1.125rem] cursor-pointer rounded border-line-strong accent-brand-600"
                           />
                         </td>
-                        <td className="px-3 py-2.5 align-top whitespace-nowrap text-ink-soft">{e.date}</td>
-                        <td className="px-3 py-2.5 align-top whitespace-nowrap text-ink-soft">{e.kind}</td>
-                        <td className="px-3 py-2.5 align-top text-ink">
-                          <span className="break-words">{e.description}</span>
-                          {e.byLine ? <span className="block text-xs text-ink-muted">{e.byLine}</span> : null}
+                        <td className="px-3 py-2.5 align-top text-ink sm:w-full">
+                          <div className="min-w-0">
+                            <span className="block font-medium break-words">{e.description}</span>
+                            <span className="block text-xs text-ink-muted tabular-nums">{meta}</span>
+                          </div>
                         </td>
-                        <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
-                          {e.quantity}
-                        </td>
-                        <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
-                          {e.needsPrice ? <span className="text-ink-muted">–</span> : e.unitPrice}
-                        </td>
-                        <td className="px-3 py-2.5 text-right align-top font-semibold whitespace-nowrap text-ink tabular-nums">
+                        <td
+                          data-label="Gesamt"
+                          className="px-3 py-2.5 text-right align-top font-semibold whitespace-nowrap text-ink tabular-nums"
+                        >
                           {e.needsPrice ? <span className="font-normal text-ink-muted">–</span> : e.total}
                         </td>
-                        <td className="py-2.5 pr-4 pl-3 align-top whitespace-nowrap sm:pr-5">
+                        <td data-label="Abrechnung" className="py-2.5 pr-4 pl-3 align-top whitespace-nowrap sm:pr-5">
                           <BillingBadge entry={e} />
                         </td>
                       </tr>
@@ -328,9 +326,10 @@ export function CostEntriesForm({
         </span>
       </div>
 
+      {/* Auswahlleiste; auf dem Handy über dem Schnellzugriff am unteren Rand */}
       <div
         className={cn(
-          "sticky bottom-4 z-20 space-y-3 rounded-2xl border border-line bg-white p-4 shadow-lift",
+          "sticky bottom-20 z-20 space-y-3 rounded-2xl border border-line bg-surface-raised p-4 shadow-lift transition-[opacity,translate] duration-200 starting:translate-y-2 starting:opacity-0 lg:bottom-4",
           chosen.length === 0 && !(showMessage && state.message) && "hidden",
         )}
       >
@@ -344,7 +343,7 @@ export function CostEntriesForm({
               <span className="text-ink-muted"> · </span>
               <span className="font-semibold tabular-nums">{formatMoney(chosenCents)}</span>
               {tooMany ? (
-                <span className="block text-xs text-red-700">
+                <span className="block text-xs text-danger-ink">
                   Bitte höchstens {MAX_INVOICE_SELECTION} Positionen in eine Rechnung übernehmen.
                 </span>
               ) : null}

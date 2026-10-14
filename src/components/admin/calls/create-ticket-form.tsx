@@ -56,7 +56,7 @@ export function CreateTicketFromCallForm({
       <FormMessage state={state} />
 
       <fieldset className="space-y-4">
-        <legend className="mb-1 text-sm font-bold text-ink">Kunde</legend>
+        <legend className="mb-1 text-xs font-bold tracking-wide text-ink-muted uppercase">Kontakt</legend>
         <Field
           label="Kunde"
           htmlFor="customer"
@@ -145,7 +145,7 @@ export function CreateTicketFromCallForm({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="mb-1 text-sm font-bold text-ink">Ticket</legend>
+        <legend className="mb-1 text-xs font-bold tracking-wide text-ink-muted uppercase">Ticket</legend>
         <Field label="Betreff" htmlFor="subject" error={fe.subject}>
           <Input
             {...errorProps(state, "subject")}

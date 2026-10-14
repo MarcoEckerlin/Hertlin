@@ -269,7 +269,7 @@ export function LocationEditForm({ location, currentMain }: { location: Location
           />
         )}
         <WebsiteCheckbox values={submitted} errors={errors} fallback={location.showOnWebsite} />
-        <div className={cn("rounded-xl border p-4", active ? "border-line" : "border-amber-200 bg-amber-50/60")}>
+        <div className={cn("rounded-xl border p-4", active ? "border-line" : "border-warning-line bg-warning-soft")}>
           <CheckboxWithError
             id="location-active"
             name="active"

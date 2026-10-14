@@ -8,6 +8,8 @@ import { RoleBadge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { FlashToast } from "@/components/ui/toaster";
+import { Disclosure } from "@/components/portal/disclosure";
 import { CompanyStatusBadge, UserStatusBadge } from "@/components/portal/admin/status-badges";
 import { SubCustomerForm } from "@/components/portal/admin/sub-customer-form";
 import { SubCustomerStatusForm } from "@/components/portal/admin/sub-customer-status-form";
@@ -15,6 +17,10 @@ import { accessStatus } from "@/components/portal/admin/types";
 import { cleanId, firstParam, getSubCustomer, listManageableUsers, recentTicketsOf } from "@/components/portal/admin/data";
 
 type Params = Promise<{ slug: string; id: string }>;
+
+/** Ganze Zeile klickbar: Der Link spannt sich über den Listeneintrag (li ist relativ positioniert). */
+const STRETCHED_LINK =
+  "outline-none after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-brand-600";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
@@ -37,7 +43,7 @@ export default async function SubCustomerPage({ params, searchParams }: { params
   if (!company) notFound();
 
   const sp = await searchParams;
-  const justCreated = firstParam(sp.angelegt) === "1";
+  const created = firstParam(sp.angelegt) || undefined;
 
   const [users, recent] = await Promise.all([
     listManageableUsers(ctx, { companyId: company.id }),
@@ -52,6 +58,11 @@ export default async function SubCustomerPage({ params, searchParams }: { params
 
   return (
     <>
+      <FlashToast
+        param="angelegt"
+        value={created}
+        messages={{ "1": "Die Unterkunde ist angelegt. Legen Sie jetzt die Benutzer an, die dort arbeiten." }}
+      />
       <PageHeader
         title={company.name}
         breadcrumbs={[{ label: "Unterkunden", href: "/unterkunden" }, { label: company.name }]}
@@ -66,12 +77,6 @@ export default async function SubCustomerPage({ params, searchParams }: { params
       />
 
       <div className="mb-6 space-y-3 empty:hidden">
-        {justCreated && company.active ? (
-          <Alert tone="success" title="Die Unterkunde ist angelegt">
-            Legen Sie jetzt die Benutzer an, die dort arbeiten. Jeder bekommt eine Einladung per E-Mail und legt sein
-            Passwort selbst fest.
-          </Alert>
-        ) : null}
         {!company.active ? (
           <Alert tone="warning" title="Diese Unterkunde ist deaktiviert">
             Ihre Benutzer können sich nicht anmelden und neue Benutzer lassen sich nicht anlegen. Die bisherigen Tickets
@@ -105,9 +110,12 @@ export default async function SubCustomerPage({ params, searchParams }: { params
             ) : (
               <ul className="divide-y divide-line">
                 {users.map((u) => (
-                  <li key={u.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3.5 sm:px-6">
+                  <li
+                    key={u.id}
+                    className="relative flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-brand-50/60 sm:px-6"
+                  >
                     <div className="min-w-0">
-                      <Link href={`/benutzer/${u.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">
+                      <Link href={`/benutzer/${u.id}`} className={`font-semibold text-ink hover:text-brand-700 ${STRETCHED_LINK}`}>
                         {u.name}
                       </Link>
                       <p className="truncate text-sm text-ink-muted">
@@ -151,9 +159,12 @@ export default async function SubCustomerPage({ params, searchParams }: { params
             ) : (
               <ul className="divide-y divide-line">
                 {recent.tickets.map((t) => (
-                  <li key={t.id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 py-3.5 sm:px-6">
+                  <li
+                    key={t.id}
+                    className="relative flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-brand-50/60 sm:px-6"
+                  >
                     <div className="min-w-0">
-                      <Link href={`/tickets/${t.id}`} className="font-semibold text-ink hover:text-brand-700 hover:underline">
+                      <Link href={`/tickets/${t.id}`} className={`font-semibold text-ink hover:text-brand-700 ${STRETCHED_LINK}`}>
                         <span className="mr-2 font-mono text-xs text-ink-muted">{formatTicketNumber(t.id)}</span>
                         {t.subject}
                       </Link>
@@ -189,15 +200,21 @@ export default async function SubCustomerPage({ params, searchParams }: { params
             </CardBody>
           </Card>
 
+          {/* Selten gebraucht: eingeklappt, solange die Unterkunde aktiv ist */}
           <Card>
-            <CardHeader title={company.active ? "Unterkunde deaktivieren" : "Unterkunde aktivieren"} />
-            <CardBody>
-              <SubCustomerStatusForm id={company.id} name={company.name} active={company.active} userCount={activeUsers} />
-              <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-ink-muted">
-                Löschen ist bewusst nicht vorgesehen. So bleiben alte Tickets der Unterkunde zugeordnet und später
-                nachvollziehbar.
-              </p>
-            </CardBody>
+            <Disclosure
+              summary={company.active ? "Unterkunde deaktivieren" : "Unterkunde aktivieren"}
+              defaultOpen={!company.active}
+              summaryClassName="px-5 py-4 text-base font-bold text-ink sm:px-6"
+            >
+              <CardBody className="border-t border-line">
+                <SubCustomerStatusForm id={company.id} name={company.name} active={company.active} userCount={activeUsers} />
+                <p className="mt-5 border-t border-line pt-4 text-xs leading-relaxed text-ink-muted">
+                  Löschen ist bewusst nicht vorgesehen. So bleiben alte Tickets der Unterkunde zugeordnet und später
+                  nachvollziehbar.
+                </p>
+              </CardBody>
+            </Disclosure>
           </Card>
         </div>
       </div>

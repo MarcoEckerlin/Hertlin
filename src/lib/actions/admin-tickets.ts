@@ -311,7 +311,8 @@ export async function createStaffTicketAction(_prev: FormState, formData: FormDa
 }
 
 /* ======================================================================
- * Bearbeitung: Status, Priorität, Art, Bereich, Bearbeiter, Zuordnung
+ * Bearbeitung: Status, Priorität, Art, Bereich, Bearbeiter, Zuordnung, Standort
+ * Es dürfen auch nur einzelne Felder kommen (z. B. nur der Status aus der Schnellleiste).
  * ==================================================================== */
 
 const metaSchema = z.object({
@@ -353,13 +354,16 @@ export async function updateTicketMetaAction(_prev: FormState, formData: FormDat
   const ticket = ticketId ? await db.ticket.findUnique({ where: { id: ticketId }, select: metaTicketSelect }) : null;
   if (!ticket) return errorState("Dieses Ticket gibt es nicht mehr. Bitte öffnen Sie es noch einmal über die Ticketliste.");
 
+  // Teilweise Änderungen: Felder, die nicht mitgeschickt werden, bleiben wie sie sind
+  // (Schnellleiste mit Status/Bearbeiter oben, Details in der Seitenleiste)
+  const field = (key: string, current: string) => (formData.has(key) ? text(formData, key) : current);
   const parsed = metaSchema.safeParse({
-    status: text(formData, "status"),
-    priority: text(formData, "priority"),
-    type: text(formData, "type"),
-    category: text(formData, "category"),
-    assigneeId: text(formData, "assigneeId"),
-    customer: text(formData, "customer"),
+    status: field("status", ticket.status),
+    priority: field("priority", ticket.priority),
+    type: field("type", ticket.type),
+    category: field("category", ticket.category),
+    assigneeId: field("assigneeId", ticket.assigneeId ?? ""),
+    customer: field("customer", ticket.companyId ?? PRIVATE_CUSTOMER),
     notify: formData.get("notify"),
   });
   if (!parsed.success) return fromZodError(parsed.error, formData);

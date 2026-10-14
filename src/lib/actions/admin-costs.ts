@@ -88,7 +88,7 @@ async function findCost(ticketId: number, costId: unknown) {
       createdById: true,
       performedById: true,
       presetId: true,
-      preset: { select: { id: true, unit: true, unitPriceCents: true } },
+      preset: { select: { id: true, unit: true, unitPriceCents: true, active: true } },
     },
   });
 }
@@ -169,6 +169,8 @@ export async function addCostAction(_prev: FormState, formData: FormData): Promi
   let unit = "";
   let description = "";
   let preset: CatalogPreset | null = null;
+  /** Neue Position mit dem Namen eines deaktivierten Katalogeintrags: verknüpfen, aber dessen Preis nicht übernehmen */
+  let presetInactive = false;
   let createPreset: { name: string; nameKey: string } | null = null;
 
   if (mode === "katalog") {
@@ -205,10 +207,15 @@ export async function addCostAction(_prev: FormState, formData: FormData): Promi
       description = cleanName(parsed.data.description);
       const nameKey = presetNameKey(description);
       // Gibt es die Bezeichnung schon im Katalog, wird dieser Eintrag verwendet (auch ohne Häkchen)
-      preset = await db.costPreset.findUnique({
+      const found = await db.costPreset.findUnique({
         where: { nameKey },
-        select: { id: true, kind: true, name: true, unit: true, unitPriceCents: true },
+        select: { id: true, kind: true, name: true, unit: true, unitPriceCents: true, active: true },
       });
+      if (found) {
+        const { active, ...rest } = found;
+        preset = rest;
+        presetInactive = !active;
+      }
       if (!preset && parsed.data.addToCatalog) createPreset = { name: description, nameKey };
     }
   }
@@ -218,7 +225,8 @@ export async function addCostAction(_prev: FormState, formData: FormData): Promi
   }
 
   const quantityHundredths = quantity.value as number;
-  const resolved = resolveUnitPrice({ canSetPrice: isAdmin, inputCents: price.value, preset, unit });
+  // Ein deaktivierter Katalogeintrag hat keinen gültigen Preis mehr: Techniker-Positionen bekommen „Preis fehlt“
+  const resolved = resolveUnitPrice({ canSetPrice: isAdmin, inputCents: price.value, preset: presetInactive ? null : preset, unit });
   const totalCents = lineTotalCents(quantityHundredths, resolved.unitPriceCents);
   const now = new Date();
 
@@ -252,7 +260,7 @@ export async function addCostAction(_prev: FormState, formData: FormData): Promi
           presetId = existing?.id ?? null;
         }
       }
-      if (presetId && !createdPreset) {
+      if (presetId && !createdPreset && !presetInactive) {
         await tx.costPreset.update({ where: { id: presetId }, data: { usageCount: { increment: 1 }, lastUsedAt: now } });
       }
       await tx.costEntry.create({
@@ -348,7 +356,12 @@ export async function updateCostAction(_prev: FormState, formData: FormData): Pr
     unitPriceCents = resolved.unitPriceCents;
     needsPrice = resolved.needsPrice;
   } else if (data.unit !== cost.unit) {
-    const resolved = resolveUnitPrice({ canSetPrice: false, inputCents: null, preset: cost.preset, unit: data.unit });
+    const resolved = resolveUnitPrice({
+      canSetPrice: false,
+      inputCents: null,
+      preset: cost.preset?.active ? cost.preset : null,
+      unit: data.unit,
+    });
     unitPriceCents = resolved.unitPriceCents;
     needsPrice = resolved.needsPrice;
   }
@@ -362,11 +375,15 @@ export async function updateCostAction(_prev: FormState, formData: FormData): Pr
   }
 
   const savePrice = isAdmin && data.savePriceToCatalog && !needsPrice && cost.preset !== null && cost.preset.unit === data.unit;
+  // Häkchen „auch im Katalog“ gesetzt, aber die Einheit weicht ab: Katalog bleibt, das wird gemeldet
+  const catalogSkipped = isAdmin && data.savePriceToCatalog && !needsPrice && cost.preset !== null && cost.preset.unit !== data.unit;
 
+  let locked = false;
   try {
     await db.$transaction(async (tx) => {
-      await tx.costEntry.update({
-        where: { id: cost.id },
+      // Nur ändern, solange die Position auf keiner Rechnung steht (eine Rechnung kann gerade erstellt worden sein)
+      const changed = await tx.costEntry.updateMany({
+        where: { id: cost.id, invoiceId: null, ...(isAdmin ? {} : { billed: false, createdById: user.id }) },
         data: {
           kind: data.kind,
           description: cleanName(data.description),
@@ -382,6 +399,10 @@ export async function updateCostAction(_prev: FormState, formData: FormData): Pr
           billedAt: billed ? (cost.billedAt ?? new Date()) : null,
         },
       });
+      if (changed.count !== 1) {
+        locked = true;
+        return;
+      }
       if (savePrice && cost.preset) {
         await tx.costPreset.update({ where: { id: cost.preset.id }, data: { unitPriceCents } });
       }
@@ -392,7 +413,8 @@ export async function updateCostAction(_prev: FormState, formData: FormData): Pr
   }
 
   revalidateCosts();
-  redirect(`/admin/tickets/${ticket.id}?kosten=gespeichert#kosten`);
+  if (locked) redirect(`/admin/tickets/${ticket.id}?kosten=gesperrt#kosten`);
+  redirect(`/admin/tickets/${ticket.id}?kosten=${catalogSkipped ? "preis-einheit" : "gespeichert"}#kosten`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -488,14 +510,19 @@ export async function deleteCostAction(rawTicketId: number, costId: string): Pro
   const cost = await findCost(ticket.id, costId);
   if (cost) {
     if (costEditBlock(user, cost)) redirect(`/admin/tickets/${ticket.id}?kosten=gesperrt#kosten`);
+    let deleted = 0;
     await db.$transaction(async (tx) => {
-      await tx.costEntry.delete({ where: { id: cost.id } });
+      // Nur löschen, solange die Position auf keiner Rechnung steht (eine Rechnung kann gerade erstellt worden sein)
+      ({ count: deleted } = await tx.costEntry.deleteMany({
+        where: { id: cost.id, invoiceId: null, ...(user.role === "ADMIN" ? {} : { billed: false, createdById: user.id }) },
+      }));
       // Versehentlich erfasst: Zähler im Katalog zurücknehmen, damit unbenutzte Einträge wieder löschbar sind
-      if (cost.presetId) {
+      if (deleted === 1 && cost.presetId) {
         await tx.costPreset.updateMany({ where: { id: cost.presetId, usageCount: { gt: 0 } }, data: { usageCount: { decrement: 1 } } });
       }
     });
     revalidateCosts();
+    if (deleted !== 1) redirect(`/admin/tickets/${ticket.id}?kosten=gesperrt#kosten`);
   }
   redirect(`/admin/tickets/${ticket.id}?kosten=geloescht#kosten`);
 }
@@ -510,8 +537,8 @@ export async function toggleCostBilledAction(rawTicketId: number, costId: string
   if (cost.invoiceId) redirect(`/admin/tickets/${ticket.id}?kosten=gesperrt#kosten`);
   if (!cost.billed && cost.needsPrice) redirect(`/admin/tickets/${ticket.id}?kosten=preis-fehlt#kosten`);
 
-  await db.costEntry.update({
-    where: { id: cost.id },
+  await db.costEntry.updateMany({
+    where: { id: cost.id, invoiceId: null },
     data: cost.billed ? { billed: false, billedAt: null } : { billed: true, billedAt: new Date() },
   });
   revalidateCosts();

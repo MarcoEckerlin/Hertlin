@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { cn } from "@/lib/cn";
 
 /** Abstand zum oberen Rand (mobile Kopfzeile ist 3,5 rem hoch) bzw. zum unteren Rand beim Mitscrollen. */
 const TOP_GAP = 80;
@@ -43,6 +44,7 @@ export function LiveTimeline({
   lastFromSelf,
   announcement,
   follow = true,
+  aboveBottomNav = false,
   children,
 }: {
   /** Kennung des letzten Eintrags; ändert sie sich, ist etwas Neues da */
@@ -52,6 +54,8 @@ export function LiveTimeline({
   announcement: string;
   /** false: Neues nur ansagen, nicht hinscrollen (z. B. ein Statuswechsel, der nicht im Verlauf steht) */
   follow?: boolean;
+  /** Seite mit Schnellzugriff-Leiste unten (Portal/Verwaltung auf dem Handy): Knopf „Neue Nachricht“ darüber setzen */
+  aboveBottomNav?: boolean;
   children: ReactNode;
 }) {
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -138,7 +142,10 @@ export function LiveTimeline({
         <button
           type="button"
           onClick={goToNewest}
-          className="fixed right-4 bottom-4 z-30 inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white shadow-lift hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 sm:right-6 sm:bottom-6"
+          className={cn(
+            "fixed right-4 z-30 inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-on-ink shadow-lift transition-[opacity,translate] duration-200 hover:bg-brand-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 starting:translate-y-2 starting:opacity-0 sm:right-6",
+            aboveBottomNav ? "bottom-[calc(4.5rem+env(safe-area-inset-bottom))] lg:bottom-6" : "bottom-4 sm:bottom-6",
+          )}
         >
           {jump === "up" ? <ArrowUp className="size-4" aria-hidden /> : <ArrowDown className="size-4" aria-hidden />}
           Neue Nachricht

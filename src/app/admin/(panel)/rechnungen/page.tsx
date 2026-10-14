@@ -32,11 +32,14 @@ function Tile({ label, value, note, href }: { label: string; value: string; note
     </>
   );
   return href ? (
-    <Link href={href} className="block rounded-2xl border border-line bg-white p-4 shadow-card hover:border-brand-300 sm:p-5">
+    <Link
+      href={href}
+      className="block rounded-2xl border border-line bg-surface p-4 shadow-card transition-colors hover:border-brand-300 hover:bg-brand-50/40 sm:p-5"
+    >
       {body}
     </Link>
   ) : (
-    <div className="rounded-2xl border border-line bg-white p-4 shadow-card sm:p-5">{body}</div>
+    <div className="rounded-2xl border border-line bg-surface p-4 shadow-card sm:p-5">{body}</div>
   );
 }
 
@@ -62,7 +65,7 @@ export default async function InvoicesPage({
     <div>
       <PageHeader
         title="Rechnungen"
-        description="Alle Rechnungen und Stornorechnungen. Neue Rechnungen erstellen Sie aus den offenen Positionen unter „Kosten pro Konto“."
+        description="Neue Rechnungen entstehen aus den offenen Positionen unter „Kosten pro Konto“."
         meta={
           company ? (
             <span className="text-sm text-ink-muted">

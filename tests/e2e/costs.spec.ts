@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import type { Browser, Page } from "@playwright/test";
+import type { Browser, Locator, Page } from "@playwright/test";
 import {
   test,
   expect,
@@ -88,6 +88,7 @@ async function addCost(admin: Page, ticketId: number, c: Omit<CostCase, "ticketI
   await admin.goto(main(`/admin/tickets/${ticketId}`));
   const section = admin.locator("#kosten");
   await expect(section.getByRole("heading", { name: "Leistungen und Material" })).toBeVisible();
+  await openCostForm(section);
   await section.getByRole("radio", { name: "Neue Position" }).check();
   await section.getByLabel("Bezeichnung").fill(c.description);
   await section.getByLabel("Art", { exact: true }).selectOption({ label: "Arbeitszeit" });
@@ -98,8 +99,15 @@ async function addCost(admin: Page, ticketId: number, c: Omit<CostCase, "ticketI
   await expect(section.getByLabel("Gesamtbetrag")).toHaveText(c.totalMoney);
   await section.getByLabel("In den Katalog aufnehmen").uncheck();
   await section.getByRole("button", { name: "Position hinzufügen" }).click();
-  await expect(section.getByText(`Arbeitszeit über ${c.totalMoney} hinzugefügt.`)).toBeVisible();
+  await expect(admin.getByText(`Arbeitszeit über ${c.totalMoney} hinzugefügt.`)).toBeVisible();
   await expect(section.getByRole("row").filter({ hasText: c.description })).toBeVisible();
+}
+
+/** „Position erfassen“ aufklappen – eingeklappt stehen dort nur der Knopf und die Schnellwahl */
+async function openCostForm(section: Locator) {
+  const toggle = section.getByRole("button", { name: "Position erfassen" });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(section.locator("#kosten-erfassen")).toBeVisible();
 }
 
 async function htmlOf(page: Page, url: string): Promise<string> {
@@ -129,6 +137,7 @@ test.describe("Leistungen und Kosten im Ticket", () => {
     // (gefiltert auf das Datum der ersten Position) davon unberührt bleiben.
     const second = randomCase();
     const secondDate = second.date === shared.date ? "2023-06-15" : second.date;
+    await openCostForm(section);
     await section.getByRole("radio", { name: "Neue Position" }).check();
     await section.getByLabel("Bezeichnung").fill(second.description);
     await section.getByLabel("Art", { exact: true }).selectOption({ label: "Material" });
@@ -139,7 +148,7 @@ test.describe("Leistungen und Kosten im Ticket", () => {
     await expect(section.getByLabel("Gesamtbetrag")).toHaveText(euro.format(2469));
     await section.getByLabel("In den Katalog aufnehmen").uncheck();
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
-    await expect(section.getByText(`Material über ${euro.format(2469)} hinzugefügt.`)).toBeVisible();
+    await expect(page.getByText(`Material über ${euro.format(2469)} hinzugefügt.`)).toBeVisible();
 
     const materialRow = section.getByRole("row").filter({ hasText: second.description });
     await expect(materialRow).toContainText("2 Stk.");
@@ -177,12 +186,13 @@ test.describe("Leistungen und Kosten im Ticket", () => {
     }
 
     // Aus dem Katalog erfassen: Der Preis kommt auf dem Server dazu, die Rückmeldung nennt keinen Betrag
+    await openCostForm(section);
     await section.getByLabel("Katalog durchsuchen").fill("anfahrt");
     await section.getByRole("radio", { name: "Anfahrt Stadtgebiet" }).check();
     await expect(section.getByLabel("Einzelpreis (€)")).toHaveCount(0);
     await section.getByLabel("Notiz").fill("zweiter Termin");
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
-    await expect(section.getByText("Hinzugefügt: „Anfahrt Stadtgebiet – zweiter Termin“ (1 Pauschale).")).toBeVisible();
+    await expect(page.getByText("Hinzugefügt: „Anfahrt Stadtgebiet – zweiter Termin“ (1 Pauschale).")).toBeVisible();
     const ownRow = section.getByRole("row").filter({ hasText: "Anfahrt Stadtgebiet – zweiter Termin" });
     await expect(ownRow).toContainText(`erbracht von ${ACCOUNTS.tech.name}`);
     await expect(ownRow).not.toContainText("€");

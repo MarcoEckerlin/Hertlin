@@ -17,12 +17,27 @@ async function createStaffTicket(page: Page, opts: { customer: string; subject: 
   if (opts.location) await page.getByLabel("Standort").selectOption({ label: opts.location });
   await page.getByLabel("Kunden per E-Mail informieren").uncheck();
   await page.getByRole("button", { name: "Ticket anlegen" }).click();
-  await expect(page).toHaveURL(/\/admin\/tickets\/\d+\?neu=1/);
+  // Die Rückmeldung „?neu=1“ verschwindet nach dem Anzeigen aus der Adresse
+  await expect(page).toHaveURL(/\/admin\/tickets\/\d+(\?neu=1.*)?$/);
   return Number(new URL(page.url()).pathname.split("/").pop());
 }
 
 function costSection(page: Page): Locator {
   return page.locator("#kosten");
+}
+
+/** „Position erfassen“ aufklappen – eingeklappt stehen dort nur der Knopf und die Schnellwahl */
+async function openCostForm(section: Locator) {
+  const toggle = section.getByRole("button", { name: "Position erfassen" });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+  await expect(section.locator("#kosten-erfassen")).toBeVisible();
+}
+
+/** Abschnitt „Leistungen und Material“ mit aufgeklapptem Erfassungsformular */
+async function openCostSection(page: Page): Promise<Locator> {
+  const section = costSection(page);
+  await openCostForm(section);
+  return section;
 }
 
 /** Zeile im Kostenkatalog (Verwaltung) zu einer Bezeichnung */
@@ -35,7 +50,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     await loginStaff(page, ACCOUNTS.admin.email);
     const ticketId = await createStaffTicket(page, { customer: "Bäckerei Beispiel", subject: unique("Kasse im Filialnetz") });
     await page.goto(main(`/admin/tickets/${ticketId}`));
-    const section = costSection(page);
+    const section = await openCostSection(page);
 
     await section.getByLabel("Katalog durchsuchen").fill("kilometer");
     await expect(section.getByRole("radio", { name: /Arbeitszeit Technik/ })).toHaveCount(0);
@@ -49,7 +64,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     await section.getByLabel("Notiz").fill("Ulm und zurück");
     await expect(section.getByText("„Fahrtkosten je Kilometer – Ulm und zurück“")).toBeVisible();
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
-    await expect(section.getByText(`Anfahrt über ${euro.format(21)} hinzugefügt.`)).toBeVisible();
+    await expect(page.getByText(`Anfahrt über ${euro.format(21)} hinzugefügt.`)).toBeVisible();
 
     const row = section.getByRole("row").filter({ hasText: "Fahrtkosten je Kilometer – Ulm und zurück" });
     await expect(row).toContainText("35 km");
@@ -67,7 +82,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     const ticketId = await createStaffTicket(page, { customer: "Bäckerei Beispiel", subject: unique("Neuer Router") });
     const name = unique("Router einrichten");
     await page.goto(main(`/admin/tickets/${ticketId}`));
-    const section = costSection(page);
+    const section = await openCostSection(page);
 
     await section.getByRole("radio", { name: "Neue Position" }).check();
     await section.getByLabel("Bezeichnung").fill(name);
@@ -76,7 +91,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     await section.getByLabel("Einzelpreis (€)").fill("80");
     await expect(section.getByLabel("In den Katalog aufnehmen")).toBeChecked();
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
-    await expect(section.getByText(`Arbeitszeit über ${euro.format(120)} hinzugefügt. Sie steht ab jetzt auch im Katalog.`)).toBeVisible();
+    await expect(page.getByText(`Arbeitszeit über ${euro.format(120)} hinzugefügt. Sie steht ab jetzt auch im Katalog.`)).toBeVisible();
 
     // Gleiche Bezeichnung in anderer Schreibweise: Hinweis auf den vorhandenen Eintrag
     await section.getByRole("radio", { name: "Neue Position" }).check();
@@ -105,7 +120,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     await loginStaff(page, ACCOUNTS.tech.email);
     const ticketId = await createStaffTicket(page, { customer: "Bäckerei Beispiel", subject });
     await page.goto(main(`/admin/tickets/${ticketId}`));
-    const section = costSection(page);
+    const section = await openCostSection(page);
     await section.getByRole("radio", { name: "Neue Position" }).check();
     await section.getByLabel("Bezeichnung").fill(name);
     await section.getByLabel("Art", { exact: true }).selectOption({ label: "Material" });
@@ -114,7 +129,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     await expect(section.getByLabel("Einzelpreis (€)")).toHaveCount(0);
     await expect(section.getByLabel("In den Katalog aufnehmen")).toBeChecked();
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
-    await expect(section.getByText(`Hinzugefügt: „${name}“ (3 Stk.). Sie steht ab jetzt auch im Katalog.`)).toBeVisible();
+    await expect(page.getByText(`Hinzugefügt: „${name}“ (3 Stk.). Sie steht ab jetzt auch im Katalog.`)).toBeVisible();
     await expect(section.getByRole("row").filter({ hasText: name })).not.toContainText("Preis fehlt");
 
     // Verwaltung: Hinweis auf der Übersicht und im Ticket
@@ -137,7 +152,7 @@ test.describe("Kostenkatalog im Ticket", () => {
     await expect(adminSection.getByText(`= ${euro.format(13.5)}`)).toBeVisible();
     await adminSection.getByLabel(`Preis auch im Katalog speichern („${name}“)`).check();
     await adminSection.getByRole("button", { name: "Preis speichern" }).click();
-    await expect(adminSection.getByText("Der Preis ist gespeichert und gilt jetzt auch im Katalog.")).toBeVisible();
+    await expect(admin.getByText("Der Preis ist gespeichert und gilt jetzt auch im Katalog.")).toBeVisible();
     await expect(adminSection.getByRole("heading", { name: /Preis fehlt/ })).toHaveCount(0);
     await expect(row).toContainText(euro.format(4.5));
     await expect(row).toContainText(euro.format(13.5));
@@ -148,10 +163,11 @@ test.describe("Kostenkatalog im Ticket", () => {
 
     // Nächste Verwendung durch den Techniker: Preis kommt jetzt aus dem Katalog
     await page.goto(main(`/admin/tickets/${ticketId}`));
+    await openCostForm(section);
     await section.getByLabel("Katalog durchsuchen").fill(name);
     await section.getByRole("radio", { name: new RegExp(name) }).check();
     await section.getByRole("button", { name: "Position hinzufügen" }).click();
-    await expect(section.getByText(`Hinzugefügt: „${name}“ (1 Stk.).`)).toBeVisible();
+    await expect(page.getByText(`Hinzugefügt: „${name}“ (1 Stk.).`)).toBeVisible();
     expect(await (await page.request.get(main(`/admin/tickets/${ticketId}`))).text()).not.toContain("4,50");
   });
 });
@@ -174,7 +190,7 @@ test.describe("Kostenkatalog verwalten", () => {
     await page.getByLabel(/Preis netto/).fill("150");
     await page.getByLabel("Standardmenge").fill("1");
     await page.getByRole("button", { name: "In den Katalog aufnehmen" }).click();
-    await expect(page).toHaveURL(main("/admin/kosten/katalog?katalog=angelegt"));
+    await expect(page).toHaveURL(/\/admin\/kosten\/katalog(\?katalog=angelegt)?$/);
     await expect(page.getByText("Der Eintrag steht jetzt im Katalog.")).toBeVisible();
     await expect(catalogRow(page, name)).toContainText(euro.format(150));
 
@@ -191,7 +207,8 @@ test.describe("Kostenkatalog verwalten", () => {
     await expect(page.getByRole("heading", { level: 1, name })).toBeVisible();
     await page.getByLabel(/Preis netto/).fill("175,50");
     await page.getByRole("button", { name: "Änderungen speichern" }).click();
-    await expect(page).toHaveURL(main("/admin/kosten/katalog?katalog=gespeichert"));
+    await expect(page).toHaveURL(/\/admin\/kosten\/katalog(\?katalog=gespeichert)?$/);
+    await expect(page.getByText("Die Änderungen sind gespeichert.")).toBeVisible();
     await expect(catalogRow(page, name)).toContainText(euro.format(175.5));
 
     // Deaktivieren: im Ticket nicht mehr auswählbar
@@ -199,7 +216,7 @@ test.describe("Kostenkatalog verwalten", () => {
     await expect(catalogRow(page, name)).toContainText("deaktiviert");
     const ticketId = await createStaffTicket(page, { customer: "Bäckerei Beispiel", subject: unique("Server-Wartung") });
     await page.goto(main(`/admin/tickets/${ticketId}`));
-    await costSection(page).getByLabel("Katalog durchsuchen").fill(name);
+    await (await openCostSection(page)).getByLabel("Katalog durchsuchen").fill(name);
     await expect(costSection(page).getByText(`Nichts gefunden für „${name}“.`)).toBeVisible();
 
     // Wieder aktivieren und löschen (nie benutzt)
@@ -208,7 +225,7 @@ test.describe("Kostenkatalog verwalten", () => {
     await expect(catalogRow(page, name).getByRole("button", { name: `Deaktivieren: ${name}` })).toBeVisible();
     page.once("dialog", (dialog) => dialog.accept());
     await catalogRow(page, name).getByRole("button", { name: `Löschen: ${name}` }).click();
-    await expect(page).toHaveURL(main("/admin/kosten/katalog?katalog=geloescht"));
+    await expect(page).toHaveURL(/\/admin\/kosten\/katalog(\?katalog=geloescht)?$/);
     await expect(page.getByText("Der Eintrag ist gelöscht.")).toBeVisible();
     await expect(catalogRow(page, name)).toHaveCount(0);
   });
@@ -246,7 +263,7 @@ test.describe("Standort im Ticket", () => {
     const meta = page.getByRole("complementary", { name: "Bearbeitung und Kontakt" });
     await meta.getByLabel("Standort").selectOption({ label: "Hertlin Ulm" });
     await meta.getByRole("button", { name: "Änderungen speichern" }).click();
-    await expect(meta.getByText("Gespeichert: Standort.")).toBeVisible();
+    await expect(page.getByText("Gespeichert: Standort.")).toBeVisible();
     await expect(page.getByText("Standort: Hertlin Ulm")).toBeVisible();
   });
 });

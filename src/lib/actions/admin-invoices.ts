@@ -21,7 +21,7 @@ import {
   unknownPlaceholders,
 } from "@/lib/invoices/calc";
 import { resolveRecipient } from "@/lib/invoices/recipients";
-import { cancelInvoice, createInvoice, sendInvoice } from "@/lib/invoices/service";
+import { cancelInvoice, createInvoice, markInvoiceSent, sendInvoice } from "@/lib/invoices/service";
 import { checkbox, email as emailSchema, requiredText } from "@/lib/validation";
 
 /**
@@ -238,6 +238,7 @@ export async function createInvoiceAction(_prev: FormState, formData: FormData):
     servicePeriodEnd: end || null,
     introText: intro || null,
     createdById: user.id,
+    expectedNetCents: /^-?\d{1,12}$/.test(str(formData, "expectedNetCents")) ? Number(str(formData, "expectedNetCents")) : null,
   });
   if (!result.ok) return errorState(result.error, formData);
 
@@ -272,6 +273,22 @@ export async function sendInvoiceAction(_prev: FormState, formData: FormData): P
 
   revalidateBilling();
   return successState(`Die Rechnung ${result.number} ist an ${result.sentTo} verschickt.`);
+}
+
+/**
+ * Selbst verschickt (Post, eigenes E-Mail-Programm oder ohne eingerichteten Mailserver):
+ * Rechnung als versendet markieren, mit kurzer Angabe, wie.
+ */
+export async function markInvoiceSentAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireAdmin();
+  const id = idFrom(formData);
+  if (!id) return errorState(INVOICE_GONE);
+  const note = str(formData, "note").replace(/\s+/g, " ").trim().slice(0, 120) || "selbst verschickt";
+  const result = await markInvoiceSent({ invoiceId: id, note });
+  if (!result.ok) return errorState(result.error, formData);
+  revalidateBilling();
+  // Das Formular verschwindet danach (Rechnung ist versendet) – die Bestätigung kommt als Toast
+  redirect(`/admin/rechnungen/${id}?versendet=1`);
 }
 
 /* ------------------------------------------------------------------ */

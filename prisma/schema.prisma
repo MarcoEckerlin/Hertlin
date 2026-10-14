@@ -359,6 +359,13 @@ model Invoice {
   footerText         String?
   /// PDF relativ zu UPLOAD_DIR (wird beim Erstellen einmal erzeugt)
   pdfPath            String?
+  /// SHA-256 des PDFs beim Erstellen (Nachweis, dass die Datei unverändert ist)
+  pdfSha256          String?
+  /// Absenderangaben (Firmendaten, Steuernummer, Bank) zum Zeitpunkt der Rechnung als JSON – ein fehlendes PDF
+  /// wird nur daraus neu erzeugt, nie aus den aktuellen Einstellungen
+  issuerSnapshot     String?
+  /// Kundennummer zum Zeitpunkt der Rechnung
+  customerNumber     String?
 
   sentAt      DateTime?
   sentTo      String?

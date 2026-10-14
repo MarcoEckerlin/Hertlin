@@ -622,7 +622,7 @@ export function PageEditor({
       />
 
       {/* Aktionsleiste – mobil kompakt (Status in einer Zeile, Knöpfe in einer Zeile), damit beim Bearbeiten Platz bleibt */}
-      <div className="sticky top-14 z-20 -mx-4 mb-6 border-y border-line bg-white/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 sm:py-3 lg:top-0 lg:-mx-10 lg:px-10">
+      <div className="sticky top-14 z-20 -mx-4 mb-6 border-y border-line bg-surface/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 sm:py-3 lg:top-0 lg:-mx-10 lg:px-10">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-y-3">
           <p className="min-w-0 flex-1 text-sm max-sm:basis-full max-sm:truncate" role="status" aria-live="polite">
             {busy === "draft" ? (
@@ -630,7 +630,7 @@ export function PageEditor({
             ) : busy === "publish" ? (
               <span className="text-ink-soft">Wird veröffentlicht …</span>
             ) : dirty ? (
-              <span className="font-semibold text-orange-700">Ungespeicherte Änderungen</span>
+              <span className="font-semibold text-caution-ink">Ungespeicherte Änderungen</span>
             ) : status.hasDraft ? (
               <span className="text-ink-soft">Entwurf gespeichert – noch nicht veröffentlicht</span>
             ) : (
@@ -770,7 +770,7 @@ export function PageEditor({
                 </p>
                 <p
                   id="page-description-count"
-                  className={cn("text-xs tabular-nums", descriptionLength > DESCRIPTION_RECOMMENDED ? "font-semibold text-amber-700" : "text-ink-muted")}
+                  className={cn("text-xs tabular-nums", descriptionLength > DESCRIPTION_RECOMMENDED ? "font-semibold text-warning-ink" : "text-ink-muted")}
                 >
                   {descriptionLength} / {DESCRIPTION_RECOMMENDED} Zeichen
                   {descriptionLength > DESCRIPTION_RECOMMENDED ? " – wird in Suchergebnissen wahrscheinlich gekürzt" : ""}
@@ -780,6 +780,9 @@ export function PageEditor({
             </div>
           </CardBody>
         </Card>
+
+        {/* Menü und Sichtbarkeit: eigener Bereich, gilt sofort (nicht Teil des Entwurfs) */}
+        {settings}
 
         {/* Module */}
         <section aria-labelledby="modules-heading" className="space-y-4">
@@ -805,7 +808,7 @@ export function PageEditor({
 
           <FieldError>{pageLevelError}</FieldError>
 
-          <details className="rounded-2xl border border-line bg-white px-5 py-4 text-sm shadow-card">
+          <details className="rounded-2xl border border-line bg-surface px-5 py-4 text-sm shadow-card">
             <summary className="cursor-pointer font-semibold text-ink select-none">Hilfe: Formatierung und Platzhalter</summary>
             <div className="mt-3 space-y-4 text-ink-soft">
               <div>
@@ -836,7 +839,7 @@ export function PageEditor({
           </details>
 
           {blocks.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-line-strong bg-white px-6 py-10 text-center">
+            <div className="rounded-2xl border border-dashed border-line-strong bg-surface px-6 py-10 text-center">
               <p className="font-semibold text-ink">Diese Seite hat noch keine Module.</p>
               <p className="mx-auto mt-1 max-w-md text-sm text-ink-soft">
                 Beginnen Sie z. B. mit einem Kopfbereich und einem Textabschnitt.
@@ -869,8 +872,6 @@ export function PageEditor({
             Modul hinzufügen
           </Button>
         </section>
-
-        {settings}
 
       </div>
 

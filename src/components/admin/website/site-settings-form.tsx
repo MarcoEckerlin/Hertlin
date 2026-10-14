@@ -89,7 +89,7 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettingsValues }) {
     const id = `settings-${key}`;
     const todo = isTodo(values[key]);
     const hint = todo ? (
-      <span className="font-medium text-amber-800">Noch ein Platzhalter – bitte vor dem Livegang durch die echte Angabe ersetzen.</span>
+      <span className="font-medium text-warning-ink">Noch ein Platzhalter – bitte vor dem Livegang durch die echte Angabe ersetzen.</span>
     ) : (
       opts.hint
     );
@@ -411,7 +411,7 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettingsValues }) {
 
       <div
         ref={messageRef}
-        className="sticky bottom-0 z-10 -mx-4 border-t border-line bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:shadow-lift"
+        className="sticky bottom-0 z-10 -mx-4 border-t border-line bg-surface-raised/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:shadow-lift"
       >
         <FormMessage state={state} className="mb-3" />
         <div className="flex flex-wrap items-center gap-3">
@@ -420,7 +420,7 @@ export function SiteSettingsForm({ initial }: { initial: SiteSettingsValues }) {
           </Button>
           {dirty ? (
             <>
-              <span className="text-sm font-semibold text-orange-700" role="status">
+              <span className="text-sm font-semibold text-caution-ink" role="status">
                 Ungespeicherte Änderungen
               </span>
               <Button

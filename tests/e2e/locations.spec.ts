@@ -53,8 +53,9 @@ test("Standort anlegen – erscheint auf der Kontaktseite und in der Fußzeile",
   await expect(page.getByRole("checkbox", { name: /^Auf der Website zeigen/ })).toBeChecked();
   await page.getByRole("button", { name: "Standort anlegen" }).click();
 
-  await expect(page).toHaveURL(/\/admin\/standorte\?neu=/);
+  // Rückmeldung als Toast; der Hinweis verschwindet danach aus der Adresse
   await expect(page.getByText("Standort angelegt")).toBeVisible();
+  await expect(page).toHaveURL(main("/admin/standorte"));
   await expect(listItem(page, NAME)).toContainText(`${STREET}, 86150 Augsburg`);
   await expect(listItem(page, NAME).getByText("Hauptsitz")).toHaveCount(0);
 
@@ -202,8 +203,8 @@ test("Löschen nur ohne Zuordnungen", async ({ page, browser }) => {
   await openLocation(page, NAME);
   page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Standort löschen" }).click();
-  await expect(page).toHaveURL(main("/admin/standorte?geloescht=1"));
   await expect(page.getByText("Der Standort ist gelöscht.")).toBeVisible();
+  await expect(page).toHaveURL(main("/admin/standorte"));
   await expect(listItem(page, NAME)).toHaveCount(0);
 
   const visitorContext = await newContext(browser);

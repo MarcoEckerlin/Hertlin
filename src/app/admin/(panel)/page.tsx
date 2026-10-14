@@ -73,7 +73,13 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       pageSize: 8,
       select: staffTicketRowSelect,
     }),
-    db.ticket.findMany({ orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 8, select: staffTicketRowSelect }),
+    // Ohne die eigenen – die stehen schon unter „Mir zugewiesen“
+    db.ticket.findMany({
+      where: { OR: [{ assigneeId: null }, { assigneeId: { not: user.id } }] },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: 6,
+      select: staffTicketRowSelect,
+    }),
     db.inquiry.findMany({
       where: { status: "NEW" },
       orderBy: { createdAt: "desc" },
@@ -137,18 +143,24 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
       ) : null}
 
       {unfinished.length > 0 ? (
-        <Alert tone="warning" title="Die Firmendaten sind noch nicht vollständig" className="mb-6">
+        <Alert tone="warning" className="mb-6">
           <p>
-            Noch mit Platzhalter („TODO“): {settingsLabelList(unfinished)}. Diese Angaben stehen so auf der Website, im Impressum und in
-            E-Mails an Kunden.{" "}
-            <Link href="/admin/website/firmendaten" className="font-semibold underline underline-offset-2">
+            <span className="font-semibold">Firmendaten unvollständig:</span>{" "}
+            {/* Auf dem Handy nur die Zahl, die Liste steht auf der Seite „Firmendaten“ */}
+            <span className="sm:hidden">
+              {unfinished.length === 1 ? "1 Angabe" : `${unfinished.length} Angaben`} noch mit Platzhalter.
+            </span>
+            <span className="max-sm:hidden">
+              {settingsLabelList(unfinished)} noch mit Platzhalter („TODO“) – so steht es auf der Website und in E-Mails.
+            </span>{" "}
+            <Link href="/admin/website/firmendaten" className="font-semibold whitespace-nowrap underline underline-offset-2">
               Firmendaten ergänzen
             </Link>
           </p>
         </Alert>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-5">
         <StatCard
           href={ticketListHref({ status: "NEW" })}
           label="Neu"
@@ -194,12 +206,12 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
                   : "noch nicht zurückgerufen"
           }
           alert={missedCalls > 0}
-          className="col-span-2 sm:col-span-1"
+          className="col-span-2 xl:col-span-1"
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-        <div className="min-w-0 space-y-6">
+      <div className="mt-5 grid grid-cols-1 gap-5 sm:mt-6 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="min-w-0 space-y-5 sm:space-y-6">
           <ListCard
             title="Mir zugewiesen"
             count={mine.total}
@@ -208,16 +220,16 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           >
             <StaffTicketList
               tickets={mine.rows}
-              emptyText="Ihnen ist gerade kein offenes Ticket zugewiesen. Neue Tickets ohne Bearbeiter finden Sie unter „Neu“."
+              emptyText="Ihnen ist gerade kein offenes Ticket zugewiesen."
             />
           </ListCard>
 
           <ListCard title="Neueste Tickets" footerHref={ticketListHref({ ansicht: "alle", sortierung: "neu" })} footerLabel="Alle Tickets">
-            <StaffTicketList tickets={latest} emptyText="Noch keine Tickets vorhanden." />
+            <StaffTicketList tickets={latest} emptyText="Keine weiteren Tickets." />
           </ListCard>
         </div>
 
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-5 sm:space-y-6">
           <ListCard title="Neue Anfragen" count={inquiryCount} footerHref="/admin/anfragen" footerLabel="Alle Anfragen">
             <InquiryList inquiries={inquiries} />
           </ListCard>
@@ -225,10 +237,10 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           {missingPrices && missingPrices.positions > 0 ? (
             <section
               aria-labelledby="karte-preis-fehlt"
-              className="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-card"
+              className="overflow-hidden rounded-2xl border border-warning-line bg-surface shadow-card"
             >
-              <div className="flex items-center justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-4 sm:px-6">
-                <h2 id="karte-preis-fehlt" className="flex items-center gap-2 text-base font-bold text-amber-900">
+              <div className="flex items-center justify-between gap-3 border-b border-warning-line bg-warning-soft px-5 py-4 sm:px-6">
+                <h2 id="karte-preis-fehlt" className="flex items-center gap-2 text-base font-bold text-warning-ink">
                   <TriangleAlert className="size-4 shrink-0" aria-hidden />
                   Positionen ohne Preis ({missingPrices.positions})
                 </h2>
