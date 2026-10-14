@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppShell, type ShellNavGroup } from "@/components/shell/app-shell";
+import { StaffLiveFeed } from "@/components/realtime/staff-live-feed";
 import { requireStaff } from "@/lib/auth";
 import { logoutAction } from "@/lib/actions/auth";
 import { ROLE_LABELS } from "@/lib/constants";
@@ -48,6 +49,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
       logoutAction={logoutAction}
     >
       {children}
+      <StaffLiveFeed />
     </AppShell>
   );
 }

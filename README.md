@@ -124,7 +124,19 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket für Live-Chats (/_ws)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 1h;
     }
+}
+
+# im http-Block:
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
 }
 ```
 
@@ -144,7 +156,7 @@ Datenbank und Anhänge liegen im Volume `hertlin-data` (`/data`). Sichern Sie di
 npm ci
 npx prisma migrate deploy
 npm run build
-npm start          # Port 3000, z. B. als systemd-Dienst
+npm start          # Port 3000 (Next.js + WebSocket-Server aus server.ts), z. B. als systemd-Dienst
 ```
 
 ## Tests

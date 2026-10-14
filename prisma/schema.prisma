@@ -33,9 +33,10 @@ model Company {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  users     User[]
-  tickets   Ticket[]
-  inquiries Inquiry[]
+  users      User[]
+  tickets    Ticket[]
+  inquiries  Inquiry[]
+  phoneCalls PhoneCall[]
 
   @@index([parentId])
 }
@@ -53,17 +54,22 @@ model User {
   companyId    String?
   company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
   active       Boolean   @default(true)
+  /// Sprache, in die Chat-Nachrichten für diesen Benutzer übersetzt werden ("de" = keine Übersetzung)
+  language     String    @default("de")
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
   sessions        Session[]
   tokens          AuthToken[]
-  ticketsCreated  Ticket[]        @relation("TicketCreatedBy")
-  ticketsAssigned Ticket[]        @relation("TicketAssignee")
+  ticketsCreated  Ticket[]         @relation("TicketCreatedBy")
+  ticketsAssigned Ticket[]         @relation("TicketAssignee")
   messages        TicketMessage[]
   costEntries     CostEntry[]
   ticketEvents    TicketEvent[]
+  inquiryMessages InquiryMessage[]
+  callsAsContact  PhoneCall[]      @relation("CallContact")
+  callsHandled    PhoneCall[]      @relation("CallHandledBy")
 
   @@index([companyId])
 }
@@ -119,22 +125,25 @@ model Ticket {
   assignee    User?    @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
 
   /// Kontaktdaten (Pflicht bei Privatkunden, optional abweichender Ansprechpartner sonst)
-  contactName    String?
-  contactEmail   String?
-  contactPhone   String?
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
   /// Anschrift für Vor-Ort-Termine bei Privatkunden
-  contactAddress String?
+  contactAddress  String?
   /// Geheimer Schlüssel im Status-Link für Privatkunden (/status/<token>)
-  guestToken     String? @unique
+  guestToken      String? @unique
+  /// Gewünschte Sprache des Privatkunden für Übersetzungen
+  contactLanguage String?
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   resolvedAt DateTime?
   closedAt   DateTime?
 
-  messages TicketMessage[]
-  costs    CostEntry[]
-  events   TicketEvent[]
+  messages   TicketMessage[]
+  costs      CostEntry[]
+  events     TicketEvent[]
+  phoneCalls PhoneCall[]
 
   @@index([companyId])
   @@index([status])
@@ -154,6 +163,8 @@ model TicketMessage {
   fromStaff  Boolean  @default(false)
   body       String
   internal   Boolean  @default(false)
+  /// Erkannte Sprache der Nachricht (für die Chat-Übersetzung)
+  language   String?
   createdAt  DateTime @default(now())
 
   attachments Attachment[]
@@ -234,8 +245,119 @@ model Inquiry {
   internalNote     String?
   companyId        String?
   company          Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  /// Geheimer Schlüssel im persönlichen Chat-Link des Interessenten (/anfrage/<token>)
+  guestToken       String?  @unique
+  /// Gewünschte Sprache des Interessenten für Übersetzungen
+  language         String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  messages InquiryMessage[]
+
   @@index([status])
+}
+
+/// Chat zwischen Hertlin und einem Interessenten zu einer Anfrage
+model InquiryMessage {
+  id         String   @id @default(cuid())
+  inquiryId  Int
+  inquiry    Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName String?
+  fromStaff  Boolean  @default(false)
+  body       String
+  language   String?
+  createdAt  DateTime @default(now())
+
+  @@index([inquiryId])
+}
+
+/// Zwischenspeicher für maschinelle Übersetzungen (Chat und Website)
+model TranslationCache {
+  id         String   @id @default(cuid())
+  /// SHA-256 des Ausgangstextes
+  hash       String
+  targetLang String
+  sourceLang String?
+  text       String
+  provider   String
+  createdAt  DateTime @default(now())
+
+  @@unique([hash, targetLang])
+}
+
+/// Seite der Website, aus Modulen zusammengesetzt.
+/// blocks: veröffentlichte Module (JSON), draft: Entwurf { title, description, blocks } (JSON)
+model Page {
+  id           String    @id @default(cuid())
+  /// "" = Startseite, sonst Pfad ohne führenden Schrägstrich, z. B. "leistungen" oder "agb"
+  slug         String    @unique
+  title        String
+  description  String?
+  navLabel     String?
+  showInNav    Boolean   @default(false)
+  showInFooter Boolean   @default(false)
+  navOrder     Int       @default(100)
+  /// Kernseite (nicht löschbar, Adresse fest)
+  system       Boolean   @default(false)
+  published    Boolean   @default(true)
+  blocks       String    @default("[]")
+  draft        String?
+  updatedById  String?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+/// Einstellungen der Website (z. B. Firmendaten), value als JSON
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Bilder für die Website (öffentlich unter /medien/<id>)
+model MediaFile {
+  id           String   @id @default(cuid())
+  fileName     String
+  storedName   String   @unique
+  mimeType     String
+  size         Int
+  alt          String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+}
+
+/// Telefonanruf aus der Telefonanlage (Webhook).
+/// direction: IN | OUT · status: RINGING | ANSWERED | MISSED | ENDED
+model PhoneCall {
+  id          String    @id @default(cuid())
+  externalId  String?   @unique
+  provider    String    @default("generic")
+  direction   String    @default("IN")
+  fromNumber  String
+  toNumber    String?
+  status      String    @default("RINGING")
+  answeredBy  String?
+  hangupCause String?
+  /// Zugeordneter Kunde (über die Telefonnummer erkannt oder von Hand gesetzt)
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?     @relation("CallContact", fields: [userId], references: [id], onDelete: SetNull)
+  callerLabel String?
+  ticketId    Int?
+  ticket      Ticket?   @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  note        String?
+  handledById String?
+  handledBy   User?     @relation("CallHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt   DateTime?
+  startedAt   DateTime  @default(now())
+  answeredAt  DateTime?
+  endedAt     DateTime?
+
+  @@index([startedAt])
+  @@index([status])
+  @@index([fromNumber])
 }

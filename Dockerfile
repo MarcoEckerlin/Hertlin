@@ -22,4 +22,4 @@ RUN mkdir -p /data && chown -R node:node /data /app
 USER node
 VOLUME ["/data"]
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && npx next start -p ${PORT}"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
