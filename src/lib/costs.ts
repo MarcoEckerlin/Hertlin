@@ -574,7 +574,7 @@ export async function getCostOverview(filter: CostFilter): Promise<CostOverview>
       continue;
     }
 
-    const email = contactEmail?.trim().toLowerCase() || null;
+    const email = privateAccountEmail(contactEmail);
     const key = email ? `private:${email}` : `ticket:${entry.ticketId}`;
     let acc = privates.get(key);
     if (!acc) {
@@ -589,11 +589,12 @@ export async function getCostOverview(filter: CostFilter): Promise<CostOverview>
           breakdown: [],
         },
         builder: new TotalsBuilder(),
-        latestTicketId: entry.ticketId,
+        // Nur Tickets mit Namen zählen, sonst verdrängt ein Ticket ohne Namen den Namen eines älteren
+        latestTicketId: contactName?.trim() ? entry.ticketId : 0,
       };
       privates.set(key, acc);
     }
-    // Name aus dem jüngsten Ticket anzeigen
+    // Name aus dem jüngsten Ticket (mit Namen) anzeigen, wie privateAccountLabels() für die CSV
     if (entry.ticketId > acc.latestTicketId && contactName?.trim()) {
       acc.latestTicketId = entry.ticketId;
       acc.row.label = contactName.trim();
@@ -754,6 +755,44 @@ export async function getCompanyCostSummary(companyIds: string[]): Promise<CostS
 }
 
 /* ------------------------------------------------------------------ */
+/* Privatkunden-Konten                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Schlüssel eines Privatkunden-Kontos: E-Mail-Adresse ohne Leerzeichen, klein geschrieben (null = ohne Adresse). */
+export function privateAccountEmail(contactEmail: string | null | undefined): string | null {
+  return contactEmail?.trim().toLowerCase() || null;
+}
+
+/**
+ * Spalte „Konto“ der CSV für Privatkunden-Tickets, passend zur Übersicht: ein Konto je E-Mail-Adresse
+ * (Groß-/Kleinschreibung egal) mit dem Namen aus dem jüngsten Ticket, das einen Namen hat.
+ * Tickets ohne E-Mail-Adresse sind jeweils ein eigenes Konto. Ergebnis: Ticketnummer → Bezeichnung.
+ */
+export function privateAccountLabels(
+  tickets: { id: number; contactName: string | null; contactEmail: string | null }[],
+): Map<number, string> {
+  const names = new Map<string, { ticketId: number; name: string }>();
+  for (const t of tickets) {
+    const email = privateAccountEmail(t.contactEmail);
+    const name = t.contactName?.trim();
+    if (!email || !name) continue;
+    const known = names.get(email);
+    if (!known || t.id > known.ticketId) names.set(email, { ticketId: t.id, name });
+  }
+  const labels = new Map<number, string>();
+  for (const t of tickets) {
+    const email = privateAccountEmail(t.contactEmail);
+    labels.set(
+      t.id,
+      email
+        ? [names.get(email)?.name, email].filter(Boolean).join(", ")
+        : t.contactName?.trim() || `Privatkunde zu ${formatTicketNumber(t.id)}`,
+    );
+  }
+  return labels;
+}
+
+/* ------------------------------------------------------------------ */
 /* CSV-Export                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -818,12 +857,12 @@ export async function buildCostCsv(filter: CostFilter, resolved: ResolvedCostAcc
     },
   });
 
+  // Privatkunden wie in der Übersicht: ein Konto je E-Mail-Adresse, egal in welcher Schreibweise
+  const privateLabels = privateAccountLabels(entries.filter((e) => !e.ticket.company).map((e) => e.ticket));
   const lines = [CSV_HEADER.map(csvText).join(";")];
   for (const e of entries) {
     const company = e.ticket.company;
-    const account = company
-      ? (company.parent?.name ?? company.name)
-      : [e.ticket.contactName?.trim(), e.ticket.contactEmail?.trim()].filter(Boolean).join(", ") || "Privatkunde";
+    const account = company ? (company.parent?.name ?? company.name) : (privateLabels.get(e.ticket.id) ?? "Privatkunde");
     lines.push(
       [
         csvQuote(csvDate.format(e.performedAt)),
