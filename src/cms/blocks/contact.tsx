@@ -9,11 +9,14 @@ export function ContactCard({
   settings,
   showAddress,
   showHours,
+  onBlue = false,
   className,
 }: {
   settings: SiteSettings;
   showAddress: boolean;
   showHours: boolean;
+  /** Abschnitt mit hellblauem Hintergrund: Karte weiß mit feinem Rahmen, sonst hellblau ohne Rahmen */
+  onBlue?: boolean;
   className?: string;
 }) {
   const { phone, phoneHref, email, legalName, street, zip, city, region, openingHours } = settings;
@@ -21,7 +24,7 @@ export function ContactCard({
   const hasAddress = showAddress && (hasText(street) || hasText(place));
 
   return (
-    <div className={cn("rounded-3xl border border-line bg-white p-6 shadow-card sm:p-8", className)}>
+    <div className={cn("rounded-2xl p-6 sm:p-8", onBlue ? "bg-white ring-1 ring-line" : "bg-brand-50", className)}>
       <ul className="space-y-4 text-[0.9375rem] text-ink-soft">
         {hasText(phone) ? (
           <li className="flex gap-3">
@@ -68,7 +71,7 @@ export function ContactCard({
         ) : null}
       </ul>
       {showHours && openingHours.length > 0 ? (
-        <div className="mt-6 border-t border-line pt-5">
+        <div className={cn("mt-6 border-t pt-5", onBlue ? "border-line" : "border-line-strong")}>
           <p className="text-sm font-semibold text-ink">Servicezeiten</p>
           <OpeningHours hours={openingHours} className="mt-2" />
         </div>
@@ -81,7 +84,12 @@ export function ContactCard({
 export function ContactBlock({ block, ctx, layout }: BlockProps<"contact">) {
   const titleId = headingId(block, layout);
   const card = (
-    <ContactCard settings={ctx.settings} showAddress={block.showAddress} showHours={block.showHours} />
+    <ContactCard
+      settings={ctx.settings}
+      showAddress={block.showAddress}
+      showHours={block.showHours}
+      onBlue={layout.bg === "blue"}
+    />
   );
 
   if (!hasHeading(block)) {
@@ -94,7 +102,7 @@ export function ContactBlock({ block, ctx, layout }: BlockProps<"contact">) {
 
   return (
     <BlockSection block={block} layout={layout} labelledBy={titleId}>
-      <div className="grid gap-12 lg:grid-cols-2 lg:items-start lg:gap-16">
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-20">
         <BlockHeading block={block} ctx={ctx} id={titleId} />
         {card}
       </div>

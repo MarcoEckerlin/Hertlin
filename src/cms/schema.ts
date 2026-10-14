@@ -79,13 +79,19 @@ export const blockSchema = z.discriminatedUnion("type", [
     type: z.literal("text"),
     ...heading,
     body: long(),
-    width: z.enum(["narrow", "wide"]).default("narrow"),
+    /** narrow = Lesespalte, wide = Überschrift links und Text rechts, note = Hinweis mit hellblauer Randlinie */
+    width: z.enum(["narrow", "wide", "note"]).default("narrow"),
     tone: toneSchema,
   }),
   z.object({
     ...base,
     type: z.literal("cards"),
     ...heading,
+    /**
+     * tiles = Kästen mit Hintergrund, columns = ohne Kasten mit feiner Linie darüber,
+     * rows = Zeilen untereinander (Überschrift links, Text rechts). Ältere Module ohne Angabe bleiben Kacheln.
+     */
+    layout: z.enum(["tiles", "columns", "rows"]).default("tiles"),
     columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3),
     items: z
       .array(
@@ -103,6 +109,8 @@ export const blockSchema = z.discriminatedUnion("type", [
     ...base,
     type: z.literal("steps"),
     ...heading,
+    /** list = schlichte nummerierte Liste, cards = Kacheln nebeneinander (sparsam einsetzen) */
+    layout: z.enum(["list", "cards"]).default("list"),
     items: z.array(z.object({ title: short(120).min(1), text: long(1500).default("") })).max(12),
     tone: toneSchema,
   }),
@@ -207,8 +215,11 @@ export const blocksSchema = z.array(blockSchema).max(60);
 /** Deutsche Namen und Kurzbeschreibungen für den Editor */
 export const BLOCK_LABELS: Record<BlockType, { label: string; description: string }> = {
   hero: { label: "Kopfbereich", description: "Große Überschrift mit Text, Buttons und Bild oder Portal-Vorschau" },
-  text: { label: "Text", description: "Überschrift und Fließtext, z. B. für Rechtstexte" },
-  cards: { label: "Kacheln", description: "Mehrere Kästen mit Überschrift, Text und Link, z. B. Leistungen" },
+  text: { label: "Text", description: "Überschrift und Fließtext, z. B. für Rechtstexte – auch als Hinweis mit Randlinie" },
+  cards: {
+    label: "Kacheln",
+    description: "Gleichwertige Punkte mit Überschrift, Text und Link – als Kästen, Spalten oder Zeilen",
+  },
   steps: { label: "Ablauf", description: "Nummerierte Schritte, z. B. „So läuft eine Störungsmeldung ab“" },
   split: { label: "Zwei Wege", description: "Nebeneinanderstehende Bereiche, z. B. Unternehmen und Privatkunden" },
   checklist: { label: "Liste", description: "Aufzählung mit Häkchen" },

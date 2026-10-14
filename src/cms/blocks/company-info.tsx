@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { PhoneLink } from "@/components/site/sections/contact";
+import { Eyebrow } from "@/components/site/sections/layout";
 import { PlaceholderNotice } from "@/components/site/sections/legal";
 import { cn } from "@/lib/cn";
 import { Markdown } from "@/cms/markdown";
@@ -43,11 +44,9 @@ export function CompanyInfoBlock({ block, ctx, layout }: BlockProps<"companyInfo
 
   const heading = (
     <>
-      {hasText(block.eyebrow) ? (
-        <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">{plain(block.eyebrow, ctx)}</p>
-      ) : null}
+      {hasText(block.eyebrow) ? <Eyebrow>{plain(block.eyebrow, ctx)}</Eyebrow> : null}
       {hasText(block.title) ? (
-        <h2 id={titleId} className={cn(h2Base, hasText(block.eyebrow) && "mt-2")}>
+        <h2 id={titleId} className={cn(h2Base, hasText(block.eyebrow) && "mt-3")}>
           {plain(block.title, ctx)}
         </h2>
       ) : null}

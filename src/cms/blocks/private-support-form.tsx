@@ -35,15 +35,14 @@ export function PrivateSupportFormBlock({ block, ctx, layout }: BlockProps<"priv
             text={block.intro}
             ctx={ctx.text}
             variant="compact"
-            listStyle="check"
             headingBase={3}
             className="mt-4 max-w-md"
           />
           {openingHours.length > 0 ? (
             <div
               className={cn(
-                "mt-8 max-w-sm rounded-2xl p-5",
-                layout.bg === "blue" ? "bg-white shadow-card" : "bg-brand-50",
+                "mt-8 max-w-sm border-t pt-4",
+                layout.bg === "blue" ? "border-line-strong" : "border-line",
               )}
             >
               <p className="text-sm font-semibold text-ink">Servicezeiten</p>

@@ -16,7 +16,6 @@ export function ImageTextBlock({ block, ctx, layout }: BlockProps<"imageText">) 
         text={block.body}
         ctx={ctx.text}
         variant="prose"
-        listStyle="check"
         headingBase={hasText(block.title) ? 3 : 2}
         className={cn("max-w-2xl", (hasText(block.title) || hasText(block.intro)) && "mt-6")}
       />

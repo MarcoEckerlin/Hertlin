@@ -18,53 +18,44 @@ function columnsFor(count: number): string {
   return "sm:grid-cols-2 lg:grid-cols-3";
 }
 
-/** Ab dieser durchschnittlichen Textlänge stehen die Schritte untereinander statt nebeneinander. */
-const LONG_TEXT = 220;
-
 /**
  * Nummerierte Schritte.
- * Kurze Schritte stehen nebeneinander (wie „So läuft eine Störungsmeldung ab“),
- * lange untereinander mit der Überschrift links (wie „Wie wir arbeiten“).
+ * - list:  schlichte nummerierte Liste untereinander, getrennt durch feine Linien. Die Ziffer steht groß
+ *          in Hellblau, weil sie hier eine Information trägt (die Reihenfolge).
+ * - cards: Kacheln nebeneinander – für kurze Schritte, am besten nur einmal auf der Website.
  */
 export function StepsBlock({ block, ctx, layout }: BlockProps<"steps">) {
   const titleId = headingId(block, layout);
   const withHeading = hasHeading(block);
   const ItemTag = hasText(block.title) ? "h3" : "h2";
   const items = block.items;
-  const avgLength = items.length ? items.reduce((sum, s) => sum + s.text.length, 0) / items.length : 0;
-  const vertical = avgLength > LONG_TEXT;
+  const onBlue = layout.bg === "blue";
 
-  if (vertical) {
-    const list = (
-      <ol className="space-y-5">
-        {items.map((step, i) => (
-          <li key={i} className={cn("rounded-3xl p-6 sm:p-8", panelClasses(layout.bg))}>
-            <p aria-hidden="true" className="text-sm font-bold text-brand-700">
-              {String(i + 1).padStart(2, "0")}
-            </p>
-            <ItemTag className="mt-2 text-xl font-bold tracking-tight text-ink sm:text-2xl">{plain(step.title, ctx)}</ItemTag>
-            <Markdown
-              text={step.text}
-              ctx={ctx.text}
-              variant="compact"
-              listStyle="check"
-              headingBase={ItemTag === "h3" ? 4 : 3}
-              className="mt-3 max-w-prose sm:text-base"
-            />
-          </li>
-        ))}
-      </ol>
-    );
+  if (block.layout === "cards") {
     return (
       <BlockSection block={block} layout={layout} labelledBy={titleId}>
-        {withHeading ? (
-          <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-            <BlockHeading block={block} ctx={ctx} id={titleId} className="lg:sticky lg:top-28 lg:self-start" />
-            {list}
-          </div>
-        ) : (
-          <div className="max-w-3xl">{list}</div>
-        )}
+        <BlockHeading block={block} ctx={ctx} id={titleId} />
+        {items.length > 0 ? (
+          <ol className={cn("grid gap-4 sm:gap-5", columnsFor(items.length), withHeading && "mt-10 lg:mt-12")}>
+            {items.map((step, i) => (
+              <li key={i} className={cn("flex flex-col rounded-2xl p-6 sm:p-7", panelClasses(layout.bg))}>
+                <span aria-hidden="true" className="text-[2.5rem] leading-none font-semibold text-brand-500 tabular-nums">
+                  {i + 1}
+                </span>
+                <ItemTag className="mt-5 text-lg leading-snug font-bold text-ink">
+                  {plain(step.title, ctx)}
+                </ItemTag>
+                <Markdown
+                  text={step.text}
+                  ctx={ctx.text}
+                  variant="compact"
+                  headingBase={ItemTag === "h3" ? 4 : 3}
+                  className="mt-2"
+                />
+              </li>
+            ))}
+          </ol>
+        ) : null}
       </BlockSection>
     );
   }
@@ -73,24 +64,39 @@ export function StepsBlock({ block, ctx, layout }: BlockProps<"steps">) {
     <BlockSection block={block} layout={layout} labelledBy={titleId}>
       <BlockHeading block={block} ctx={ctx} id={titleId} />
       {items.length > 0 ? (
-        <ol className={cn("grid gap-4 sm:gap-5", columnsFor(items.length), withHeading && "mt-12")}>
+        <ol
+          className={cn(
+            "max-w-3xl border-b",
+            onBlue ? "border-line-strong" : "border-line",
+            withHeading && "mt-10 lg:mt-12",
+          )}
+        >
           {items.map((step, i) => (
-            <li key={i} className={cn("rounded-2xl p-6", panelClasses(layout.bg))}>
+            <li
+              key={i}
+              className={cn(
+                "grid grid-cols-[2.75rem_minmax(0,1fr)] gap-x-4 border-t py-6 sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-x-6 sm:py-7",
+                onBlue ? "border-line-strong" : "border-line",
+              )}
+            >
               <span
                 aria-hidden="true"
-                className="grid size-10 place-items-center rounded-full bg-brand-400 text-base font-bold text-ink"
+                className="text-[2rem] leading-none font-semibold text-brand-500 tabular-nums sm:text-[2.5rem]"
               >
                 {i + 1}
               </span>
-              <ItemTag className="mt-5 text-lg font-bold text-ink">{plain(step.title, ctx)}</ItemTag>
-              <Markdown
-                text={step.text}
-                ctx={ctx.text}
-                variant="compact"
-                listStyle="check"
-                headingBase={ItemTag === "h3" ? 4 : 3}
-                className="mt-2"
-              />
+              <div className="min-w-0">
+                <ItemTag className="text-lg leading-snug font-bold text-ink sm:text-xl">
+                  {plain(step.title, ctx)}
+                </ItemTag>
+                <Markdown
+                  text={step.text}
+                  ctx={ctx.text}
+                  variant="compact"
+                  headingBase={ItemTag === "h3" ? 4 : 3}
+                  className="mt-2 max-w-prose sm:text-base"
+                />
+              </div>
             </li>
           ))}
         </ol>

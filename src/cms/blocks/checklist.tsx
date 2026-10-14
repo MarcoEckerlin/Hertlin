@@ -1,32 +1,48 @@
-import { CheckList } from "@/components/site/sections/check-list";
+import { Check } from "lucide-react";
+import { markedRule } from "@/components/site/sections/layout";
 import { cn } from "@/lib/cn";
 import { InlineMarkdown, Markdown } from "@/cms/markdown";
 import { BlockHeading, BlockSection, hasText, headingId, plain, type BlockProps } from "@/cms/blocks/shared";
 
+/** Spalten für die kurze Übersicht ohne Überschrift (z. B. direkt unter dem Seitenkopf). */
+function stripColumns(count: number): string {
+  if (count <= 1) return "";
+  if (count === 2 || count === 4) return "sm:grid-cols-2";
+  return "sm:grid-cols-2 lg:grid-cols-3";
+}
+
 /**
  * Liste mit Häkchen.
- * Mit Überschrift: Überschrift links, Liste rechts in einem Kasten.
- * Ohne Überschrift: kompakter Kasten, die Dachzeile wird zur Kastenüberschrift (z. B. „Gut zu wissen“).
+ * Mit Überschrift: Überschrift oben, Liste darunter (ab Tabletbreite zweispaltig, wenn es viele Punkte sind).
+ * Ohne Überschrift: kurze Übersicht hinter einer feinen Linie, die Dachzeile wird zur kleinen Überschrift
+ * (z. B. „Gut zu wissen“). Passt direkt unter den Seitenkopf.
  */
 export function ChecklistBlock({ block, ctx, layout }: BlockProps<"checklist">) {
   const titleId = headingId(block, layout);
   const items = block.items.filter((item) => item.trim().length > 0);
-  const box = cn(
-    "rounded-3xl p-6 sm:p-8",
-    layout.bg === "blue" ? "border border-line bg-white shadow-card" : "bg-brand-50",
-  );
-  const list =
+  const onBlue = layout.bg === "blue";
+
+  const renderItems = (className: string) =>
     items.length > 0 ? (
-      <CheckList items={items.map((item, i) => <InlineMarkdown key={i} text={item} ctx={ctx.text} />)} />
+      <ul className={cn("text-[0.9375rem] leading-relaxed text-ink-soft", className)}>
+        {items.map((item, i) => (
+          <li key={i} className="flex gap-3">
+            <Check className="mt-[0.3em] size-4 shrink-0 text-brand-600" strokeWidth={2.5} aria-hidden />
+            <span className="min-w-0">
+              <InlineMarkdown text={item} ctx={ctx.text} />
+            </span>
+          </li>
+        ))}
+      </ul>
     ) : null;
 
   if (hasText(block.title)) {
     return (
       <BlockSection block={block} layout={layout} labelledBy={titleId}>
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-          <BlockHeading block={block} ctx={ctx} id={titleId} />
-          {list ? <div className={cn(box, "lg:self-start")}>{list}</div> : null}
-        </div>
+        <BlockHeading block={block} ctx={ctx} id={titleId} />
+        {renderItems(
+          cn("mt-8 grid max-w-4xl gap-x-12 gap-y-3 sm:text-base", items.length > 4 && "sm:grid-cols-2"),
+        )}
       </BlockSection>
     );
   }
@@ -34,19 +50,16 @@ export function ChecklistBlock({ block, ctx, layout }: BlockProps<"checklist">) 
   const labelId = hasText(block.eyebrow) ? `${layout.domId}-titel` : undefined;
   return (
     <BlockSection block={block} layout={layout} labelledBy={labelId}>
-      <div className={cn(box, "max-w-3xl")}>
+      <div className={cn("max-w-6xl pt-6", markedRule(onBlue))}>
         {labelId ? (
           <h2 id={labelId} className="text-sm font-bold text-ink">
             {plain(block.eyebrow, ctx)}
           </h2>
         ) : null}
-        <Markdown
-          text={block.intro}
-          ctx={ctx.text}
-          variant="compact"
-          className={cn(labelId && "mt-2")}
-        />
-        {list ? <div className={cn((labelId || hasText(block.intro)) && "mt-4")}>{list}</div> : null}
+        <Markdown text={block.intro} ctx={ctx.text} variant="compact" className={cn("max-w-2xl", labelId && "mt-2")} />
+        {renderItems(
+          cn("grid gap-x-10 gap-y-3", stripColumns(items.length), (labelId || hasText(block.intro)) && "mt-4"),
+        )}
       </div>
     </BlockSection>
   );

@@ -35,14 +35,12 @@ export function HeroBlock({ block, ctx, layout }: BlockProps<"hero">) {
         <div className={cn("mx-auto max-w-[90rem] overflow-hidden", boxed && "rounded-3xl bg-brand-100")}>
           <Container className="grid items-center gap-12 py-14 sm:py-20 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:py-24">
             <div className="max-w-2xl">
-              {hasText(block.eyebrow) ? (
-                <p className="text-sm font-bold tracking-wider text-brand-800 uppercase">{plain(block.eyebrow, ctx)}</p>
-              ) : null}
+              {hasText(block.eyebrow) ? <Eyebrow>{plain(block.eyebrow, ctx)}</Eyebrow> : null}
               <Tag
                 id={titleId}
                 className={cn(
                   "text-[2.125rem] leading-tight font-bold tracking-tight break-words text-ink hyphens-auto sm:text-5xl sm:hyphens-manual lg:text-[3.5rem] lg:leading-[1.08]",
-                  hasText(block.eyebrow) && "mt-4",
+                  hasText(block.eyebrow) && "mt-5",
                 )}
               >
                 {plain(block.title, ctx)}
@@ -51,7 +49,6 @@ export function HeroBlock({ block, ctx, layout }: BlockProps<"hero">) {
                 text={block.text}
                 ctx={ctx.text}
                 variant="lead"
-                listStyle="check"
                 headingBase={layout.primaryHeading ? 2 : 3}
                 className="mt-6 max-w-xl sm:[&>p:first-child]:text-xl sm:[&>p:first-child]:leading-relaxed"
               />
@@ -77,14 +74,14 @@ export function HeroBlock({ block, ctx, layout }: BlockProps<"hero">) {
           imageId && "lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:items-center lg:gap-16",
         )}
       >
-        <div className={compact ? "max-w-3xl" : "max-w-2xl"}>
+        <div className={imageId ? "max-w-2xl" : "max-w-4xl"}>
           {hasText(block.eyebrow) ? <Eyebrow>{plain(block.eyebrow, ctx)}</Eyebrow> : null}
           <Tag
             id={titleId}
             className={cn(
-              "leading-tight font-bold tracking-tight break-words text-ink hyphens-auto sm:text-5xl sm:hyphens-manual",
+              "leading-[1.12] font-bold tracking-tight break-words text-ink hyphens-auto sm:text-5xl sm:hyphens-manual lg:text-[3.25rem]",
               compact ? "text-3xl" : "text-[2rem]",
-              hasText(block.eyebrow) && "mt-3",
+              hasText(block.eyebrow) && "mt-5",
             )}
           >
             {plain(block.title, ctx)}
@@ -93,9 +90,8 @@ export function HeroBlock({ block, ctx, layout }: BlockProps<"hero">) {
             text={block.text}
             ctx={ctx.text}
             variant="lead"
-            listStyle="check"
             headingBase={layout.primaryHeading ? 2 : 3}
-            className="mt-5 max-w-xl"
+            className="mt-6 max-w-[38rem]"
           />
           {buttons}
         </div>

@@ -105,7 +105,7 @@ const headingFields = (opts: { titleHint?: string } = {}): FieldDef[] => [
     kind: "text",
     name: "eyebrow",
     label: "Dachzeile",
-    hint: "Kurze Zeile über der Überschrift, z. B. „Für Unternehmen“.",
+    hint: "Kurze Zeile über der Überschrift, z. B. „Für Unternehmen“. Sparsam einsetzen – meist reicht eine klare Überschrift.",
     max: 60,
     optional: "omit",
   },
@@ -126,7 +126,7 @@ const toneField: FieldDef = {
   kind: "select",
   name: "tone",
   label: "Hintergrund",
-  hint: "Weiße und hellblaue Abschnitte im Wechsel lassen sich gut auseinanderhalten.",
+  hint: "Hellblau sparsam für Abschnitte einsetzen, die herausstechen sollen. Folgen Abschnitte mit gleichem Hintergrund aufeinander, trennt sie eine feine Linie.",
   options: [
     { value: "white", label: "Weiß" },
     { value: "blue", label: "Hellblau" },
@@ -186,10 +186,11 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
     {
       kind: "select",
       name: "width",
-      label: "Breite",
+      label: "Darstellung",
       options: [
-        { value: "narrow", label: "Schmal – angenehm für längere Texte" },
-        { value: "wide", label: "Breit" },
+        { value: "narrow", label: "Lesespalte – angenehm für längere Texte" },
+        { value: "wide", label: "Breit – Überschrift links, Text rechts" },
+        { value: "note", label: "Hinweis – eingerückt mit hellblauer Linie" },
       ],
     },
     toneField,
@@ -198,9 +199,21 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
     ...headingFields(),
     {
       kind: "select",
+      name: "layout",
+      label: "Darstellung",
+      hint: "Kästen nur für wirklich gleichwertige Angebote verwenden – Spalten und Zeilen wirken ruhiger.",
+      options: [
+        { value: "tiles", label: "Kästen mit Hintergrund" },
+        { value: "columns", label: "Spalten – ohne Kasten, mit feiner Linie darüber" },
+        { value: "rows", label: "Zeilen – Überschrift links, Text rechts" },
+      ],
+    },
+    {
+      kind: "select",
       name: "columns",
-      label: "Kacheln pro Zeile",
+      label: "Anzahl nebeneinander",
       hint: "Auf dem Handy stehen die Kacheln immer untereinander.",
+      showIf: (v) => v.layout !== "rows",
       numeric: true,
       options: [
         { value: "2", label: "2 nebeneinander" },
@@ -234,6 +247,16 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   ],
   steps: [
     ...headingFields(),
+    {
+      kind: "select",
+      name: "layout",
+      label: "Darstellung",
+      hint: "Kacheln nebeneinander passen zu kurzen Schritten – am besten nur einmal auf der Website verwenden.",
+      options: [
+        { value: "list", label: "Nummerierte Liste untereinander" },
+        { value: "cards", label: "Kacheln nebeneinander" },
+      ],
+    },
     {
       kind: "list",
       name: "items",
@@ -447,6 +470,7 @@ export function newBlock(type: BlockType): Block {
         id,
         type,
         title: "Überschrift",
+        layout: "columns",
         columns: 3,
         items: [
           { title: "Erste Kachel", text: "" },
@@ -460,6 +484,7 @@ export function newBlock(type: BlockType): Block {
         id,
         type,
         title: "So läuft es ab",
+        layout: "list",
         items: [
           { title: "Erster Schritt", text: "" },
           { title: "Zweiter Schritt", text: "" },

@@ -36,7 +36,6 @@ export function InquiryFormBlock({ block, ctx, layout }: BlockProps<"inquiryForm
             text={block.intro}
             ctx={ctx.text}
             variant="compact"
-            listStyle="check"
             headingBase={3}
             className="mt-4 max-w-md"
           />

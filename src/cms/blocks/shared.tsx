@@ -32,7 +32,7 @@ export type BlockLayout = {
   joinTop: boolean;
   /** Nächstes Modul hat denselben Hintergrund: kleinerer Abstand unten */
   joinBottom: boolean;
-  /** Trennlinie zum vorherigen Modul (bei mehreren gleichartigen Abschnitten untereinander) */
+  /** Feine Trennlinie zum vorherigen Modul (gleicher Hintergrund, neuer Abschnitt mit eigener Überschrift) */
   separator: boolean;
   /** Dieses Modul trägt die Hauptüberschrift der Seite (h1) */
   primaryHeading: boolean;
@@ -65,9 +65,9 @@ export function toneBg(tone: Tone): string {
   return tone === "blue" ? "bg-brand-50" : "bg-white";
 }
 
-/** Fläche für Kästen innerhalb eines Abschnitts: auf Weiß hellblau, auf Hellblau weiß mit Rahmen. */
+/** Fläche für Kästen innerhalb eines Abschnitts: auf Weiß hellblau, auf Hellblau weiß mit feinem Rahmen. */
 export function panelClasses(bg: Tone): string {
-  return bg === "blue" ? "border border-line bg-white shadow-card" : "bg-brand-50";
+  return bg === "blue" ? "bg-white ring-1 ring-line" : "bg-brand-50";
 }
 
 /** Abschnitt eines Moduls mit Hintergrund, Abständen, Sprunganker und Seitenbreite. */
@@ -93,12 +93,25 @@ export function BlockSection({
       className={cn("scroll-mt-24", toneBg(layout.bg), sectionPadding(layout), className)}
     >
       <Container className={containerClassName}>
-        {layout.separator ? <div aria-hidden="true" className="mb-12 border-t border-line lg:mb-16" /> : null}
+        {layout.separator ? (
+          <div
+            aria-hidden="true"
+            className={cn("mb-12 border-t lg:mb-16", layout.bg === "blue" ? "border-line-strong" : "border-line")}
+          />
+        ) : null}
         {children}
       </Container>
     </section>
   );
 }
+
+/** Größen der Abschnittsüberschriften: "section" für eigenständige Abschnitte, "minor" für Randspalten. */
+export type HeadingSize = "section" | "minor";
+
+const TITLE_SIZE: Record<HeadingSize, string> = {
+  section: "text-[1.75rem] leading-[1.18] sm:text-[2.125rem] lg:text-[2.375rem]",
+  minor: "text-[1.375rem] leading-snug sm:text-[1.625rem]",
+};
 
 /** Überschrift eines Abschnitts mit optionaler Dachzeile und Einleitung (Markdown). */
 export function BlockHeading({
@@ -106,6 +119,7 @@ export function BlockHeading({
   ctx,
   id,
   as = "h2",
+  size = "section",
   className,
   titleClassName,
   colors = "default",
@@ -114,6 +128,7 @@ export function BlockHeading({
   ctx: BlockContext;
   id?: string;
   as?: "h1" | "h2" | "h3";
+  size?: HeadingSize;
   className?: string;
   titleClassName?: string;
   colors?: MarkdownColors;
@@ -128,8 +143,9 @@ export function BlockHeading({
         <Tag
           id={id}
           className={cn(
-            "text-3xl font-bold tracking-tight break-words text-ink hyphens-auto sm:text-4xl sm:hyphens-manual",
-            hasText(block.eyebrow) && "mt-3",
+            "font-bold tracking-tight break-words text-ink hyphens-auto sm:hyphens-manual",
+            TITLE_SIZE[size],
+            hasText(block.eyebrow) && "mt-4",
             titleClassName,
           )}
         >
@@ -139,11 +155,14 @@ export function BlockHeading({
       <Markdown
         text={block.intro}
         ctx={ctx.text}
-        variant="lead"
+        variant={size === "minor" ? "compact" : "lead"}
         colors={colors}
-        listStyle="check"
+        listStyle="bullet"
         headingBase={hasTitle ? 3 : 2}
-        className={cn("max-w-xl", (hasTitle || hasText(block.eyebrow)) && "mt-4")}
+        className={cn(
+          size === "minor" ? "max-w-md" : "max-w-[38rem]",
+          (hasTitle || hasText(block.eyebrow)) && (size === "minor" ? "mt-3" : "mt-5"),
+        )}
       />
     </div>
   );

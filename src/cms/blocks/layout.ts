@@ -1,12 +1,14 @@
 import type { Block } from "@/cms/schema";
-import { hasHeading, type BlockLayout, type Tone } from "@/cms/blocks/shared";
+import { hasHeading, hasText, type BlockLayout, type Tone } from "@/cms/blocks/shared";
 
 /**
  * Anordnung der Module auf einer Seite.
  *
  * Abschnitte mit gleichem Hintergrund gehen ineinander über (kein doppelter Abstand), damit z. B. ein
  * Seitenkopf mit nachfolgendem Kasten oder ein in mehrere Textmodule aufgeteilter Rechtstext wie aus
- * einem Guss wirkt. Handlungsaufforderungen (cta) setzen sich farblich vom vorherigen Abschnitt ab.
+ * einem Guss wirkt. Beginnt dabei ein neuer Abschnitt mit eigener Überschrift, trennt ihn eine feine Linie
+ * vom vorherigen – ruhiger als ein Farbwechsel oder ein Kasten.
+ * Handlungsaufforderungen (cta) setzen sich farblich vom vorherigen Abschnitt ab.
  */
 
 /** Großer Einstieg mit Portal-Ansicht steht für sich und verbindet sich nicht mit Nachbarn. */
@@ -16,6 +18,19 @@ function isolated(block: Block): boolean {
 
 function isWideText(block: Block): boolean {
   return block.type === "text" && block.width === "wide" && hasHeading(block);
+}
+
+/** Hinweis-Text mit eigener Randlinie braucht keine zusätzliche Trennlinie. */
+function isNote(block: Block): boolean {
+  return block.type === "text" && block.width === "note";
+}
+
+/** Trennlinie zwischen zwei Abschnitten mit gleichem Hintergrund? */
+function wantsSeparator(block: Block, prev: Block): boolean {
+  if (prev.type === "hero" || prev.type === "cta" || block.type === "cta" || block.type === "hero") return false;
+  if (isWideText(block) && isWideText(prev)) return true;
+  if (isNote(block)) return false;
+  return "title" in block && hasText(block.title);
 }
 
 function safeDomId(id: string, index: number): string {
@@ -45,7 +60,7 @@ export function computeLayouts(blocks: Block[], indexOf: (i: number) => number =
       bg: tones[i],
       joinTop,
       joinBottom,
-      separator: joinTop && !!prev && isWideText(block) && isWideText(prev),
+      separator: joinTop && !!prev && wantsSeparator(block, prev),
       primaryHeading: i === firstHero,
       domId: safeDomId(block.id, indexOf(i)),
     };

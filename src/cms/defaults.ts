@@ -206,7 +206,6 @@ const HOME: DefaultPageSource = {
       id: "zwei-wege",
       type: "split",
       tone: "white",
-      eyebrow: "Für wen wir arbeiten",
       title: "Für Firmen und für Privatleute",
       intro:
         "Firmen brauchen jemanden, der ihre IT kennt und dauerhaft im Blick behält. Privatleute brauchen meistens schnelle Hilfe bei einem konkreten Problem. Beides machen wir – aber nicht auf dieselbe Art.",
@@ -238,10 +237,10 @@ const HOME: DefaultPageSource = {
     {
       id: "leistungen",
       type: "cards",
-      tone: "blue",
-      columns: 2,
-      eyebrow: "Leistungen",
-      title: "Was wir übernehmen",
+      tone: "white",
+      layout: "columns",
+      columns: 3,
+      title: "Leistungen im Überblick",
       intro: md(
         "Von der Einrichtung eines einzelnen Notebooks bis zur Betreuung mehrerer Standorte. Liegt etwas außerhalb dessen, was wir gut können, sagen wir Ihnen das offen.",
         "[Alle Leistungen im Detail](/leistungen)",
@@ -256,8 +255,8 @@ const HOME: DefaultPageSource = {
     {
       id: "ablauf",
       type: "steps",
-      tone: "white",
-      eyebrow: "Ablauf",
+      tone: "blue",
+      layout: "cards",
       title: "So läuft eine Störungsmeldung ab",
       intro:
         "Vom Drucker, der nicht mehr druckt, bis zum ausgefallenen Server: Jede Störung läuft bei uns gleich ab. So weiß jeder, was als Nächstes passiert.",
@@ -283,9 +282,9 @@ const HOME: DefaultPageSource = {
     {
       id: "kundenportal",
       type: "cards",
-      tone: "blue",
+      tone: "white",
+      layout: "rows",
       columns: 2,
-      eyebrow: "Kundenportal",
       title: "Ein Portal für Ihre Firma – mit allen Standorten",
       intro: md(
         "Firmenkunden bekommen ein eigenes Kundenportal. Darin melden Ihre Mitarbeiter Störungen, stellen Anfragen und sehen, wie weit wir sind.",
@@ -314,7 +313,6 @@ const HOME: DefaultPageSource = {
       id: "reaktionszeiten",
       type: "responseTimes",
       tone: "white",
-      eyebrow: "Reaktionszeiten",
       title: "Wie schnell wir uns melden",
       intro: "Je dringender das Problem, desto schneller sind wir dran. Die Dringlichkeit legen Sie beim Melden fest.",
       note: RESPONSE_NOTE,
@@ -354,7 +352,7 @@ const LEISTUNGEN: DefaultPageSource = {
       title: "Was wir für Sie übernehmen",
       text: md(
         "Wir kümmern uns um Computer, Netzwerk und Telefon – im Büro und zu Hause. Manche Kunden rufen uns nur, wenn etwas kaputt ist. Andere geben uns die komplette Betreuung ihrer IT.",
-        "Hier steht, was wir in den einzelnen Bereichen konkret tun.",
+        "Hier steht, was wir in den einzelnen Bereichen konkret tun – von [Arbeitsplätzen](#arbeitsplaetze) über [Netzwerk](#netzwerk), [Microsoft 365](#microsoft-365), [Server und Datensicherung](#server-backup) und [IT-Sicherheit](#sicherheit) bis zur [Telefonie](#telefonie).",
       ),
       primary: { label: "Anfrage stellen", href: "/kontakt" },
       secondary: { label: "Wie wir abrechnen", href: "#abrechnung" },
@@ -366,8 +364,8 @@ const LEISTUNGEN: DefaultPageSource = {
         tone: "white",
         width: "wide",
         anchor: s.id,
-        eyebrow: s.audience,
         title: s.title,
+        intro: s.audience,
         body: md(...s.text, "### Typische Aufgaben", list(...s.tasks)),
       }),
     ),
@@ -375,9 +373,9 @@ const LEISTUNGEN: DefaultPageSource = {
       id: "abrechnung",
       type: "cards",
       tone: "blue",
+      layout: "rows",
       columns: 2,
       anchor: "abrechnung",
-      eyebrow: "Kosten",
       title: "Wie wir abrechnen",
       intro: md(
         "Sie sollen vorher wissen, worauf Sie sich einlassen. Deshalb rechnen wir nachvollziehbar ab und sprechen größere Arbeiten vorher mit Ihnen ab.",
@@ -456,9 +454,9 @@ const UNTERNEHMEN: DefaultPageSource = {
       id: "betreuung",
       type: "cards",
       tone: "white",
+      layout: "rows",
       columns: 2,
-      eyebrow: "Laufende Betreuung",
-      title: "Was Betreuung bei uns bedeutet",
+      title: "Was zur laufenden Betreuung gehört",
       intro:
         "Ein großer Teil der Betreuung passiert, bevor etwas kaputtgeht. Darum kümmern wir uns laufend:",
       items: [
@@ -492,9 +490,8 @@ const UNTERNEHMEN: DefaultPageSource = {
       id: "kundenportal",
       type: "text",
       tone: "blue",
-      width: "wide",
+      width: "narrow",
       anchor: "kundenportal",
-      eyebrow: "Kundenportal",
       title: "Ihr eigenes Portal unter eigener Adresse",
       body: md(
         "Jeder Firmenkunde bekommt ein Kundenportal mit eigener Subdomain, zum Beispiel **{portal_beispiel}**. Dort melden Ihre Mitarbeiter Störungen, stellen Anfragen, laden Screenshots hoch und lesen unsere Antworten.",
@@ -505,6 +502,7 @@ const UNTERNEHMEN: DefaultPageSource = {
       id: "rollen",
       type: "cards",
       tone: "blue",
+      layout: "columns",
       columns: 3,
       title: "Wer im Portal was sieht",
       intro: "Jeder bekommt einen eigenen Zugang. Was jemand sehen und tun darf, hängt von seiner Rolle ab.",
@@ -548,8 +546,8 @@ const UNTERNEHMEN: DefaultPageSource = {
       id: "zusammenarbeit",
       type: "steps",
       tone: "white",
-      eyebrow: "Zusammenarbeit",
-      title: "Wie wir anfangen",
+      layout: "list",
+      title: "Wie eine Zusammenarbeit beginnt",
       intro:
         "Bevor wir Verantwortung für Ihre IT übernehmen, müssen wir sie kennen. Deshalb beginnt jede Zusammenarbeit mit denselben vier Schritten.",
       items: [
@@ -576,8 +574,7 @@ const UNTERNEHMEN: DefaultPageSource = {
       type: "responseTimes",
       tone: "blue",
       anchor: "reaktionszeiten",
-      eyebrow: "Reaktionszeiten",
-      title: "Verbindlich, je nach Dringlichkeit",
+      title: "Reaktionszeiten nach Dringlichkeit",
       intro: "Beim Melden wählen Sie, wie dringend es ist. Danach richtet sich, wie schnell wir uns melden.",
       note: RESPONSE_NOTE,
     },
@@ -585,7 +582,6 @@ const UNTERNEHMEN: DefaultPageSource = {
       id: "fragen",
       type: "faq",
       tone: "white",
-      eyebrow: "Häufige Fragen",
       title: "Was Firmen uns oft fragen",
       intro: "Ihre Frage ist nicht dabei? Rufen Sie an unter {telefon} oder schreiben Sie uns über das [Kontaktformular](/kontakt).",
       items: [
@@ -682,9 +678,9 @@ const PRIVATKUNDEN: DefaultPageSource = {
       id: "hilfe",
       type: "cards",
       tone: "white",
+      layout: "columns",
       columns: 3,
-      eyebrow: "Wobei wir helfen",
-      title: "Typische Probleme, die wir lösen",
+      title: "Wobei wir zu Hause helfen",
       intro:
         "Die Liste ist nicht vollständig. Wenn Ihr Problem nicht dabei ist, beschreiben Sie es trotzdem – wir sagen Ihnen, ob wir helfen können.",
       items: [
@@ -724,8 +720,8 @@ const PRIVATKUNDEN: DefaultPageSource = {
       id: "ablauf",
       type: "steps",
       tone: "blue",
-      eyebrow: "Ablauf",
-      title: "So läuft es ab",
+      layout: "list",
+      title: "So läuft die Hilfe ab",
       intro: "Sie brauchen weder ein Konto noch eine App. Nach drei Schritten ist Ihr Problem in Arbeit.",
       items: [
         {
@@ -744,22 +740,17 @@ const PRIVATKUNDEN: DefaultPageSource = {
     },
     {
       id: "status-link",
-      type: "cards",
+      type: "text",
       tone: "blue",
-      columns: 2,
-      items: [
-        {
-          title: "Was der Status-Link kann",
-          text: "Über den Link aus unserer E-Mail sehen Sie jederzeit, wie weit wir sind, lesen unsere Antworten und können selbst antworten. Geben Sie den Link bitte nicht weiter – wer ihn kennt, kann Ihr Ticket lesen.",
-        },
-      ],
+      width: "note",
+      title: "Was der Status-Link kann",
+      body: "Über den Link aus unserer E-Mail sehen Sie jederzeit, wie weit wir sind, lesen unsere Antworten und können selbst antworten. Geben Sie den Link bitte nicht weiter – wer ihn kennt, kann Ihr Ticket lesen.",
     },
     {
       id: "formular",
       type: "privateSupportForm",
       tone: "white",
       anchor: "hilfe-anfordern",
-      eyebrow: "Hilfe anfordern",
       title: "Problem schildern",
       intro: md(
         "Beschreiben Sie in Ruhe, was los ist. Je genauer die Beschreibung, desto schneller können wir helfen.",
@@ -803,45 +794,30 @@ const UEBER_UNS: DefaultPageSource = {
     },
     {
       id: "arbeitsweise",
-      type: "steps",
+      type: "text",
       tone: "white",
-      eyebrow: "Arbeitsweise",
+      width: "wide",
       title: "Wie wir arbeiten",
       intro:
         "Diese vier Grundsätze gelten bei uns für jeden Auftrag, vom einzelnen Notebook bis zum Server.",
-      items: [
-        {
-          title: "Wir erklären, was wir tun",
-          text: md(
-            "Sie müssen kein Technikexperte werden. Aber Sie sollen verstehen, warum ein Gerät ersetzt werden muss oder was eine Änderung bringt, bevor wir loslegen.",
-            "Im Ticket steht hinterher in normalen Worten, was die Ursache war und was wir geändert haben.",
-          ),
-        },
-        {
-          title: "Wir dokumentieren Ihre IT so, dass auch ein anderer Dienstleister damit arbeiten könnte",
-          text: md(
-            "Geräteliste, Netzwerkplan, Zugänge und Sicherungskonzept liegen geordnet vor und gehören Ihnen.",
-            "Das macht Sie unabhängig von uns. Wir finden: Kunden sollen bleiben, weil sie zufrieden sind, nicht weil nur wir wissen, wie alles zusammenhängt.",
-          ),
-        },
-        {
-          title: "Sie haben feste Ansprechpartner",
-          text: "Jeder Firmenkunde hat bei uns feste Techniker, die seine Umgebung und seine Mitarbeiter kennen. Sie müssen nicht bei jedem Anruf neu erklären, wie Ihr Netzwerk aufgebaut ist oder welches Programm in der Buchhaltung läuft.",
-        },
-        {
-          title: "Wir sagen auch, wenn sich etwas nicht lohnt",
-          text: md(
-            "Manchmal ist ein neues Gerät günstiger als die Reparatur. Manchmal ist es umgekehrt, und das fünf Jahre alte Notebook läuft mit einer neuen SSD noch ein paar Jahre gut.",
-            "Wir empfehlen, was für Sie sinnvoll ist – auch wenn es der kleinere Auftrag ist.",
-          ),
-        },
-      ],
+      body: md(
+        "## Wir erklären, was wir tun",
+        "Sie müssen kein Technikexperte werden. Aber Sie sollen verstehen, warum ein Gerät ersetzt werden muss oder was eine Änderung bringt, bevor wir loslegen.",
+        "Im Ticket steht hinterher in normalen Worten, was die Ursache war und was wir geändert haben.",
+        "## Wir dokumentieren Ihre IT so, dass auch ein anderer Dienstleister damit arbeiten könnte",
+        "Geräteliste, Netzwerkplan, Zugänge und Sicherungskonzept liegen geordnet vor und gehören Ihnen.",
+        "Das macht Sie unabhängig von uns. Wir finden: Kunden sollen bleiben, weil sie zufrieden sind, nicht weil nur wir wissen, wie alles zusammenhängt.",
+        "## Sie haben feste Ansprechpartner",
+        "Jeder Firmenkunde hat bei uns feste Techniker, die seine Umgebung und seine Mitarbeiter kennen. Sie müssen nicht bei jedem Anruf neu erklären, wie Ihr Netzwerk aufgebaut ist oder welches Programm in der Buchhaltung läuft.",
+        "## Wir sagen auch, wenn sich etwas nicht lohnt",
+        "Manchmal ist ein neues Gerät günstiger als die Reparatur. Manchmal ist es umgekehrt, und das fünf Jahre alte Notebook läuft mit einer neuen SSD noch ein paar Jahre gut.",
+        "Wir empfehlen, was für Sie sinnvoll ist – auch wenn es der kleinere Auftrag ist.",
+      ),
     },
     {
       id: "einsatzgebiet",
       type: "contact",
       tone: "blue",
-      eyebrow: "Einsatzgebiet",
       title: "Wo wir unterwegs sind",
       intro: md(
         "Für Termine vor Ort fahren wir zu Firmen und Privatkunden in unserer Region. Fernwartung funktioniert dagegen unabhängig vom Ort – vorausgesetzt, das Gerät hat eine Internetverbindung.",
@@ -906,9 +882,9 @@ const SUPPORT: DefaultPageSource = {
     {
       id: "fernwartung",
       type: "steps",
-      tone: "blue",
+      tone: "white",
+      layout: "list",
       anchor: "fernwartung",
-      eyebrow: "Fernwartung",
       title: "So funktioniert die Fernwartung",
       intro:
         "Bei einer Fernwartung sehen wir Ihren Bildschirm und können Maus und Tastatur bedienen. So lassen sich viele Probleme lösen, ohne dass jemand vorbeikommen muss.",
@@ -932,13 +908,12 @@ const SUPPORT: DefaultPageSource = {
       title: "Nur nach Absprache am Telefon",
       text: "Starten Sie eine Fernwartung nur, wenn Sie gerade mit uns telefonieren oder einen Termin vereinbart haben. Wir fordern Sie nie unangekündigt dazu auf. Ruft jemand unaufgefordert an, gibt sich als {firma}, Microsoft oder Ihre Bank aus und will auf Ihren Rechner: auflegen und uns Bescheid geben.",
       primary: { label: "Fernwartung herunterladen", href: "{fernwartung}" },
-      showPhone: true,
+      showPhone: false,
     },
     {
       id: "erreichbarkeit",
       type: "contact",
       tone: "blue",
-      eyebrow: "Erreichbarkeit",
       title: "Telefon und Servicezeiten",
       intro: md(
         "**Wenn nichts mehr geht:** Steht der Betrieb still, rufen Sie bitte an, statt nur ein Ticket zu schreiben.",
@@ -981,6 +956,7 @@ const KONTAKT: DefaultPageSource = {
       id: "bestandskunden",
       type: "cards",
       tone: "blue",
+      layout: "columns",
       columns: 2,
       items: [
         {
@@ -1133,7 +1109,7 @@ const DATENSCHUTZ_TEIL_2 = md(
   "## 12. Cookies und Speicher im Browser",
   "Wir verwenden zwei Cookies:",
   list(
-    "**hertlin_session** wird nur gesetzt, wenn Sie sich im Kundenportal anmelden (bzw. als Mitarbeiter von {firma} in der internen Verwaltung). Es enthält einen zufälligen Sitzungsschlüssel, mit dem der Server Sie wiedererkennt – auch beim Aufbau der Live-Chat-Verbindung. Das Cookie ist für Skripte im Browser nicht lesbar und wird beim Abmelden gelöscht, spätestens aber nach 14 Tagen ungültig.",
+    "**hertlin_session** wird nur gesetzt, wenn Sie sich im Kundenportal anmelden (bzw. als Mitarbeiter von {firma} in der internen Verwaltung). Es enthält einen zufälligen Sitzungsschlüssel, mit dem der Server Sie wiedererkennt – auch beim Aufbau der Live-Chat-Verbindung. Das Cookie ist für Skripte im Browser nicht lesbar und wird beim Abmelden gelöscht, spätestens aber nach 72 Stunden ohne Nutzung bzw. 14 Tage nach der Anmeldung ungültig. Bei verschlüsselter Verbindung heißt es __Host-hertlin_session.",
     "**hertlin_lang** wird nur gesetzt, wenn Sie in der Sprachauswahl eine Sprache wählen. Es enthält nur das Sprachkürzel (z. B. „en“), damit die Website beim nächsten Besuch gleich in dieser Sprache erscheint, und gilt ein Jahr. Dieselbe Angabe legt Ihr Browser unter dem gleichen Namen im lokalen Speicher (localStorage) ab.",
   ),
   "Beide sind technisch notwendig, damit die Anmeldung bzw. die von Ihnen gewählte Sprache funktioniert (§ 25 Abs. 2 Nr. 2 TDDDG, Art. 6 Abs. 1 lit. b bzw. lit. f DSGVO). Eine Einwilligung ist dafür nicht erforderlich. Den Spracheintrag können Sie jederzeit löschen, indem Sie wieder „Deutsch“ wählen oder die Website-Daten in Ihrem Browser löschen. Cookies zu Analyse-, Tracking- oder Werbezwecken setzen wir nicht ein.",
@@ -1321,8 +1297,7 @@ const AGB: DefaultPageSource = {
       id: "hinweis",
       type: "text",
       tone: "white",
-      width: "narrow",
-      eyebrow: "Hinweis",
+      width: "note",
       body: md(
         "**Muster – vor Verwendung rechtlich prüfen lassen und an Ihre Verträge anpassen.**",
         "Diese AGB sind eine Vorlage für einen IT-Dienstleister und ersetzen keine Rechtsberatung. Prüfen Sie vor allem Fristen, Haftungsregeln und Zahlungsbedingungen und entfernen Sie diesen Hinweis, sobald der Text geprüft ist.",
