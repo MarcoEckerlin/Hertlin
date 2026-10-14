@@ -1,3 +1,4 @@
+import { PORT } from "./env";
 import { test, expect, loginStaff, main, newContext, pngFile, unique, ACCOUNTS, PNG_1PX } from "./fixtures";
 import { lastMailTo, linkIn } from "./mail";
 
@@ -140,7 +141,7 @@ test.describe("Hilfe-Formular für Privatkunden", () => {
 
     // Status-Link aus der Bestätigung und aus der E-Mail führen zum selben Ticket
     await expect.poll(async () => (await lastMailTo(email))?.body ?? "").toMatch(/\/status\/[A-Za-z0-9_-]+/);
-    const mailLink = linkIn((await lastMailTo(email))!.body, /http:\/\/localhost:3200\/status\/[A-Za-z0-9_-]+/);
+    const mailLink = linkIn((await lastMailTo(email))!.body, new RegExp(`http://localhost:${PORT}/status/[A-Za-z0-9_-]+`));
     expect(mailLink).toBeTruthy();
 
     await page.getByRole("link", { name: "Status ansehen" }).click();
@@ -217,7 +218,7 @@ test.describe("Hilfe-Formular für Privatkunden", () => {
     await expect(page.getByText(/Wenn E-Mail-Adresse und Ticketnummer zusammenpassen/)).toBeVisible();
 
     await expect.poll(async () => (await lastMailTo(email))?.subject ?? "").toBe(`Ihr Link zu ${number}`);
-    const link = linkIn((await lastMailTo(email))!.body, /http:\/\/localhost:3200\/status\/[A-Za-z0-9_-]+/);
+    const link = linkIn((await lastMailTo(email))!.body, new RegExp(`http://localhost:${PORT}/status/[A-Za-z0-9_-]+`));
     expect(link).toBeTruthy();
     await page.goto(link!);
     await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible();

@@ -24,7 +24,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-const { defaultTicketLocationId } = await import("@/components/admin/tickets/data");
+const { defaultTicketLocationId } = await import("@/lib/locations");
 
 describe("Standort neuer Tickets", () => {
   it("nimmt den Standort der Firma", async () => {

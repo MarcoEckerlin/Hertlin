@@ -1,3 +1,4 @@
+import { PORT } from "./env";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -92,7 +93,7 @@ test.describe("Verwaltung: Tickets bearbeiten", () => {
 
     // Status-Link aus der Bestätigungsmail
     await expect.poll(async () => (await lastMailTo(email))?.subject ?? "").toContain(ticketNumber(ticketId));
-    const link = linkIn((await lastMailTo(email))!.body, /http:\/\/localhost:3200\/status\/[A-Za-z0-9_-]+/);
+    const link = linkIn((await lastMailTo(email))!.body, new RegExp(`http://localhost:${PORT}/status/[A-Za-z0-9_-]+`));
     expect(link).toBeTruthy();
 
     const guestContext = await newContext(browser);
@@ -122,13 +123,13 @@ test.describe("Verwaltung: Kunden und Team", () => {
     await page.getByRole("button", { name: "Firmenkunde anlegen" }).click();
 
     await expect(page.getByText("Firmenkunde angelegt")).toBeVisible();
-    await expect(page.getByText(`${slug}.localhost:3200`).first()).toBeVisible();
+    await expect(page.getByText(`${slug}.localhost:${PORT}`).first()).toBeVisible();
 
     // Einladung einlösen
     await expect.poll(async () => (await lastMailTo(contactEmail))?.body ?? "").toContain("/passwort/");
     const link = linkIn(
       (await lastMailTo(contactEmail))!.body,
-      new RegExp(`http://${slug}\\.localhost:3200/passwort/[A-Za-z0-9_-]+`),
+      new RegExp(`http://${slug}\\.localhost:${PORT}/passwort/[A-Za-z0-9_-]+`),
     );
     expect(link).toBeTruthy();
 
@@ -173,7 +174,7 @@ test.describe("Verwaltung: Kunden und Team", () => {
     await expect(page.getByText("Mara Schuster")).toBeVisible();
 
     await expect.poll(async () => (await lastMailTo(email))?.body ?? "").toContain("/admin/passwort/");
-    const link = linkIn((await lastMailTo(email))!.body, /http:\/\/localhost:3200\/admin\/passwort\/[A-Za-z0-9_-]+/);
+    const link = linkIn((await lastMailTo(email))!.body, new RegExp(`http://localhost:${PORT}/admin/passwort/[A-Za-z0-9_-]+`));
     expect(link).toBeTruthy();
 
     const techContext = await newContext(browser);

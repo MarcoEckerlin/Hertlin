@@ -35,3 +35,30 @@ export async function parseLocationId(value: unknown): Promise<string | null | u
   const location = await db.location.findFirst({ where: { id: value, active: true }, select: { id: true } });
   return location ? location.id : undefined;
 }
+
+/**
+ * Vorgabe für den Standort eines neuen Tickets:
+ * Firma → deren Standort, bei einer Unterkunde ohne eigenen Standort der des Firmenkunden;
+ * Privatkunde (companyId null) → Hauptsitz. Nur aktive Standorte, sonst null.
+ */
+export async function defaultTicketLocationId(companyId: string | null): Promise<string | null> {
+  if (!companyId) {
+    const main = await db.location.findFirst({
+      where: { isMain: true, active: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true },
+    });
+    return main?.id ?? null;
+  }
+  const company = await db.company.findUnique({
+    where: { id: companyId },
+    select: {
+      location: { select: { id: true, active: true } },
+      parent: { select: { location: { select: { id: true, active: true } } } },
+    },
+  });
+  if (!company) return null;
+  if (company.location?.active) return company.location.id;
+  if (company.parent?.location?.active) return company.parent.location.id;
+  return null;
+}

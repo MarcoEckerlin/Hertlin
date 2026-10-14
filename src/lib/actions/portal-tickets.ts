@@ -37,7 +37,7 @@ import {
   revalidatePortal,
   staffCompanyLabel,
 } from "@/components/portal/portal-data";
-import { defaultTicketLocationId } from "@/components/admin/tickets/data";
+import { defaultTicketLocationId } from "@/lib/locations";
 
 /**
  * Tickets im Kundenportal: anlegen, antworten, als gelöst markieren, wieder öffnen.

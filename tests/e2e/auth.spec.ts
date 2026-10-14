@@ -1,3 +1,4 @@
+import { PORT } from "./env";
 import { test, expect, login, main, newContext, portal, PASSWORD } from "./fixtures";
 import { lastMailTo, linkIn } from "./mail";
 
@@ -71,7 +72,7 @@ test.describe("Anmeldung und Mandantentrennung", () => {
     // Die Mail geht erst nach der Antwort raus (gleiche Antwortzeit mit und ohne Konto)
     await expect.poll(async () => (await lastMailTo(email))?.body ?? null).not.toBe(before);
     const mail = await lastMailTo(email);
-    const link = mail && linkIn(mail.body, /http:\/\/muster\.localhost:3200\/passwort\/[A-Za-z0-9_-]+/);
+    const link = mail && linkIn(mail.body, new RegExp(`http://muster\\.localhost:${PORT}/passwort/[A-Za-z0-9_-]+`));
     expect(link).toBeTruthy();
 
     await page.goto(link!);
