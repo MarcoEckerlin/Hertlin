@@ -15,4 +15,9 @@ vitest.config.mts
 !.env.example
 docker.env
 docker-compose.yml
+docker-compose.override.yml
 DOCKER.md
+*.tsbuildinfo
+# Sicherungen gehören nicht ins Image
+*.tar.gz
+*.tgz

@@ -147,7 +147,7 @@ Reservierte Kürzel, die nie an Kunden vergeben werden (z. B. `www`, `admin`, `m
 
 ### Reverse Proxy
 
-Die Anwendung erwartet den originalen Hostnamen (`Host` oder `X-Forwarded-Host`) und die Client-IP in `X-Forwarded-For`. Der Proxy muss `X-Forwarded-For` **selbst setzen** (nicht vom Client übernehmen), sonst greifen die Schutzgrenzen gegen zu viele Anmeldeversuche nicht zuverlässig. Ausgewertet wird der letzte Eintrag. Die Anwendung selbst darf nur für den Proxy erreichbar sein (Docker: Port nur an `127.0.0.1`, ohne Docker: `LISTEN_HOST=127.0.0.1`) – direkt aus dem Netz könnte jeder Client die IP frei angeben.
+Die Anwendung erwartet den originalen Hostnamen (`Host` oder `X-Forwarded-Host`) und die Client-IP in `X-Forwarded-For`. Der Proxy muss `X-Forwarded-For` **selbst setzen** (nicht vom Client übernehmen), sonst greifen die Schutzgrenzen gegen zu viele Anmeldeversuche nicht zuverlässig. Ausgewertet wird der letzte Eintrag. Die Anwendung selbst darf nur für den Proxy erreichbar sein (Docker: Port 3000 ist standardmäßig nur an `127.0.0.1` gebunden, siehe [DOCKER.md](DOCKER.md); ohne Docker: `LISTEN_HOST=127.0.0.1`) – direkt aus dem Netz könnte jeder Client die IP frei angeben.
 
 Beispiel nginx:
 
@@ -192,12 +192,13 @@ map $http_upgrade $connection_upgrade {
 ### Docker
 
 ```bash
-cp docker.env.example docker.env   # ROOT_DOMAIN, APP_PROTOCOL, ADMIN_EMAIL, SMTP … eintragen
+cp docker.env.example docker.env      # ROOT_DOMAIN, APP_PROTOCOL=https, ADMIN_EMAIL, SMTP … eintragen
+echo "COMPOSE_PROFILES=https" > .env  # startet Caddy für automatisches HTTPS
 docker compose up -d --build
-docker compose logs hertlin        # Link zum Passwort-Setzen für den ersten Administrator
+docker compose logs hertlin           # Link zum Passwort-Setzen für den ersten Administrator
 ```
 
-Ausführliche Anleitung für Test im Heimnetz, eigene Domain mit automatischem HTTPS (Caddy), vorhandenen Reverse Proxy, Updates und Sicherung: [DOCKER.md](DOCKER.md). Datenbank, Anhänge und Website-Bilder liegen im Volume `hertlin-data` (`/data`).
+Beispieldaten gibt es nur im Test über `http`; im HTTPS-Betrieb sperrt der Container Demo-Zugänge mit dem öffentlichen Demo-Passwort. Ausführliche Anleitung für Test im Heimnetz, eigene Domain mit automatischem HTTPS (Caddy), vorhandenen Reverse Proxy, Updates und Sicherung: [DOCKER.md](DOCKER.md). Datenbank, Anhänge und Website-Bilder liegen im Volume `hertlin-data` (`/data`).
 
 ### Ohne Docker
 

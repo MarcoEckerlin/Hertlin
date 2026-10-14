@@ -51,5 +51,6 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 
-# Docker-Konfiguration mit Zugangsdaten
+# Docker-Konfiguration mit Zugangsdaten bzw. für diesen Server
 /docker.env
+/docker-compose.override.yml

@@ -6,9 +6,18 @@ cd /app
 echo "› Datenbank-Migrationen …"
 node_modules/.bin/prisma migrate deploy
 
-if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
-  echo "› Beispieldaten (nur wenn die Datenbank leer ist) …"
-  node_modules/.bin/tsx prisma/seed.ts
+# Beispieldaten nur im Test über http – ihr Passwort ist öffentlich bekannt
+if [ "${APP_PROTOCOL:-https}" = "http" ]; then
+  if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
+    echo "› Beispieldaten (nur wenn die Datenbank leer ist) …"
+    node_modules/.bin/tsx prisma/seed.ts
+  fi
+else
+  if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
+    echo "› SEED_DEMO_DATA wird ignoriert: Beispieldaten gibt es nur im Test mit APP_PROTOCOL=http."
+  fi
+  echo "› Prüfe Demo-Zugänge …"
+  node_modules/.bin/tsx scripts/demo-guard.ts || true
 fi
 
 if [ -n "${ADMIN_EMAIL:-}" ]; then
