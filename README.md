@@ -30,10 +30,13 @@ Website, Kundenportal und interne Verwaltung für den IT-Dienstleister Hertlin. 
 - Website-Übersetzer: Sprachauswahl übersetzt die sichtbaren Texte der Website und des Kundenportals maschinell
 
 **Verwaltung**
-- Übersicht, Ticketliste mit Filtern, Tickets im Namen von Kunden anlegen
-- Antworten an Kunden und interne Notizen, Status, Priorität, Bearbeiter, Ereignisprotokoll
-- Kosten pro Ticket (Arbeitszeit, Anfahrt, Material, Pauschalen) – **nur für Administratoren sichtbar**
+- Übersicht, Ticketliste mit Filtern (auch nach Standort), Tickets im Namen von Kunden anlegen
+- Antworten an Kunden und interne Notizen, Status, Priorität, Bearbeiter, Standort, Ereignisprotokoll
+- **Leistungen und Material im Ticket**: Administratoren und Techniker erfassen, was gebraucht wurde (Arbeitszeit, Anfahrt/Fahrtkosten, Material, Pauschalen) und wer es erbracht hat. Schnellwahl aus dem **Kostenkatalog** (Standardpositionen mit Preis); neue Positionen landen automatisch im Katalog. **Preise und Summen sehen nur Administratoren**; Positionen von Technikern ohne Katalogpreis sind als „Preis fehlt“ markiert, bis ein Administrator ihn einträgt
 - Kostenübersicht pro Konto (Firmenkunde inkl. Unterkunden, Privatkunden), Zeitraumfilter, Abrechnungsstatus, CSV-Export
+- **Rechnungen**: aus offenen Positionen je Empfänger (Firmenkunde, Unterkunde mit eigener Rechnung, Privatkunde), fortlaufende Nummern, PDF mit allen Pflichtangaben, Versand per E-Mail an die **Rechnungs-E-Mail des Kunden**, bezahlt/storniert (Stornorechnung, nie löschen); Hauptansprechpartner sehen ihre Rechnungen im Kundenportal
+- **Standorte**: mehrere Hertlin-Standorte mit Anschrift, Telefon und Öffnungszeiten, Hauptsitz; Zuordnung von Kunden, Mitarbeitern und Tickets; Anzeige auf der Website (Modul „Standorte“, Fußzeile)
+- **Hell- und Dunkelmodus** für Website, Portal und Verwaltung (Umschalter „Wie Gerät / Hell / Dunkel“)
 - Anfragen von Neukunden bearbeiten und direkt als Firmenkunden anlegen
 - Kunden, Subdomains, Unterkunden und Benutzer verwalten, Einladungen per E-Mail
 - Team-Verwaltung (Administratoren und Techniker)
@@ -44,12 +47,12 @@ Website, Kundenportal und interne Verwaltung für den IT-Dienstleister Hertlin. 
 
 | Rolle | Wo | Darf |
 | --- | --- | --- |
-| Administrator | Verwaltung | alles, inkl. Kosten, Kundenverwaltung, Team |
-| Techniker | Verwaltung | Tickets und Anfragen bearbeiten, Kunden ansehen – **keine Kosten** |
-| Hauptansprechpartner | Kundenportal | alle Tickets seiner Firma (beim Firmenkunden inkl. aller Unterkunden), Benutzer verwalten, Unterkunden anlegen (nur Firmenkunde) |
+| Administrator | Verwaltung | alles, inkl. Preise, Kostenübersicht, Rechnungen, Katalog, Standorte, Kundenverwaltung, Team |
+| Techniker | Verwaltung | Tickets und Anfragen bearbeiten, Leistungen und Material im Ticket erfassen (eigene ändern, solange nicht abgerechnet), Kunden ansehen – **keine Preise, Summen oder Rechnungen** |
+| Hauptansprechpartner | Kundenportal | alle Tickets seiner Firma (beim Firmenkunden inkl. aller Unterkunden), Rechnungen, Benutzer verwalten, Unterkunden anlegen (nur Firmenkunde) |
 | Mitarbeiter | Kundenportal | eigene Tickets erstellen und sehen |
 
-Kosten werden ausschließlich in Verwaltungsseiten für Administratoren geladen. Kunden und Techniker bekommen sie weder angezeigt noch per E-Mail.
+Preise und Summen werden ausschließlich für Administratoren geladen. Techniker sehen nur Mengen und Leistungen, Kunden nur ihre versendeten Rechnungen.
 
 ## Lokale Entwicklung
 
@@ -90,12 +93,18 @@ Datenbank neu aufsetzen (löscht alle lokalen Daten): `npm run db:reset`
 ## Vor dem Livegang anpassen
 
 1. **Firmenangaben** in `src/config/site.ts`: Firmierung, Anschrift, Telefon, E-Mail, USt-IdNr., Öffnungszeiten, Reaktionszeiten, Fernwartungslink. Alle Werte mit `TODO` ersetzen. Impressum und Datenschutzerklärung ziehen sich die Daten von dort – lassen Sie beide Texte bitte rechtlich prüfen.
-2. **Preisvorschläge** für das Kostenformular in `src/config/pricing.ts`.
-3. **Ersten Administrator** anlegen (statt Beispieldaten):
+2. **Kostenkatalog** (Verwaltung → Einstellungen → Kostenkatalog): Preise der Standardpositionen (Arbeitszeit, Anfahrt, Fahrtkosten je km …) an die eigene Preisliste anpassen.
+3. **Rechnungseinstellungen** (Verwaltung → Rechnungen → Einstellungen): Steuernummer, Kleinunternehmer ja/nein, Bankverbindung, Zahlungsziel, Texte. Solange Pflichtangaben fehlen, lassen sich keine Rechnungen erstellen. Für jeden Firmenkunden die **Rechnungs-E-Mail** eintragen. Ohne SMTP-Mailserver werden Rechnungen nicht verschickt – dann das PDF herunterladen, selbst senden und „Als versendet markieren“.
+4. **Standorte** (Verwaltung → Einstellungen → Standorte), z. B. „Hauptsitz aus den Firmendaten übernehmen“ und weitere Standorte anlegen.
+5. **Ersten Administrator** anlegen (statt Beispieldaten):
    ```bash
    npm run create-admin -- --email anna@hertlin.de --name "Anna Hertlin"
    ```
    Der ausgegebene Link führt zur Seite, auf der das Passwort festgelegt wird.
+
+### E-Rechnung
+
+PDF-Rechnungen per E-Mail an Geschäftskunden sind bis Ende 2026 zulässig (mit Zustimmung des Empfängers). Ab 2027 brauchen Unternehmen mit mehr als 800.000 € Vorjahresumsatz strukturierte E-Rechnungen (XRechnung oder ZUGFeRD), ab 2028 alle – an Privatkunden und für Kleinbeträge bis 250 € bleibt PDF erlaubt. Die Rechnungsdaten liegen vollständig in der Datenbank, eine ZUGFeRD-Ausgabe lässt sich ergänzen. Rechnungen (Datenbank und `UPLOAD_DIR/invoices`) 8 Jahre aufbewahren und regelmäßig sichern.
 
 ## Telefonanlage
 
@@ -232,7 +241,10 @@ Die Tests in `tests/e2e/` laufen im echten Browser (Chromium) gegen den Produkti
 | `auth.spec.ts` | Anmeldung, Sitzungen je Subdomain, Portal-Finder, Passwort zurücksetzen |
 | `public.spec.ts` | alle Website-Seiten und Hauptmenü, Neukunden-Anfrage mit Live-Chat, Hilfe-Formular mit Anhang und Status-Link, Status-Link neu anfordern |
 | `portal.spec.ts` | Tickets mit Anhang, Antworten, „Problem ist gelöst“/„Wieder öffnen“, Unterkunden und Einladungen, Rechte von Mitarbeitern |
-| `costs.spec.ts` | Kosten nur für Administratoren: Erfassung, Summe, unsichtbar für Techniker und Kunden, Übersicht pro Konto, CSV-Export |
+| `costs.spec.ts` | Preise nur für Administratoren: Erfassung, Summe, Techniker sehen Leistungen ohne Beträge, Kunden nichts, Übersicht pro Konto, CSV-Export |
+| `catalog.spec.ts` | Kostenkatalog: Schnellwahl im Ticket, neue Positionen landen im Katalog, Techniker-Position ohne Preis, Admin trägt Preis nach |
+| `invoices.spec.ts` | Rechnungen: Pflichtangaben, Erstellen mit Nummer und PDF, Versand bzw. „selbst verschickt“, Unterkunde als eigener Empfänger, bezahlt, Storno, Portal-Sichtbarkeit, keine Rechnungen für Techniker |
+| `locations.spec.ts` | Standorte: anlegen, Website und Fußzeile, Hauptsitz, Mitarbeiter zuordnen, Ticket- und Kundenfilter, Löschen nur ohne Zuordnungen |
 | `staff.spec.ts` | interne Notiz und Antwort, Statuswechsel, Ticket für Privatkunden, neuer Firmenkunde mit Subdomain, Techniker einladen |
 | `realtime.spec.ts` | Live-Chat: Anwesenheit, „schreibt gerade …“, Antworten ohne Neuladen, interne Notizen nicht beim Kunden |
 | `telephony.spec.ts` | Webhook der Telefonanlage, Live-Hinweis mit erkanntem Kunden, verpasste Anrufe, Ticket aus Anruf, Zugangsschlüssel |
