@@ -1,4 +1,4 @@
-import { test, expect, login, main, portal, PASSWORD } from "./fixtures";
+import { test, expect, login, main, newContext, portal, PASSWORD } from "./fixtures";
 import { lastMailTo, linkIn } from "./mail";
 
 test.describe("Anmeldung und Mandantentrennung", () => {
@@ -58,35 +58,39 @@ test.describe("Anmeldung und Mandantentrennung", () => {
     await expect(page).toHaveURL(/\/admin\/login/);
   });
 
-  test("Passwort zurücksetzen im Kundenportal", async ({ page }) => {
-    await page.goto(portal("baeckerei", "/passwort-vergessen"));
-    await page.getByLabel("E-Mail-Adresse").fill("chef@baeckerei.example");
-    const before = (await lastMailTo("chef@baeckerei.example"))?.body ?? null;
+  // Eigenes Konto (Sabine Roth, Unterkunde „Homeoffice-Arbeitsplätze“), das kein anderer Test benutzt –
+  // das Passwort ist danach geändert.
+  test("Passwort zurücksetzen im Kundenportal", async ({ page, browser }) => {
+    const email = "home@muster.example";
+    await page.goto(portal("muster", "/passwort-vergessen"));
+    await page.getByLabel("E-Mail-Adresse").fill(email);
+    const before = (await lastMailTo(email))?.body ?? null;
     await page.getByRole("button", { name: "Link anfordern" }).click();
     await expect(page.getByText(/haben wir Ihnen gerade eine E-Mail/)).toBeVisible();
 
     // Die Mail geht erst nach der Antwort raus (gleiche Antwortzeit mit und ohne Konto)
-    await expect.poll(async () => (await lastMailTo("chef@baeckerei.example"))?.body ?? null).not.toBe(before);
-    const mail = await lastMailTo("chef@baeckerei.example");
-    const link = mail && linkIn(mail.body, /http:\/\/baeckerei\.localhost:3200\/passwort\/[A-Za-z0-9_-]+/);
+    await expect.poll(async () => (await lastMailTo(email))?.body ?? null).not.toBe(before);
+    const mail = await lastMailTo(email);
+    const link = mail && linkIn(mail.body, /http:\/\/muster\.localhost:3200\/passwort\/[A-Za-z0-9_-]+/);
     expect(link).toBeTruthy();
 
     await page.goto(link!);
     await page.getByLabel("Neues Passwort").fill("ein-neues-passwort-123");
     await page.getByLabel("Passwort wiederholen").fill("ein-neues-passwort-123");
     await page.getByRole("button", { name: "Passwort speichern und anmelden" }).click();
-    await expect(page).toHaveURL(portal("baeckerei", "/"));
+    await expect(page).toHaveURL(portal("muster", "/"));
 
     // Link ist danach verbraucht
     await page.goto(link!);
     await expect(page.getByText("Link nicht mehr gültig")).toBeVisible();
 
     // Altes Passwort gilt nicht mehr, neues schon
-    const other = await page.context().browser()!.newPage();
-    await login(other, portal("baeckerei", "/login"), "chef@baeckerei.example", PASSWORD);
+    const otherContext = await newContext(browser);
+    const other = await otherContext.newPage();
+    await login(other, portal("muster", "/login"), email, PASSWORD);
     await expect(other.getByText("E-Mail-Adresse oder Passwort stimmen nicht.")).toBeVisible();
-    await login(other, portal("baeckerei", "/login"), "chef@baeckerei.example", "ein-neues-passwort-123");
-    await expect(other).toHaveURL(portal("baeckerei", "/"));
-    await other.close();
+    await login(other, portal("muster", "/login"), email, "ein-neues-passwort-123");
+    await expect(other).toHaveURL(portal("muster", "/"));
+    await otherContext.close();
   });
 });

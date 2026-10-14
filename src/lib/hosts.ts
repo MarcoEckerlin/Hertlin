@@ -58,6 +58,16 @@ export function isValidSlug(slug: string): boolean {
   return SLUG_PATTERN.test(slug) && !RESERVED_SLUGS.has(slug);
 }
 
+/**
+ * Hostname, den server.ts an Next.js übergibt. Next.js bildet daraus die Basis-URL für den Proxy
+ * (http://<hostname>:<port>), schreibt Loopback-Adressen in der URL des Proxys aber zu „localhost“ um.
+ * Stünde hier 127.0.0.1, passten Rewrite-Ziel und Basis nicht zusammen: Die Rewrites auf die Kundenportale
+ * (/portal/<kuerzel>) würden als externe Rewrites an localhost weitergereicht – und jedes Portal lieferte 404.
+ */
+export function nextInternalHostname(listenHost: string): string {
+  return /^(127(\.\d{1,3}){3}|::1|\[::1\])$/.test(listenHost.trim()) ? "localhost" : listenHost;
+}
+
 const LOCAL_BASE = "http://hertlin.invalid";
 
 /**

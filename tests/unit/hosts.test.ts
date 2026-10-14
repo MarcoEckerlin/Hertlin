@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidSlug, parseHost, safeLocalPath } from "@/lib/hosts";
+import { isValidSlug, nextInternalHostname, parseHost, safeLocalPath } from "@/lib/hosts";
 
 describe("parseHost", () => {
   const root = "hertlin.de";
@@ -75,5 +75,21 @@ describe("safeLocalPath (Ziel nach der Anmeldung)", () => {
     }
     expect(safeLocalPath("/\t/evil.example/x", "/")).toBe("/");
     expect(safeLocalPath("/.//evil.example", "/")).toBe("/");
+  });
+});
+
+describe("nextInternalHostname (Hostname für Next.js in server.ts)", () => {
+  it("gibt Loopback-Adressen als localhost weiter, damit Portal-Rewrites intern bleiben", () => {
+    expect(nextInternalHostname("127.0.0.1")).toBe("localhost");
+    expect(nextInternalHostname("127.0.1.1")).toBe("localhost");
+    expect(nextInternalHostname("::1")).toBe("localhost");
+    expect(nextInternalHostname("[::1]")).toBe("localhost");
+  });
+
+  it("lässt andere Adressen unverändert", () => {
+    expect(nextInternalHostname("0.0.0.0")).toBe("0.0.0.0");
+    expect(nextInternalHostname("localhost")).toBe("localhost");
+    expect(nextInternalHostname("10.0.0.5")).toBe("10.0.0.5");
+    expect(nextInternalHostname("::")).toBe("::");
   });
 });

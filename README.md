@@ -210,6 +210,28 @@ npm test             # Unit-Tests (Vitest)
 npm run build && npm run test:e2e   # Ende-zu-Ende-Tests (Playwright, eigene Datenbank prisma/e2e.db)
 ```
 
+### Ende-zu-Ende-Tests (Playwright)
+
+Die Tests in `tests/e2e/` laufen im echten Browser (Chromium) gegen den Produktions-Build. Vorher einmal den Browser installieren: `npx playwright install chromium`.
+
+- `npm run build` baut die Anwendung, `npm run test:e2e` startet dann selbst einen Testserver auf Port 3200 – den eigenen Server aus `server.ts` mit WebSocket, `NODE_ENV=production`, `ROOT_DOMAIN=localhost:3200`. Port 3200 muss frei sein.
+- Vor jedem Lauf legt `tests/e2e/prepare-db.ts` die Testdatenbank `prisma/e2e.db` neu an (Migrationen + Beispieldaten aus `prisma/seed.ts`). Das Skript bricht ab, wenn `DATABASE_URL` auf eine andere Datenbank zeigt – `prisma/dev.db` bleibt unberührt.
+- Anhänge landen in `storage/e2e-uploads`, E-Mails wie immer in `storage/mails.log` (die Tests lesen Einladungs- und Status-Links von dort). Übersetzung ist im Testserver ausgeschaltet, der Telefonie-Webhook hat einen festen Testschlüssel (`tests/e2e/env.ts`).
+- Kundenportale laufen unter `<kuerzel>.localhost:3200`; Chromium löst `*.localhost` ohne Eintrag in `/etc/hosts` auf.
+- Einzelne Bereiche: `npx playwright test costs.spec.ts`, einzelner Test: `npx playwright test -g "Techniker sieht"`. Bei Fehlern liegt unter `test-results/` ein Trace (`npx playwright show-trace …`).
+
+| Datei | Prüft |
+| --- | --- |
+| `auth.spec.ts` | Anmeldung, Sitzungen je Subdomain, Portal-Finder, Passwort zurücksetzen |
+| `public.spec.ts` | alle Website-Seiten und Hauptmenü, Neukunden-Anfrage mit Live-Chat, Hilfe-Formular mit Anhang und Status-Link, Status-Link neu anfordern |
+| `portal.spec.ts` | Tickets mit Anhang, Antworten, „Problem ist gelöst“/„Wieder öffnen“, Unterkunden und Einladungen, Rechte von Mitarbeitern |
+| `costs.spec.ts` | Kosten nur für Administratoren: Erfassung, Summe, unsichtbar für Techniker und Kunden, Übersicht pro Konto, CSV-Export |
+| `staff.spec.ts` | interne Notiz und Antwort, Statuswechsel, Ticket für Privatkunden, neuer Firmenkunde mit Subdomain, Techniker einladen |
+| `realtime.spec.ts` | Live-Chat: Anwesenheit, „schreibt gerade …“, Antworten ohne Neuladen, interne Notizen nicht beim Kunden |
+| `telephony.spec.ts` | Webhook der Telefonanlage, Live-Hinweis mit erkanntem Kunden, verpasste Anrufe, Ticket aus Anruf, Zugangsschlüssel |
+| `cms.spec.ts` | Website-Editor: Entwurf, Vorschau, Veröffentlichen, eigene Seite im Menü, Firmendaten in der Fußzeile, kein Zugriff für Techniker |
+| `security.spec.ts` | Mandantentrennung (Tickets, Anhänge, Benutzer), WebSocket-Kanäle und Origin, Open Redirect über `?next=` |
+
 ## Technik
 
 Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind CSS 4, Prisma mit SQLite, Zod, Nodemailer, ws (WebSocket).
