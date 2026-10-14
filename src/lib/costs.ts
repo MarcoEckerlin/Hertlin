@@ -289,6 +289,8 @@ export type ResolvedCostAccount = {
   sublabel: string | null;
   /** Firmenkunde: Firmen-IDs (Wurzel + Unterkunden) */
   companyIds: string[];
+  /** Firmenkunde: Unterkunden mit eigener Rechnung (eigener Rechnungsempfänger) */
+  separateSubs: { id: string; name: string }[];
   ticketWhere: Prisma.TicketWhereInput;
   /** Für den Export-Dateinamen */
   fileSlug: string;
@@ -345,7 +347,7 @@ function fileSlugOf(value: string): string {
 }
 
 /** E-Mail-Schreibweisen eines Privatkunden (SQLite vergleicht Gleichheit mit Groß/Klein). */
-async function privateEmailVariants(email: string): Promise<string[]> {
+export async function privateEmailVariants(email: string): Promise<string[]> {
   const rows = await db.ticket.findMany({
     where: { companyId: null, contactEmail: { not: null } },
     distinct: ["contactEmail"],
@@ -359,7 +361,12 @@ export async function resolveCostAccount(account: CostAccount): Promise<Resolved
   if (account.kind === "company") {
     const company = await db.company.findFirst({
       where: { id: account.companyId, parentId: null },
-      select: { id: true, name: true, customerNumber: true, children: { select: { id: true } } },
+      select: {
+        id: true,
+        name: true,
+        customerNumber: true,
+        children: { orderBy: { name: "asc" }, select: { id: true, name: true, invoiceSeparately: true } },
+      },
     });
     if (!company) return null;
     const companyIds = [company.id, ...company.children.map((c) => c.id)];
@@ -368,6 +375,7 @@ export async function resolveCostAccount(account: CostAccount): Promise<Resolved
       label: company.name,
       sublabel: company.customerNumber ? `Kundennummer ${company.customerNumber}` : null,
       companyIds,
+      separateSubs: company.children.filter((c) => c.invoiceSeparately).map((c) => ({ id: c.id, name: c.name })),
       ticketWhere: { companyId: { in: companyIds } },
       fileSlug: fileSlugOf(company.name),
     };
@@ -386,6 +394,7 @@ export async function resolveCostAccount(account: CostAccount): Promise<Resolved
       label: latest?.contactName?.trim() || account.email,
       sublabel: account.email,
       companyIds: [],
+      separateSubs: [],
       ticketWhere: { companyId: null, contactEmail: { in: variants } },
       fileSlug: fileSlugOf(latest?.contactName?.trim() || account.email.split("@")[0]),
     };
@@ -401,6 +410,7 @@ export async function resolveCostAccount(account: CostAccount): Promise<Resolved
     label: ticket.contactName?.trim() || `Privatkunde zu ${formatTicketNumber(ticket.id)}`,
     sublabel: ticket.contactEmail?.trim() || "ohne E-Mail-Adresse",
     companyIds: [],
+    separateSubs: [],
     ticketWhere: { id: ticket.id, companyId: null },
     fileSlug: fileSlugOf(ticket.contactName?.trim() || formatTicketNumber(ticket.id)),
   };
@@ -419,13 +429,31 @@ export type CostTotals = {
   totalCents: number;
   openCents: number;
   billedCents: number;
+  /** Positionen ohne Preis (Techniker hat erfasst, Preis fehlt noch) – zählen erst mit Preis in den Summen */
+  unpricedEntries: number;
 };
 
 function emptyTotals(): CostTotals {
-  return { entries: 0, tickets: 0, laborMinutes: 0, materialCents: 0, totalCents: 0, openCents: 0, billedCents: 0 };
+  return {
+    entries: 0,
+    tickets: 0,
+    laborMinutes: 0,
+    materialCents: 0,
+    totalCents: 0,
+    openCents: 0,
+    billedCents: 0,
+    unpricedEntries: 0,
+  };
 }
 
-type EntryLike = { kind: string; unit: string; quantityHundredths: number; totalCents: number; billed: boolean };
+type EntryLike = {
+  kind: string;
+  unit: string;
+  quantityHundredths: number;
+  totalCents: number;
+  billed: boolean;
+  needsPrice?: boolean;
+};
 
 /** Arbeitszeit einer Position in Minuten; andere Einheiten (z. B. Pauschale) zählen nicht als Zeit. */
 export function laborMinutesOf(entry: Pick<EntryLike, "kind" | "unit" | "quantityHundredths">): number {
@@ -443,6 +471,7 @@ class TotalsBuilder {
   add(entry: EntryLike, ticketId: number) {
     const t = this.totals;
     t.entries += 1;
+    if (entry.needsPrice) t.unpricedEntries += 1;
     t.totalCents += entry.totalCents;
     if (entry.billed) t.billedCents += entry.totalCents;
     else t.openCents += entry.totalCents;
@@ -509,6 +538,7 @@ export async function getCostOverview(filter: CostFilter): Promise<CostOverview>
       quantityHundredths: true,
       totalCents: true,
       billed: true,
+      needsPrice: true,
       ticketId: true,
       ticket: {
         select: {
@@ -636,12 +666,20 @@ export type CostDetailEntry = {
   billed: boolean;
   billedAt: Date | null;
   createdByName: string | null;
+  /** Mitarbeiter, der die Leistung erbracht hat */
+  performedByName: string | null;
+  /** Preis fehlt noch (vom Techniker erfasst) */
+  needsPrice: boolean;
+  /** Rechnung, auf der die Position steht */
+  invoice: { id: string; number: string } | null;
 };
 
 export type CostDetailTicket = {
   id: number;
   subject: string;
   status: string;
+  /** Firma des Tickets (null bei Privatkunden) */
+  companyId: string | null;
   /** Unterkunde bzw. Firma, wenn abweichend vom Firmenkunden */
   subCompanyName: string | null;
   contactName: string | null;
@@ -669,14 +707,17 @@ export async function getAccountCostDetail(resolved: ResolvedCostAccount, filter
       performedAt: true,
       billed: true,
       billedAt: true,
+      needsPrice: true,
       createdBy: { select: { name: true } },
+      performedBy: { select: { name: true } },
+      invoice: { select: { id: true, number: true } },
       ticket: {
         select: {
           id: true,
           subject: true,
           status: true,
           contactName: true,
-          company: { select: { name: true, parentId: true } },
+          company: { select: { id: true, name: true, parentId: true } },
         },
       },
     },
@@ -694,6 +735,7 @@ export async function getAccountCostDetail(resolved: ResolvedCostAccount, filter
           id: e.ticket.id,
           subject: e.ticket.subject,
           status: e.ticket.status,
+          companyId: e.ticket.company?.id ?? null,
           subCompanyName: e.ticket.company?.parentId ? e.ticket.company.name : null,
           contactName: e.ticket.contactName,
           entries: [],
@@ -716,6 +758,9 @@ export async function getAccountCostDetail(resolved: ResolvedCostAccount, filter
       billed: e.billed,
       billedAt: e.billedAt,
       createdByName: e.createdBy?.name ?? null,
+      performedByName: e.performedBy?.name ?? null,
+      needsPrice: e.needsPrice,
+      invoice: e.invoice,
     });
   }
 
@@ -809,6 +854,7 @@ const CSV_HEADER = [
   "Einzelpreis",
   "Gesamt",
   "Abgerechnet",
+  "Rechnung",
 ];
 
 const csvNumber = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: false });
@@ -845,6 +891,8 @@ export async function buildCostCsv(filter: CostFilter, resolved: ResolvedCostAcc
       totalCents: true,
       performedAt: true,
       billed: true,
+      needsPrice: true,
+      invoice: { select: { number: true } },
       ticket: {
         select: {
           id: true,
@@ -874,9 +922,10 @@ export async function buildCostCsv(filter: CostFilter, resolved: ResolvedCostAcc
         csvText(e.description),
         csvQuote(csvQuantity.format(e.quantityHundredths / 100)),
         csvText(e.unit),
-        csvQuote(csvNumber.format(e.unitPriceCents / 100)),
+        e.needsPrice ? csvText("Preis fehlt") : csvQuote(csvNumber.format(e.unitPriceCents / 100)),
         csvQuote(csvNumber.format(e.totalCents / 100)),
         csvText(e.billed ? "ja" : "nein"),
+        csvText(e.invoice?.number ?? ""),
       ].join(";"),
     );
   }

@@ -57,6 +57,9 @@ export default async function CompanyCostsPage({
             <ButtonLink href={`/admin/kunden/${companyId}`} variant="ghost">
               Zum Kunden
             </ButtonLink>
+            <ButtonLink href={`/admin/rechnungen?kunde=${companyId}`} variant="ghost">
+              Rechnungen
+            </ButtonLink>
             <a href={exportHref} className={buttonClasses("secondary")} download>
               <Download className="size-4" aria-hidden />
               CSV exportieren

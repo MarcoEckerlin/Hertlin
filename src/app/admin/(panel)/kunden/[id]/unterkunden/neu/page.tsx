@@ -6,6 +6,7 @@ import { cleanId } from "@/components/admin/companies/list-tools";
 import { SubCustomerCreateForm } from "@/components/admin/companies/sub-customer-create-form";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { locationOptions } from "@/lib/locations";
 
 export const metadata: Metadata = { title: "Unterkunde anlegen" };
 
@@ -32,7 +33,7 @@ export default async function NewSubCustomerPage({ params }: { params: Promise<{
       />
       <Card className="max-w-3xl">
         <CardBody className="sm:p-8">
-          <SubCustomerCreateForm parentId={company.id} />
+          <SubCustomerCreateForm parentId={company.id} parentName={company.name} locationOptions={await locationOptions()} />
         </CardBody>
       </Card>
     </div>

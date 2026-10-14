@@ -10,6 +10,7 @@ import { requireAdmin } from "@/lib/auth";
 import { CUSTOMER_ROLES } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { portalHost, rootDomain } from "@/lib/hosts";
+import { locationOptions } from "@/lib/locations";
 
 export const metadata: Metadata = { title: "Kunde bearbeiten" };
 
@@ -33,11 +34,26 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
       email: true,
       internalNote: true,
       active: true,
+      locationId: true,
+      location: { select: { id: true, name: true, city: true, active: true } },
+      billingEmail: true,
+      billingName: true,
+      billingStreet: true,
+      billingZip: true,
+      billingCity: true,
+      vatId: true,
+      invoiceSeparately: true,
       parent: { select: { id: true, name: true, active: true } },
       children: { select: { id: true } },
     },
   });
   if (!company) notFound();
+
+  // Deaktivierter Standort bleibt auswählbar, solange er zugeordnet ist (sonst ginge er beim Speichern verloren)
+  const options = await locationOptions();
+  if (company.location && !company.location.active && !options.some((o) => o.value === company.location?.id)) {
+    options.push({ value: company.location.id, label: `${company.location.name} (deaktiviert)` });
+  }
 
   const isSub = company.parentId !== null;
   const treeIds = isSub ? [company.id] : [company.id, ...company.children.map((c) => c.id)];
@@ -64,6 +80,8 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
           <CardBody>
             <CompanyEditForm
               isSub={isSub}
+              parentName={company.parent?.name ?? null}
+              locationOptions={options}
               company={{
                 id: company.id,
                 name: company.name,
@@ -74,6 +92,14 @@ export default async function EditCompanyPage({ params }: { params: Promise<{ id
                 phone: company.phone,
                 email: company.email,
                 internalNote: company.internalNote,
+                locationId: company.locationId,
+                billingEmail: company.billingEmail,
+                billingName: company.billingName,
+                billingStreet: company.billingStreet,
+                billingZip: company.billingZip,
+                billingCity: company.billingCity,
+                vatId: company.vatId,
+                invoiceSeparately: company.invoiceSeparately,
               }}
             />
           </CardBody>

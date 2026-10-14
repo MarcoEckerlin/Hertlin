@@ -74,6 +74,11 @@ export function CostOverviewTable({
           <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
             {row.sublabel ? <span className="break-all">{row.sublabel}</span> : null}
             {!row.active ? <Badge tone="gray">deaktiviert</Badge> : null}
+            {row.totals.unpricedEntries > 0 ? (
+              <Badge tone="orange">
+                {row.totals.unpricedEntries === 1 ? "1 Position ohne Preis" : `${row.totals.unpricedEntries} ohne Preis`}
+              </Badge>
+            ) : null}
           </span>
         </td>
         <Cells totals={row.totals} showOpen={showOpen} />
