@@ -48,7 +48,7 @@ export default async function PortalProfilePage() {
       <PageHeader
         breadcrumbs={[{ label: "Übersicht", href: "/" }, { label: "Mein Profil" }]}
         title="Mein Profil"
-        description="Ihre Kontaktdaten, die Sprache für Nachrichten und Ihr Passwort für das Kundenportal."
+        description="Kontaktdaten, Sprache für Nachrichten und Passwort."
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
@@ -56,7 +56,7 @@ export default async function PortalProfilePage() {
           <Card>
             <CardHeader
               title="Ihre Angaben"
-              description="So sehen wir Sie in Ihren Tickets. Die Telefonnummer hilft uns bei Rückfragen."
+              description="So sehen wir Sie in Ihren Tickets; die Telefonnummer hilft bei Rückfragen."
             />
             <CardBody>
               <ProfileForm name={user.name} phone={user.phone} position={user.position} />
@@ -76,7 +76,7 @@ export default async function PortalProfilePage() {
           <Card>
             <CardHeader
               title="Passwort ändern"
-              description="Zur Sicherheit brauchen wir Ihr aktuelles Passwort. Auf anderen Geräten werden Sie danach abgemeldet."
+              description="Auf anderen Geräten werden Sie danach abgemeldet."
             />
             <CardBody>
               <PasswordForm email={user.email} />
@@ -98,11 +98,11 @@ export default async function PortalProfilePage() {
                   <span className="mt-1.5 block leading-relaxed text-ink-soft">{roleDescription}</span>
                 </Item>
                 <Item label="E-Mail-Adresse">
-                  <span className="block font-medium break-all text-ink">{user.email}</span>
+                  <span className="block font-medium text-ink [overflow-wrap:anywhere]">{user.email}</span>
                   <span className="mt-1 block leading-relaxed text-ink-muted">{emailHint}</span>
                 </Item>
                 <Item label="Adresse Ihres Kundenportals">
-                  <a href={addressUrl} className="block font-medium break-all text-brand-700 hover:underline">
+                  <a href={addressUrl} className="block font-medium text-brand-700 [overflow-wrap:anywhere] hover:underline">
                     {address}
                   </a>
                   <span className="mt-1 block leading-relaxed text-ink-muted">

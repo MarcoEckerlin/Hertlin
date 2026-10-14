@@ -52,8 +52,8 @@ export default async function PortalInvoicesPage() {
         title="Rechnungen"
         description={
           ctx.isRootAdmin
-            ? "Rechnungen von Hertlin an Ihre Firma, auch für Unterkunden mit eigener Rechnung. Das PDF können Sie jederzeit herunterladen."
-            : "Rechnungen von Hertlin an Ihre Firma. Das PDF können Sie jederzeit herunterladen."
+            ? "Unsere Rechnungen an Ihre Firma und an Unterkunden mit eigener Rechnung, jeweils als PDF."
+            : "Unsere Rechnungen an Ihre Firma, jeweils als PDF."
         }
       />
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toggleSubCustomerActiveAction } from "@/lib/actions/portal-admin";
 import { initialFormState } from "@/lib/forms";
 import { Checkbox, FieldError } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { showToast } from "@/components/ui/toaster";
 
 /**
  * Unterkunde deaktivieren (mit Bestätigung) oder wieder aktivieren.
@@ -25,6 +26,11 @@ export function SubCustomerStatusForm({
   const [state, formAction] = useActionState(toggleSubCustomerActiveAction, initialFormState);
   const [confirmed, setConfirmed] = useState(false);
 
+  // Erfolg als kurze Meldung: Der Abschnitt klappt nach dem Aktivieren zu, ein Kasten darin wäre nicht zu sehen
+  useEffect(() => {
+    if (state.status === "success" && state.message) showToast(state.message);
+  }, [state]);
+
   // Nach einem Wechsel des Status die Bestätigung zurücksetzen
   const [prevActive, setPrevActive] = useState(active);
   if (prevActive !== active) {
@@ -43,7 +49,7 @@ export function SubCustomerStatusForm({
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="intent" value={active ? "deactivate" : "activate"} />
-      <FormMessage state={state} />
+      {state.status === "error" ? <FormMessage state={state} /> : null}
 
       {active ? (
         <>

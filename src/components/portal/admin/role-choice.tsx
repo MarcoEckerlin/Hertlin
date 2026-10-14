@@ -42,11 +42,11 @@ export function RoleChoice({
           <label
             key={role}
             className={cn(
-              "relative flex cursor-pointer gap-3 rounded-xl border border-line-strong bg-white p-4 transition-colors",
+              "relative flex cursor-pointer gap-3 rounded-xl border border-line-strong bg-surface p-4 transition-colors",
               "hover:border-brand-300 has-checked:border-brand-400 has-checked:bg-brand-50",
               "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-600",
               "has-disabled:cursor-not-allowed has-disabled:opacity-70 has-disabled:hover:border-line-strong",
-              error && "border-red-300",
+              error && "border-danger-solid",
             )}
           >
             <input

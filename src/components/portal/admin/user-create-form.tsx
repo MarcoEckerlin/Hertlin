@@ -189,7 +189,7 @@ function UserCreateForm({
             {selected.name}
           </p>
           {errors.companyId ? (
-            <p className="mt-1.5 text-sm font-medium text-red-700">{errors.companyId}</p>
+            <p className="mt-1.5 text-sm font-medium text-danger-ink">{errors.companyId}</p>
           ) : (
             <p className="mt-1.5 text-sm text-ink-muted">
               {isRootAdmin ? (

@@ -76,7 +76,7 @@ export function TicketTimeline({
   const items = sortItems(messages, events);
 
   return (
-    <ol className="space-y-4">
+    <ol className="space-y-3">
       {items.map((item) =>
         item.kind === "message" ? (
           <MessageItem
@@ -117,7 +117,7 @@ function MessageItem({
       <article
         className={cn(
           "w-full max-w-2xl rounded-2xl border p-4 sm:p-5",
-          fromStaff ? "border-brand-200 bg-brand-50 sm:mr-12" : "border-line bg-white shadow-card sm:ml-12",
+          fromStaff ? "border-brand-200 bg-brand-50 sm:mr-12" : "border-line bg-surface shadow-card sm:ml-12",
         )}
         aria-label={fromStaff ? `Antwort von Hertlin${name ? `, ${name}` : ""}` : own ? "Ihre Nachricht" : `Nachricht von ${name ?? "Kundenseite"}`}
       >
@@ -126,7 +126,7 @@ function MessageItem({
             <span
               className={cn(
                 "grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold",
-                fromStaff ? "bg-brand-400 text-ink" : "bg-brand-100 text-brand-800",
+                fromStaff ? "bg-primary text-on-primary" : "bg-brand-100 text-brand-800",
               )}
               aria-hidden
             >
@@ -163,7 +163,7 @@ function MessageItem({
                   href={`/dateien/${attachment.id}`}
                   target="_blank"
                   rel="noopener"
-                  className="inline-flex max-w-full items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line ring-inset hover:bg-brand-50 hover:ring-brand-300"
+                  className="inline-flex max-w-full items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-ink ring-1 ring-line ring-inset hover:bg-brand-50 hover:ring-brand-300"
                 >
                   <Paperclip className="size-3.5 shrink-0 text-ink-muted" aria-hidden />
                   <span className="truncate">{attachment.fileName}</span>

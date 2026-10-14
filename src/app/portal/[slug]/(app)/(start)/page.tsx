@@ -13,6 +13,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ContactBox } from "@/components/portal/contact-box";
+import { portalContact } from "@/components/portal/portal-data";
 import { RecentTickets } from "@/components/portal/ticket-list";
 
 export const metadata: Metadata = { title: "Übersicht" };
@@ -43,8 +44,9 @@ export default async function PortalDashboardPage({
   const scope = portalTicketWhere(ctx);
   const since = daysAgo(30);
 
-  const [site, openCount, waitingCount, resolvedCount, recent] = await Promise.all([
+  const [site, contact, openCount, waitingCount, resolvedCount, recent] = await Promise.all([
     getSiteSettings(),
+    portalContact({ companyId: ctx.company.id }),
     db.ticket.count({ where: { AND: [scope, { status: { in: [...OPEN_STATUSES] } }] } }),
     db.ticket.count({ where: { AND: [scope, { status: "WAITING_CUSTOMER" }] } }),
     db.ticket.count({
@@ -66,6 +68,13 @@ export default async function PortalDashboardPage({
 
   const isSubCustomer = ctx.company.parentId !== null;
   const multipleCompanies = ctx.scopeCompanyIds.length > 1;
+
+  const waitingNote =
+    waitingCount === 0
+      ? "Gerade wartet keine Rückfrage."
+      : ctx.isAdmin
+        ? "Wir warten auf eine Antwort von Ihnen oder Ihrem Team."
+        : "Wir brauchen Ihre Antwort, um weiterzumachen.";
 
   return (
     <>
@@ -90,43 +99,21 @@ export default async function PortalDashboardPage({
         </Alert>
       ) : null}
 
-      {/* Kennzahlen */}
-      <section aria-label="Ihre Tickets in Zahlen" className="grid gap-3 sm:grid-cols-3 sm:gap-4">
-        <StatCard
-          href="/tickets"
-          label="Offene Tickets"
-          value={openCount}
-          note="neu, in Bearbeitung oder mit Rückfrage"
-        />
+      {/* Kennzahlen: auf dem Handy drei kleine Kacheln nebeneinander */}
+      <section aria-label="Ihre Tickets in Zahlen" className="grid grid-cols-3 gap-2 sm:gap-4">
+        <StatCard href="/tickets" label="Offene Tickets" value={openCount} note="neu, in Bearbeitung oder mit Rückfrage" />
         <StatCard
           href="/tickets?status=wartet"
           label={ctx.isAdmin ? "Rückfrage offen" : "Rückfrage an Sie"}
           value={waitingCount}
-          note={
-            ctx.isAdmin
-              ? waitingCount === 0
-                ? "Gerade wartet keine Rückfrage auf Antwort."
-                : waitingCount === 1
-                  ? "Wir warten auf eine Antwort – von Ihnen oder von der Person, die das Ticket gemeldet hat."
-                  : "Wir warten auf Antworten – von Ihnen oder von den Personen, die die Tickets gemeldet haben."
-              : waitingCount === 0
-                ? "Gerade wartet keine Frage auf Sie."
-                : waitingCount === 1
-                  ? "Wir brauchen Ihre Antwort, um weiterzumachen."
-                  : "Wir brauchen Ihre Antworten, um weiterzumachen."
-          }
+          note={waitingNote}
           highlight={waitingCount > 0}
         />
-        <StatCard
-          href="/tickets?status=erledigt"
-          label="Erledigt"
-          value={resolvedCount}
-          note="gelöst in den letzten 30 Tagen"
-        />
+        <StatCard href="/tickets?status=erledigt" label="Erledigt" value={resolvedCount} note="in den letzten 30 Tagen" />
       </section>
 
       {/* Schnellaktionen */}
-      <section aria-label="Schnell melden" className="mt-6 grid gap-3 sm:grid-cols-2 sm:gap-4">
+      <section aria-label="Schnell melden" className="mt-2 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-4">
         <QuickAction
           href="/tickets/neu?art=stoerung"
           title="Störung melden"
@@ -141,7 +128,7 @@ export default async function PortalDashboardPage({
         />
       </section>
 
-      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-6 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader
@@ -149,7 +136,7 @@ export default async function PortalDashboardPage({
               description={
                 ctx.isAdmin
                   ? multipleCompanies
-                    ? `Tickets von ${ctx.root.name} und den Unterkunden`
+                    ? `${ctx.root.name} und Unterkunden`
                     : `Alle Tickets von ${ctx.company.name}`
                   : "Ihre eigenen Tickets"
               }
@@ -167,8 +154,7 @@ export default async function PortalDashboardPage({
               <div className="px-5 py-10 text-center sm:px-6">
                 <p className="font-semibold text-ink">Noch keine Tickets</p>
                 <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-soft">
-                  Sobald Sie eine Störung melden oder eine Anfrage stellen, sehen Sie hier den aktuellen Stand und unsere
-                  Antworten.
+                  Hier sehen Sie später den Stand Ihrer Störungen und Anfragen und unsere Antworten.
                 </p>
                 <div className="mt-5">
                   <ButtonLink href="/tickets/neu" variant="secondary" size="sm">
@@ -179,10 +165,10 @@ export default async function PortalDashboardPage({
             )}
           </Card>
 
-          {ctx.isAdmin ? <AdminHint isRootAdmin={ctx.isRootAdmin} companyName={ctx.company.name} /> : null}
+          {ctx.isAdmin ? <AdminHint isRootAdmin={ctx.isRootAdmin} /> : null}
         </div>
 
-        <ContactBox site={site} />
+        <ContactBox site={site} contact={contact} />
       </div>
     </>
   );
@@ -205,19 +191,27 @@ function StatCard({
     <Link
       href={href}
       className={cn(
-        "group flex flex-col rounded-2xl border p-5 shadow-card transition-colors",
+        "group flex min-w-0 flex-col rounded-2xl border p-3 shadow-card transition-colors sm:p-5",
         highlight
-          ? "border-orange-200 bg-orange-50 hover:border-orange-300"
-          : "border-line bg-white hover:border-brand-300 hover:bg-brand-50/40",
+          ? "border-caution-line bg-caution-soft hover:border-caution-solid"
+          : "border-line bg-surface hover:border-brand-300 hover:bg-brand-50/40",
       )}
     >
-      <span className={cn("text-sm font-semibold", highlight ? "text-orange-900" : "text-ink-soft")}>{label}</span>
-      <span className={cn("mt-1 text-3xl font-bold tracking-tight tabular-nums", highlight ? "text-orange-950" : "text-ink")}>
+      <span className={cn("text-xs leading-snug font-semibold sm:text-sm", highlight ? "text-caution-ink" : "text-ink-soft")}>
+        {label}
+      </span>
+      <span
+        className={cn(
+          "mt-0.5 text-2xl font-bold tracking-tight tabular-nums sm:mt-1 sm:text-3xl",
+          highlight ? "text-caution-ink" : "text-ink",
+        )}
+      >
         {value}
       </span>
-      <span className={cn("mt-1 text-sm", highlight ? "text-orange-900" : "text-ink-muted")}>{note}</span>
+      {/* Erklärung nur auf größeren Bildschirmen; auf dem Handy reichen Titel und Zahl */}
+      <span className={cn("mt-1 hidden text-sm sm:block", highlight ? "text-caution-ink" : "text-ink-muted")}>{note}</span>
       {highlight ? (
-        <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-orange-900 group-hover:underline">
+        <span className="mt-auto hidden items-center gap-1 pt-3 text-sm font-semibold text-caution-ink group-hover:underline sm:inline-flex">
           Jetzt antworten
           <ArrowRight className="size-3.5" aria-hidden />
         </span>
@@ -230,30 +224,31 @@ function QuickAction({ href, title, text, icon }: { href: string; title: string;
   return (
     <Link
       href={href}
-      className="group flex items-start gap-4 rounded-2xl border border-line bg-white p-5 shadow-card transition-colors hover:border-brand-300 hover:bg-brand-50/40"
+      className="group flex items-center gap-3 rounded-2xl border border-line bg-surface p-3 shadow-card transition-colors hover:border-brand-300 hover:bg-brand-50/40 sm:items-start sm:gap-4 sm:p-5"
     >
-      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800">{icon}</span>
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-800 sm:size-11">{icon}</span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5 font-bold text-ink">
+        <span className="flex items-center gap-1.5 text-sm leading-tight font-bold text-ink sm:text-base">
           {title}
-          <ArrowRight className="size-4 text-ink-muted transition-transform group-hover:translate-x-0.5" aria-hidden />
+          <ArrowRight
+            className="hidden size-4 text-ink-muted transition-transform group-hover:translate-x-0.5 sm:block"
+            aria-hidden
+          />
         </span>
-        <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{text}</span>
+        <span className="mt-1 hidden text-sm leading-relaxed text-ink-soft sm:block">{text}</span>
       </span>
     </Link>
   );
 }
 
-function AdminHint({ isRootAdmin, companyName }: { isRootAdmin: boolean; companyName: string }) {
+function AdminHint({ isRootAdmin }: { isRootAdmin: boolean }) {
   return (
-    <div className="rounded-2xl border border-dashed border-line-strong bg-white px-5 py-4 sm:px-6">
-      <p className="text-sm font-semibold text-ink">Zugänge für Ihr Team</p>
-      <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-        {isRootAdmin
-          ? "Als Hauptansprechpartner legen Sie Zugänge für Kolleginnen und Kollegen an. Für Standorte, Filialen oder Firmen, die Sie mitbetreuen, richten Sie Unterkunden ein – jede mit eigenen Benutzern und Tickets."
-          : `Als Hauptansprechpartner von ${companyName} legen Sie Zugänge für Ihre Kolleginnen und Kollegen an und sehen alle Tickets von ${companyName}.`}
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-2xl border border-dashed border-line-strong px-5 py-3.5 text-sm sm:px-6">
+      <p className="text-ink-soft">
+        <span className="font-semibold text-ink">Zugänge für Ihr Team</span>
+        {isRootAdmin ? " – Filialen und Standorte bekommen eigene Unterkunden." : " legen Sie unter „Benutzer“ an."}
       </p>
-      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold">
+      <div className="flex flex-wrap gap-x-5 gap-y-1 font-semibold">
         <Link href="/benutzer" className="text-brand-700 hover:underline">
           Benutzer verwalten
         </Link>
