@@ -230,3 +230,16 @@ describe("Stand einer Rechnung", () => {
     expect(isUnpaid({ kind: "INVOICE", status: "CANCELLED" })).toBe(false);
   });
 });
+
+describe("Vollständige Anschrift", () => {
+  it("verlangt Straße und PLZ mit Ort", async () => {
+    const { isCompleteAddress } = await import("@/lib/invoices/recipients");
+    expect(isCompleteAddress("Beispielweg 12\n12345 Musterstadt")).toBe(true);
+    expect(isCompleteAddress(["Am Markt 3", "89073 Ulm"])).toBe(true);
+    expect(isCompleteAddress("Hauptgasse 4\n1010 Wien")).toBe(true);
+    expect(isCompleteAddress("Ulm")).toBe(false);
+    expect(isCompleteAddress("89073 Ulm")).toBe(false);
+    expect(isCompleteAddress("Am Markt 3\nUlm")).toBe(false);
+    expect(isCompleteAddress("")).toBe(false);
+  });
+});

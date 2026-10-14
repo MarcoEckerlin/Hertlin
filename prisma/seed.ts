@@ -132,6 +132,8 @@ async function main() {
       name: "Bäckerei Beispiel",
       slug: "baeckerei",
       customerNumber: "K-1002",
+      street: "Marktplatz 2",
+      zip: "12345",
       city: "Musterstadt",
       email: "info@baeckerei.example",
       locationId: zentrale.id,

@@ -16,7 +16,7 @@ import {
   type PlaceholderValues,
 } from "@/lib/invoices/calc";
 import { renderInvoicePdf, type InvoicePdfData, type InvoicePdfIssuer } from "@/lib/invoices/pdf";
-import { entryReference, openEntrySelect, type BillingRecipient } from "@/lib/invoices/recipients";
+import { entryReference, isCompleteAddress, openEntrySelect, type BillingRecipient } from "@/lib/invoices/recipients";
 import { CANCELLATION_EMAIL_TEXT, isMissing, issuerVatId } from "@/lib/invoices/settings-schema";
 import { invoicePdfPath, readInvoicePdf, removeInvoicePdf, writeInvoicePdf } from "@/lib/invoices/storage";
 import { sendMailWithResult } from "@/lib/mail";
@@ -264,6 +264,14 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<ServiceR
   }
   const { billing, site } = issuer;
   const recipient = input.recipient;
+  if (!isCompleteAddress(input.recipientAddress)) {
+    return {
+      ok: false,
+      error: recipient.editHref
+        ? "Die Rechnungsanschrift ist unvollständig. Bitte beim Kunden unter „Rechnungsdaten“ Straße, PLZ und Ort eintragen."
+        : "Bitte die vollständige Anschrift angeben: Straße und Hausnummer sowie PLZ und Ort.",
+    };
+  }
   const customerNumber = recipient.customerNumber;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
