@@ -176,7 +176,7 @@ function CompanyUserCreateForm({
         </Alert>
         {state.data.inviteLink ? <InviteLinkBox link={state.data.inviteLink} name={state.data.name ?? "die Person"} /> : null}
         <div className="flex flex-wrap gap-3">
-          <ButtonLink href={`/admin/kunden/${rootId}#benutzer`}>Zum Kunden</ButtonLink>
+          <ButtonLink href={`/admin/kunden/${rootId}?tab=benutzer`}>Zum Kunden</ButtonLink>
           <button type="button" className={buttonClasses("secondary")} onClick={onAgain}>
             Weiteren Benutzer anlegen
           </button>
@@ -210,7 +210,7 @@ function CompanyUserCreateForm({
 
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <SubmitButton pendingText="Wird angelegt …">Benutzer anlegen und einladen</SubmitButton>
-        <ButtonLink href={`/admin/kunden/${rootId}#benutzer`} variant="ghost">
+        <ButtonLink href={`/admin/kunden/${rootId}?tab=benutzer`} variant="ghost">
           Abbrechen
         </ButtonLink>
       </div>
@@ -337,7 +337,7 @@ export function CompanyUserEditForm({
           <input type="hidden" name="companyId" value={defaultCompanyId} />
         )}
         <RoleChoice value={values.role ?? user.role} company={company} error={errors.role} />
-        <div className={cn("rounded-xl border p-4", active ? "border-line" : "border-amber-200 bg-amber-50/60")}>
+        <div className={cn("rounded-xl border p-4", active ? "border-line" : "border-warning-line bg-warning-soft")}>
           <Checkbox
             id="user-active"
             name="active"

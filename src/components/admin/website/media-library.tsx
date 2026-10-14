@@ -32,7 +32,7 @@ export function MediaUploadForm({ accept, hint, maxFiles }: { accept: string; hi
             multiple
             required
             aria-describedby={`${fileId}-hint`}
-            className="block w-full rounded-xl border border-dashed border-line-strong bg-mist px-3 py-3 text-sm text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink file:ring-1 file:ring-line-strong file:ring-inset hover:file:bg-brand-50"
+            className="block w-full rounded-xl border border-dashed border-line-strong bg-mist px-3 py-3 text-sm text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-surface file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink file:ring-1 file:ring-line-strong file:ring-inset hover:file:bg-brand-50"
           />
           <p id={`${fileId}-hint`} className="mt-1.5 text-sm text-ink-muted">
             {hint} Bis zu {maxFiles} Bilder auf einmal.
@@ -76,7 +76,7 @@ export function MediaAltForm({ id, alt }: { id: string; alt: string | null }) {
         </SubmitButton>
       </div>
       {state.status !== "idle" && state.message ? (
-        <p className={state.status === "error" ? "text-xs font-medium text-red-700" : "text-xs text-emerald-700"} role="status">
+        <p className={state.status === "error" ? "text-xs font-medium text-danger-ink" : "text-xs text-success-ink"} role="status">
           {state.message}
         </p>
       ) : null}
@@ -139,7 +139,7 @@ export function MediaDeleteButton({ id, fileName, usage }: { id: string; fileNam
                     <Link href={`/admin/website/seiten/${u.pageId}`} className="font-semibold underline underline-offset-2">
                       {u.title}
                     </Link>{" "}
-                    <span className="text-amber-800">
+                    <span className="text-warning-ink">
                       ({[u.live ? "auf der Website" : null, u.draft ? "im Entwurf" : null].filter(Boolean).join(" und ")})
                     </span>
                   </li>

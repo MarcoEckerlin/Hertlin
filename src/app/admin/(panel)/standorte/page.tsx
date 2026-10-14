@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Mail, MapPin, Phone, Plus } from "lucide-react";
-import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { cleanId, firstParam } from "@/components/admin/companies/list-tools";
+import { FlashToast } from "@/components/ui/toaster";
+import { aboveRowLinkClass, cleanId, firstParam, rowLinkClass } from "@/components/admin/companies/list-tools";
 import { countsOf, loadLocationCounts, loadLocations, type LocationCounts } from "@/components/admin/locations/data";
 import { LocationMoveButtons } from "@/components/admin/locations/location-move-buttons";
 import { requireAdmin } from "@/lib/auth";
@@ -19,7 +19,7 @@ function plural(n: number, one: string, many: string): string {
 }
 
 function Counts({ id, counts }: { id: string; counts: LocationCounts }) {
-  const link = "font-semibold text-brand-700 hover:underline";
+  const link = cn("font-semibold text-brand-700 hover:underline", aboveRowLinkClass);
   return (
     <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-muted">
       <li>
@@ -56,16 +56,28 @@ export default async function LocationsPage({
 
   const createdId = cleanId(sp.neu);
   const created = createdId ? locations.find((l) => l.id === createdId) : undefined;
-  const deleted = firstParam(sp.geloescht) === "1";
+  const deletedParam = firstParam(sp.geloescht) || undefined;
   const lastIndex = locations.length - 1;
   // Verschieben lohnt sich erst ab zwei Standorten neben dem Hauptsitz
   const movable = locations.filter((l) => !l.isMain).length > 1;
 
   return (
     <div>
+      <FlashToast
+        param="neu"
+        value={createdId ?? undefined}
+        messages={
+          created
+            ? {
+                [created.id]: `Standort angelegt. ${created.name} steht jetzt zur Auswahl${created.showOnWebsite ? " und erscheint auf der Website" : ""}.`,
+              }
+            : {}
+        }
+      />
+      <FlashToast param="geloescht" value={deletedParam} messages={{ "1": "Der Standort ist gelöscht." }} />
       <PageHeader
         title="Standorte"
-        description="Büros und Filialen von Hertlin. Kunden, Mitarbeiter und Tickets lassen sich einem Standort zuordnen; auf der Website erscheinen die Standorte im Modul „Standorte“ und in der Fußzeile."
+        description="Büros und Filialen von Hertlin. Kunden, Mitarbeiter und Tickets lassen sich einem Standort zuordnen."
         actions={
           locations.length > 0 ? (
             <ButtonLink href="/admin/standorte/neu">
@@ -75,17 +87,6 @@ export default async function LocationsPage({
           ) : null
         }
       />
-
-      {created ? (
-        <Alert tone="success" title="Standort angelegt" className="mb-5">
-          {created.name} steht jetzt zur Auswahl{created.showOnWebsite ? " und erscheint auf der Website" : ""}.
-        </Alert>
-      ) : null}
-      {deleted ? (
-        <Alert tone="success" className="mb-5">
-          Der Standort ist gelöscht.
-        </Alert>
-      ) : null}
 
       {locations.length === 0 ? (
         <EmptyState
@@ -111,8 +112,8 @@ export default async function LocationsPage({
                 <li
                   key={l.id}
                   className={cn(
-                    "rounded-2xl border p-4 shadow-card sm:p-5",
-                    l.active ? "border-line bg-white" : "border-dashed border-line-strong bg-mist",
+                    "relative rounded-2xl border p-4 shadow-card transition-colors hover:border-brand-300 sm:p-5",
+                    l.active ? "border-line bg-surface" : "border-dashed border-line-strong bg-mist",
                     l.id === createdId && "ring-2 ring-brand-300",
                   )}
                 >
@@ -120,7 +121,7 @@ export default async function LocationsPage({
                     <div className="min-w-0 sm:flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-base font-bold break-words text-ink sm:text-lg">
-                          <Link href={`/admin/standorte/${l.id}`} className="hover:underline">
+                          <Link href={`/admin/standorte/${l.id}`} className={cn("hover:underline", rowLinkClass)}>
                             {l.name}
                           </Link>
                         </h2>
@@ -152,7 +153,7 @@ export default async function LocationsPage({
                         ) : null}
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-1">
+                    <div className={cn("flex shrink-0 items-center gap-1", aboveRowLinkClass)}>
                       {l.isMain || !movable ? null : (
                         <LocationMoveButtons
                           id={l.id}

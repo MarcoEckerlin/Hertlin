@@ -7,6 +7,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Detail, DetailList, Missing } from "@/components/admin/companies/detail-list";
+import { DisclosureCard } from "@/components/admin/companies/disclosure";
 import { InquiryDeleteForm } from "@/components/admin/inquiries/inquiry-delete-form";
 import { InquiryUpdateForm } from "@/components/admin/inquiries/inquiry-update-form";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
@@ -191,7 +192,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
                 <Detail label="Name">{inquiry.name}</Detail>
                 {isBusiness ? <Detail label="Firma">{inquiry.companyName || <Missing>nicht angegeben</Missing>}</Detail> : null}
                 <Detail label="E-Mail">
-                  <a href={`mailto:${inquiry.email}`} className="break-all text-brand-700 hover:underline">
+                  <a href={`mailto:${inquiry.email}`} className="text-brand-700 hover:underline">
                     {inquiry.email}
                   </a>
                 </Detail>
@@ -305,17 +306,15 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
           </Card>
 
           {isAdmin ? (
-            <Card>
-              <CardHeader title="Anfrage löschen" />
-              <CardBody className="space-y-4">
+            <DisclosureCard title="Anfrage löschen" summary="Personenbezogene Daten entfernen, wenn sie nicht mehr gebraucht werden.">
+              <div className="space-y-4">
                 <p className="text-sm leading-relaxed text-ink-soft">
-                  Die Anfrage enthält personenbezogene Daten. Kommt kein Auftrag zustande, löschen Sie sie, sobald sie nicht mehr
-                  gebraucht wird. Gelöscht ist gelöscht – Name, Kontaktdaten, Nachricht und Notiz lassen sich nicht
-                  wiederherstellen.
+                  Kommt kein Auftrag zustande, löschen Sie die Anfrage, sobald sie nicht mehr gebraucht wird. Gelöscht ist gelöscht –
+                  Name, Kontaktdaten, Nachricht und Notiz lassen sich nicht wiederherstellen.
                 </p>
                 <InquiryDeleteForm id={inquiry.id} number={number} />
-              </CardBody>
-            </Card>
+              </div>
+            </DisclosureCard>
           ) : null}
         </aside>
       </div>

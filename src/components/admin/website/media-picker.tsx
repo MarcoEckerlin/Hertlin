@@ -94,7 +94,7 @@ export function MediaPicker({
               type="file"
               accept={accept}
               required
-              className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink file:ring-1 file:ring-line-strong file:ring-inset hover:file:bg-brand-50"
+              className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-full file:border-0 file:bg-surface file:px-4 file:py-2 file:text-sm file:font-semibold file:text-ink file:ring-1 file:ring-line-strong file:ring-inset hover:file:bg-brand-50"
             />
             <p className="mt-1.5 text-xs text-ink-muted">{uploadHint}</p>
           </div>
@@ -130,7 +130,7 @@ export function MediaPicker({
                   aria-pressed={selected}
                   data-autofocus={selected || (!request?.selectedId && i === 0) ? true : undefined}
                   className={cn(
-                    "group relative block w-full overflow-hidden rounded-xl border bg-white text-left transition-colors",
+                    "group relative block w-full overflow-hidden rounded-xl border bg-surface text-left transition-colors",
                     selected ? "border-brand-500 ring-2 ring-brand-300" : "border-line hover:border-brand-300",
                   )}
                 >
@@ -143,7 +143,7 @@ export function MediaPicker({
                     {item.alt ? <span className="sr-only"> – {item.alt}</span> : null}
                   </span>
                   {selected ? (
-                    <span className="absolute top-2 right-2 grid size-7 place-items-center rounded-full bg-brand-500 text-white">
+                    <span className="absolute top-2 right-2 grid size-7 place-items-center rounded-full bg-primary text-on-primary">
                       <Check className="size-4" aria-hidden />
                       <span className="sr-only">ausgewählt</span>
                     </span>

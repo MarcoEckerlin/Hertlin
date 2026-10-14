@@ -1,20 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ExternalLink, Plus } from "lucide-react";
+import { ChevronRight, ExternalLink, Plus, TriangleAlert } from "lucide-react";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/format";
 import { rootDomain } from "@/lib/hosts";
 import { getSiteSettings, unfinishedSettings } from "@/lib/settings";
 import { ensureSystemPages, listPages, type PageSummary } from "@/cms/store";
-import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { FlashToast } from "@/components/ui/toaster";
+import { aboveRowLinkClass, rowLinkClass } from "@/components/admin/companies/list-tools";
 import { settingsLabelList } from "@/components/admin/website/settings-labels";
+import { cn } from "@/lib/cn";
 
 export const metadata: Metadata = { title: "Website" };
 
@@ -24,7 +26,7 @@ const NOTICES: Record<string, string> = {
 
 function StatusBadges({ page }: { page: PageSummary }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap justify-end gap-1.5 sm:justify-start">
       {page.published ? (
         <Badge tone="green">Veröffentlicht</Badge>
       ) : page.publishedAt ? (
@@ -33,53 +35,58 @@ function StatusBadges({ page }: { page: PageSummary }) {
         <Badge tone="gray">Noch nicht veröffentlicht</Badge>
       )}
       {page.hasDraft ? <Badge tone="amber">Entwurf mit Änderungen</Badge> : null}
+      <LinkedIn page={page} />
     </div>
   );
 }
 
+/** Wo die Seite verlinkt ist; nichts, wenn nirgends */
 function LinkedIn({ page }: { page: PageSummary }) {
-  if (!page.showInNav && !page.showInFooter) return <span className="text-ink-muted">–</span>;
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <>
       {page.showInNav ? <Badge tone="blue">Hauptmenü</Badge> : null}
       {page.showInFooter ? <Badge tone="blue">Fußzeile</Badge> : null}
-    </div>
+    </>
   );
 }
 
 function PagesTable({ pages, editors, host }: { pages: PageSummary[]; editors: Map<string, string>; host: string }) {
   return (
-    <Table>
+    <Table stack>
       <THead>
         <tr>
           <TH>Seite</TH>
           <TH>Adresse</TH>
-          <TH>Status</TH>
-          <TH>Verlinkt im</TH>
+          <TH>Status und Menü</TH>
           <TH>Zuletzt geändert</TH>
-          <TH>
-            <span className="sr-only">Aktionen</span>
-          </TH>
         </tr>
       </THead>
       <tbody>
         {pages.map((page) => {
           const editor = page.updatedById ? editors.get(page.updatedById) : undefined;
           return (
-            <TR key={page.id}>
-              <TD>
-                <Link href={`/admin/website/seiten/${page.id}`} className="font-semibold text-ink hover:underline">
-                  {page.title}
-                </Link>
-                {page.usesDefaults ? <span className="block text-xs text-ink-muted">Zeigt den Standardinhalt</span> : null}
+            <TR key={page.id} className="relative">
+              <TD className="min-w-[13rem]">
+                <span className="min-w-0">
+                  <Link
+                    href={`/admin/website/seiten/${page.id}`}
+                    className={cn("font-semibold text-ink hover:underline", rowLinkClass)}
+                  >
+                    {page.title}
+                  </Link>
+                  {page.usesDefaults ? <span className="block text-xs text-ink-muted">Zeigt den Standardinhalt</span> : null}
+                </span>
               </TD>
-              <TD>
+              <TD label="Adresse">
                 {page.published ? (
                   <a
                     href={page.path}
                     target="_blank"
                     rel="noopener"
-                    className="inline-flex min-h-6 items-center gap-1 py-1 font-mono text-[0.8rem] text-brand-700 hover:underline"
+                    className={cn(
+                      "inline-flex min-h-6 items-center gap-1 py-1 font-mono text-[0.8rem] text-brand-700 hover:underline",
+                      aboveRowLinkClass,
+                    )}
                     title={`${host}${page.path} in neuem Tab öffnen`}
                   >
                     {page.path}
@@ -90,26 +97,37 @@ function PagesTable({ pages, editors, host }: { pages: PageSummary[]; editors: M
                   <span className="font-mono text-[0.8rem] text-ink-muted">{page.path}</span>
                 )}
               </TD>
-              <TD>
+              <TD label="Status">
                 <StatusBadges page={page} />
               </TD>
-              <TD>
-                <LinkedIn page={page} />
-              </TD>
-              <TD className="whitespace-nowrap">
-                {formatDateTime(page.updatedAt)}
-                {editor ? <span className="block text-xs text-ink-muted">von {editor}</span> : null}
-              </TD>
-              <TD className="text-right">
-                <ButtonLink href={`/admin/website/seiten/${page.id}`} variant="secondary" size="sm">
-                  Bearbeiten<span className="sr-only"> – {page.title}</span>
-                </ButtonLink>
+              <TD label="Geändert" className="whitespace-nowrap">
+                <span>
+                  {formatDateTime(page.updatedAt)}
+                  {editor ? <span className="block text-xs text-ink-muted">von {editor}</span> : null}
+                </span>
               </TD>
             </TR>
           );
         })}
       </tbody>
     </Table>
+  );
+}
+
+/** Kachel mit Link (ganze Fläche klickbar) */
+function LinkCard({ href, title, children }: { href: string; title: string; children: React.ReactNode }) {
+  return (
+    <Card className="relative transition-colors hover:border-brand-300">
+      <CardBody className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <Link href={href} className={cn("font-semibold text-ink hover:underline", rowLinkClass)}>
+            {title}
+          </Link>
+          <div className="mt-0.5 text-sm text-ink-soft">{children}</div>
+        </div>
+        <ChevronRight className="mt-0.5 size-5 shrink-0 text-ink-muted" aria-hidden />
+      </CardBody>
+    </Card>
   );
 }
 
@@ -127,70 +145,46 @@ export default async function WebsiteOverviewPage({ searchParams }: { searchPara
   const systemPages = pages.filter((p) => p.system);
   const customPages = pages.filter((p) => !p.system);
   const host = rootDomain();
-  const notice = typeof hinweis === "string" ? NOTICES[hinweis] : undefined;
 
   return (
     <>
+      <FlashToast param="hinweis" value={hinweis} messages={NOTICES} />
       <PageHeader
         title="Website"
-        description="Texte, Seiten und Bilder der Website pflegen. Änderungen speichern Sie zuerst als Entwurf – auf der Website erscheinen sie erst nach „Veröffentlichen“."
+        description="Texte, Seiten und Bilder der Website. Änderungen erscheinen erst nach „Veröffentlichen“."
         actions={
-          <>
-            <ButtonLink href="/admin/website/firmendaten" variant="secondary">
-              Firmendaten
-            </ButtonLink>
-            <ButtonLink href="/admin/website/medien" variant="secondary">
-              Medien
-            </ButtonLink>
-            <ButtonLink href="/admin/website/seiten/neu">
-              <Plus className="size-4" aria-hidden />
-              Neue Seite
-            </ButtonLink>
-          </>
+          <ButtonLink href="/admin/website/seiten/neu">
+            <Plus className="size-4" aria-hidden />
+            Neue Seite
+          </ButtonLink>
         }
       />
 
       <div className="space-y-8">
-        {notice ? <Alert tone="success">{notice}</Alert> : null}
-
-        {unfinished.length > 0 ? (
-          <Alert tone="warning" title="Die Firmendaten sind noch nicht vollständig">
-            <p>
-              Noch mit Platzhalter („TODO“): {settingsLabelList(unfinished)}. Diese Angaben erscheinen im Impressum, in der Fußzeile und in
-              E-Mails an Kunden.{" "}
-              <Link href="/admin/website/firmendaten" className="font-semibold underline underline-offset-2">
-                Jetzt ergänzen
-              </Link>
-            </p>
-          </Alert>
-        ) : null}
-
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardBody>
-              <Link href="/admin/website/firmendaten" className="font-semibold text-ink hover:underline">
-                Firmendaten
-              </Link>
-              <p className="mt-0.5 text-sm text-ink-soft">
-                Anschrift, Telefon, E-Mail, Öffnungszeiten und Reaktionszeiten – an einer Stelle gepflegt, überall auf der Website verwendet.
+          <LinkCard href="/admin/website/firmendaten" title="Firmendaten">
+            {unfinished.length > 0 ? (
+              <p className="flex items-start gap-1.5 font-medium text-warning-ink">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                <span>
+                  Noch mit Platzhalter: {settingsLabelList(unfinished)}. Diese Angaben stehen im Impressum, in der Fußzeile und in
+                  E-Mails.
+                </span>
               </p>
-            </CardBody>
-          </Card>
-          <Card>
-            <CardBody>
-              <Link href="/admin/website/medien" className="font-semibold text-ink hover:underline">
-                Medien
-              </Link>
-              <p className="mt-0.5 text-sm text-ink-soft">
-                {mediaCount === 0
-                  ? "Noch keine Bilder hochgeladen."
-                  : mediaCount === 1
-                    ? "1 Bild in der Mediathek."
-                    : `${mediaCount} Bilder in der Mediathek.`}{" "}
-                Bilder für Kopfbereiche und „Bild und Text“-Module.
-              </p>
-            </CardBody>
-          </Card>
+            ) : (
+              <p>Anschrift, Telefon, E-Mail und Zeiten – an einer Stelle gepflegt, überall auf der Website verwendet.</p>
+            )}
+          </LinkCard>
+          <LinkCard href="/admin/website/medien" title="Medien">
+            <p>
+              {mediaCount === 0
+                ? "Noch keine Bilder hochgeladen."
+                : mediaCount === 1
+                  ? "1 Bild in der Mediathek."
+                  : `${mediaCount} Bilder in der Mediathek.`}{" "}
+              Bilder für Kopfbereiche und „Bild und Text“-Module.
+            </p>
+          </LinkCard>
         </div>
 
         <section aria-labelledby="system-pages" className="space-y-3">
@@ -216,7 +210,7 @@ export default async function WebsiteOverviewPage({ searchParams }: { searchPara
             <EmptyState
               title="Noch keine eigenen Seiten"
               action={
-                <ButtonLink href="/admin/website/seiten/neu">
+                <ButtonLink href="/admin/website/seiten/neu" variant="secondary">
                   <Plus className="size-4" aria-hidden />
                   Neue Seite anlegen
                 </ButtonLink>

@@ -49,7 +49,7 @@ export function CallDirection({ direction, status, withLabel = false }: { direct
   const Icon = out ? PhoneOutgoing : missed ? PhoneMissed : PhoneIncoming;
   const label = out ? "Ausgehend" : "Eingehend";
   return (
-    <span className={cn("inline-flex items-center gap-1.5", missed ? "text-red-700" : "text-ink-soft")} title={label}>
+    <span className={cn("inline-flex items-center gap-1.5", missed ? "text-danger-ink" : "text-ink-soft")} title={label}>
       <Icon className="size-4 shrink-0" aria-hidden />
       {withLabel ? <span>{label}</span> : <span className="sr-only">{label}</span>}
     </span>

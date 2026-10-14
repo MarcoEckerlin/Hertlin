@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { MessageSquare } from "lucide-react";
-import { Alert } from "@/components/ui/alert";
 import { Badge, InquiryStatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Select } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination, parsePage } from "@/components/ui/pagination";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { TD, TH, THead, TR, Table } from "@/components/ui/table";
-import { FilterPill, SearchForm, firstParam } from "@/components/admin/companies/list-tools";
+import { FlashToast } from "@/components/ui/toaster";
+import { ListFilters, ListResults, ListSearchForm } from "@/components/admin/companies/list-filters";
+import { aboveRowLinkClass, firstParam, rowLinkClass } from "@/components/admin/companies/list-tools";
 import { requireStaff } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { INQUIRY_TOPIC_LABELS, labelOf, type InquiryStatus } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { formatDateTime, formatInquiryNumber, formatRelative } from "@/lib/format";
@@ -19,8 +23,10 @@ export const metadata: Metadata = { title: "Anfragen" };
 
 const PAGE_SIZE = 30;
 
+const OPEN_INQUIRY_STATUSES: InquiryStatus[] = ["NEW", "CONTACTED", "OFFER_SENT"];
+
 const STATUS_FILTERS = [
-  { key: "offen", label: "Offen", statuses: ["NEW", "CONTACTED", "OFFER_SENT"] },
+  { key: "offen", label: "Offen", statuses: OPEN_INQUIRY_STATUSES },
   { key: "neu", label: "Neu", statuses: ["NEW"] },
   { key: "gewonnen", label: "Auftrag erhalten", statuses: ["WON"] },
   { key: "verloren", label: "Kein Auftrag", statuses: ["LOST"] },
@@ -62,7 +68,7 @@ export default async function InquiriesPage({
     typ: TYPE_FILTERS.find((f) => f.key === typParam)?.key ?? "",
     q: firstParam(sp.q).slice(0, 80),
   };
-  const deleted = firstParam(sp.geloescht).match(/^A-\d{1,9}$/)?.[0] ?? null;
+  const deleted = firstParam(sp.geloescht).match(/^A-\d{1,9}$/)?.[0] ?? undefined;
   const page = parsePage(sp.seite);
 
   const statusFilter = STATUS_FILTERS.find((f) => f.key === filters.status)!;
@@ -86,7 +92,7 @@ export default async function InquiriesPage({
   }
   const where: Prisma.InquiryWhereInput = and.length ? { AND: and } : {};
 
-  const [total, inquiries, openCount, anyInquiry] = await Promise.all([
+  const [total, inquiries, openCount, newCount, anyInquiry] = await Promise.all([
     db.inquiry.count({ where }),
     db.inquiry.findMany({
       where,
@@ -113,7 +119,8 @@ export default async function InquiriesPage({
         },
       },
     }),
-    db.inquiry.count({ where: { status: { in: ["NEW", "CONTACTED", "OFFER_SENT"] } } }),
+    db.inquiry.count({ where: { status: { in: OPEN_INQUIRY_STATUSES } } }),
+    db.inquiry.count({ where: { status: "NEW" } }),
     db.inquiry.count({ take: 1 }),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -122,168 +129,178 @@ export default async function InquiriesPage({
 
   return (
     <div>
-      <PageHeader
-        title="Anfragen"
-        description="Anfragen von Interessenten über das Kontaktformular der Website. Bestandskunden melden sich über ihr Kundenportal."
+      <FlashToast
+        param="geloescht"
+        value={deleted}
+        messages={deleted ? { [deleted]: `Die Anfrage ${deleted} wurde gelöscht.` } : {}}
       />
+      <PageHeader title="Anfragen" description="Anfragen von Interessenten über das Kontaktformular der Website." />
 
-      {deleted ? (
-        <Alert tone="success" className="mb-5">
-          Die Anfrage {deleted} wurde gelöscht.
-        </Alert>
-      ) : null}
-
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <nav aria-label="Filter" className="flex flex-wrap items-center gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <FilterPill key={f.key} href={filterHref(filters, { status: f.key })} active={filters.status === f.key}>
-              {f.label}
-              {f.key === "offen" && openCount > 0 ? <span className="tabular-nums opacity-75">{openCount}</span> : null}
-            </FilterPill>
-          ))}
-          <span className="mx-1 hidden h-6 w-px bg-line sm:block" aria-hidden />
-          {TYPE_FILTERS.map((f) => (
-            <FilterPill key={f.key || "alle"} href={filterHref(filters, { typ: f.key })} active={filters.typ === f.key}>
-              {f.label}
-            </FilterPill>
-          ))}
-        </nav>
-        <SearchForm
-          action="/admin/anfragen"
-          id="anfragen-suche"
-          value={filters.q}
-          label="Anfragen durchsuchen"
-          placeholder="Name, Firma, E-Mail oder Nummer"
-          keep={{ status: filters.status !== "offen" ? filters.status : undefined, typ: filters.typ || undefined }}
-        />
-      </div>
-
-      {inquiries.length === 0 ? (
-        anyInquiry === 0 ? (
-          <EmptyState title="Noch keine Anfragen">
-            Sobald jemand das Kontaktformular auf der Website abschickt, erscheint die Anfrage hier. Zusätzlich geht eine E-Mail
-            an das Team.
-          </EmptyState>
-        ) : (
-          <EmptyState
-            title={
-              filters.status === "offen" && !filters.q && !filters.typ
-                ? "Keine offenen Anfragen"
-                : "Keine Anfragen für diese Auswahl"
-            }
-            action={
-              filtered || filters.status === "offen" ? (
-                <ButtonLink href="/admin/anfragen?status=alle" variant="secondary">
-                  Alle Anfragen anzeigen
-                </ButtonLink>
-              ) : null
-            }
-          >
-            {filters.q
-              ? `Zu „${filters.q}“ gibt es keine Anfrage. Prüfen Sie die Schreibweise oder suchen Sie unter „Alle“.`
-              : filters.status === "offen"
-                ? "Alles beantwortet. Abgeschlossene Anfragen finden Sie unter „Alle“."
-                : "Ändern Sie die Filter oben."}
-          </EmptyState>
-        )
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-ink-muted">{total === 1 ? "1 Anfrage" : `${total} Anfragen`}</p>
-          <Table>
-            <THead>
-              <tr>
-                <TH>Nummer</TH>
-                <TH>Name / Firma</TH>
-                <TH>Thema</TH>
-                <TH>Typ</TH>
-                <TH>Status</TH>
-                <TH>Chat</TH>
-                <TH className="text-right">Eingang</TH>
-              </tr>
-            </THead>
-            <tbody>
-              {inquiries.map((i) => {
-                const chatCount = i._count.messages;
-                const lastChat = i.messages[0] ?? null;
-                const awaitingReply = lastChat !== null && !lastChat.fromStaff;
-                return (
-                  <TR key={i.id}>
-                    <TD className="whitespace-nowrap">
-                      <Link href={`/admin/anfragen/${i.id}`} className="font-semibold text-brand-700 hover:underline">
-                        {formatInquiryNumber(i.id)}
-                      </Link>
-                    </TD>
-                    <TD className="min-w-[12rem]">
-                      <Link href={`/admin/anfragen/${i.id}`} className="font-semibold break-words text-ink hover:underline">
-                        {i.companyName || i.name}
-                      </Link>
-                      <p className="text-xs break-words text-ink-muted">
-                        {i.companyName ? i.name : i.email}
-                        {i.zipCity ? ` · ${i.zipCity}` : ""}
-                      </p>
-                    </TD>
-                    <TD className="min-w-[12rem]">{labelOf(INQUIRY_TOPIC_LABELS, i.topic)}</TD>
-                    <TD>
-                      <Badge tone={i.customerType === "BUSINESS" ? "blue" : "gray"}>
-                        {i.customerType === "BUSINESS" ? "Unternehmen" : "Privat"}
-                      </Badge>
-                    </TD>
-                    <TD>
-                      <InquiryStatusBadge status={i.status} />
-                      {i.company ? <p className="mt-1 text-xs text-ink-muted">Kunde: {i.company.name}</p> : null}
-                    </TD>
-                    <TD className="whitespace-nowrap">
-                      {chatCount === 0 ? (
-                        <span className="text-ink-muted" title="Noch keine Chat-Nachrichten">
-                          –
-                        </span>
-                      ) : (
-                        <Link
-                          href={`/admin/anfragen/${i.id}`}
-                          className="inline-flex items-center gap-1.5 text-ink-soft hover:text-ink"
-                          aria-label={`${chatCount === 1 ? "1 Chat-Nachricht" : `${chatCount} Chat-Nachrichten`}${
-                            awaitingReply ? ", letzte vom Interessenten – noch unbeantwortet" : ""
-                          }`}
-                        >
-                          <MessageSquare className="size-4 shrink-0" aria-hidden />
-                          <span className="font-semibold tabular-nums">{chatCount}</span>
-                        </Link>
-                      )}
-                      {awaitingReply && lastChat ? (
-                        <p className="mt-1">
-                          <Badge tone="amber">Antwort offen</Badge>
-                          <time
-                            dateTime={lastChat.createdAt.toISOString()}
-                            title={`Letzte Nachricht des Interessenten: ${formatDateTime(lastChat.createdAt)}`}
-                            className="ml-1.5 text-xs text-ink-muted"
-                          >
-                            {formatRelative(lastChat.createdAt, now)}
-                          </time>
-                        </p>
-                      ) : null}
-                    </TD>
-                    <TD className="text-right whitespace-nowrap">
-                      <time dateTime={i.createdAt.toISOString()} title={formatDateTime(i.createdAt)}>
-                        {formatRelative(i.createdAt, now)}
-                      </time>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </tbody>
-          </Table>
-          <Pagination
-            page={Math.min(page, pageCount)}
-            pageCount={pageCount}
-            basePath="/admin/anfragen"
-            baseQuery={{
-              status: filters.status !== "offen" ? filters.status : undefined,
-              typ: filters.typ || undefined,
-              q: filters.q || undefined,
-            }}
+      <ListFilters>
+        <div className="mb-5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <SegmentedTabs
+            label="Status"
+            tabs={STATUS_FILTERS.map((f) => ({
+              href: filterHref(filters, { status: f.key }),
+              label: f.label,
+              active: filters.status === f.key,
+              count: f.key === "offen" ? openCount : f.key === "neu" ? newCount : undefined,
+              highlight: f.key === "neu",
+            }))}
           />
-        </>
-      )}
+          <ListSearchForm
+            action="/admin/anfragen"
+            id="anfragen-suche"
+            value={filters.q}
+            label="Anfragen durchsuchen"
+            placeholder="Name, Firma, E-Mail oder Nummer"
+            keep={{ status: filters.status !== "offen" ? filters.status : undefined }}
+            className="xl:w-auto"
+          >
+            <div className="w-full sm:w-44">
+              <label htmlFor="anfragen-typ" className="sr-only">
+                Art des Kunden
+              </label>
+              <Select id="anfragen-typ" name="typ" defaultValue={filters.typ} className="h-9 text-sm">
+                {TYPE_FILTERS.map((f) => (
+                  <option key={f.key || "alle"} value={f.key}>
+                    {f.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          </ListSearchForm>
+        </div>
+
+        <ListResults>
+          {inquiries.length === 0 ? (
+            anyInquiry === 0 ? (
+              <EmptyState title="Noch keine Anfragen">
+                Sobald jemand das Kontaktformular auf der Website abschickt, erscheint die Anfrage hier. Zusätzlich geht eine
+                E-Mail an das Team.
+              </EmptyState>
+            ) : (
+              <EmptyState
+                title={
+                  filters.status === "offen" && !filters.q && !filters.typ
+                    ? "Keine offenen Anfragen"
+                    : "Keine Anfragen für diese Auswahl"
+                }
+                action={
+                  filtered || filters.status === "offen" ? (
+                    <ButtonLink href="/admin/anfragen?status=alle" variant="secondary">
+                      Alle Anfragen anzeigen
+                    </ButtonLink>
+                  ) : null
+                }
+              >
+                {filters.q
+                  ? `Zu „${filters.q}“ gibt es keine Anfrage. Prüfen Sie die Schreibweise oder suchen Sie unter „Alle“.`
+                  : filters.status === "offen"
+                    ? "Alles beantwortet. Abgeschlossene Anfragen finden Sie unter „Alle“."
+                    : "Ändern Sie die Filter oben."}
+              </EmptyState>
+            )
+          ) : (
+            <>
+              <Table stack>
+                <THead>
+                  <tr>
+                    <TH>Anfrage</TH>
+                    <TH>Thema</TH>
+                    <TH>Status</TH>
+                    <TH>Chat</TH>
+                    <TH className="text-right">Eingang</TH>
+                  </tr>
+                </THead>
+                <tbody>
+                  {inquiries.map((i) => {
+                    const chatCount = i._count.messages;
+                    const lastChat = i.messages[0] ?? null;
+                    const awaitingReply = lastChat !== null && !lastChat.fromStaff;
+                    const business = i.customerType === "BUSINESS";
+                    return (
+                      <TR key={i.id} className="relative">
+                        <TD className="min-w-[14rem]">
+                          <span className="min-w-0">
+                            <Link
+                              href={`/admin/anfragen/${i.id}`}
+                              className={cn("font-semibold break-words text-ink hover:underline", rowLinkClass)}
+                            >
+                              {i.companyName || i.name}
+                            </Link>
+                            <span className="block text-xs break-words text-ink-muted">
+                              {[formatInquiryNumber(i.id), i.companyName ? i.name : i.email, i.zipCity]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                          </span>
+                        </TD>
+                        <TD label="Thema" className="min-w-[11rem]">
+                          <span>
+                            {labelOf(INQUIRY_TOPIC_LABELS, i.topic)}
+                            <span className="block text-xs text-ink-muted">{business ? "Unternehmen" : "Privatkunde"}</span>
+                          </span>
+                        </TD>
+                        <TD label="Status">
+                          <span>
+                            <InquiryStatusBadge status={i.status} />
+                            {i.company ? (
+                              <span className="mt-1 block text-xs text-ink-muted">Kunde: {i.company.name}</span>
+                            ) : null}
+                          </span>
+                        </TD>
+                        <TD label="Chat" className="whitespace-nowrap">
+                          {chatCount === 0 ? (
+                            <span className="text-ink-muted" title="Noch keine Chat-Nachrichten">
+                              –
+                            </span>
+                          ) : (
+                            <span className="inline-flex flex-wrap items-center justify-end gap-x-2 gap-y-1 sm:justify-start">
+                              <span className="inline-flex items-center gap-1.5 text-ink-soft">
+                                <MessageSquare className="size-4 shrink-0" aria-hidden />
+                                <span className="font-semibold tabular-nums">{chatCount}</span>
+                                <span className="sr-only">{chatCount === 1 ? "Chat-Nachricht" : "Chat-Nachrichten"}</span>
+                              </span>
+                              {awaitingReply && lastChat ? (
+                                <Badge tone="amber">
+                                  Antwort offen
+                                  <time
+                                    dateTime={lastChat.createdAt.toISOString()}
+                                    title={`Letzte Nachricht des Interessenten: ${formatDateTime(lastChat.createdAt)}`}
+                                    className={cn("font-normal", aboveRowLinkClass)}
+                                  >
+                                    {formatRelative(lastChat.createdAt, now)}
+                                  </time>
+                                </Badge>
+                              ) : null}
+                            </span>
+                          )}
+                        </TD>
+                        <TD label="Eingang" className="text-right whitespace-nowrap">
+                          <time dateTime={i.createdAt.toISOString()} title={formatDateTime(i.createdAt)}>
+                            {formatRelative(i.createdAt, now)}
+                          </time>
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </tbody>
+              </Table>
+              <Pagination
+                page={Math.min(page, pageCount)}
+                pageCount={pageCount}
+                basePath="/admin/anfragen"
+                baseQuery={{
+                  status: filters.status !== "offen" ? filters.status : undefined,
+                  typ: filters.typ || undefined,
+                  q: filters.q || undefined,
+                }}
+              />
+            </>
+          )}
+        </ListResults>
+      </ListFilters>
     </div>
   );
 }

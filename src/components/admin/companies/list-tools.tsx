@@ -1,64 +1,16 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
-import { cn } from "@/lib/cn";
-
-/** Filter als Link-Pille (aktiv dunkel hinterlegt). */
-export function FilterPill({ href, active, children }: { href: string; active: boolean; children: ReactNode }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? "true" : undefined}
-      className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-sm font-semibold whitespace-nowrap ring-1 ring-inset",
-        active ? "bg-ink text-white ring-ink" : "bg-white text-ink-soft ring-line-strong hover:bg-brand-50 hover:text-ink",
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
+/**
+ * Kleine Helfer für die Listen der Verwaltung (Kunden, Anfragen, Anrufe, Team, Website, Standorte).
+ * Filter-Reiter: SegmentedTabs aus @/components/ui/segmented-tabs; Suche: ListSearchForm aus ./list-filters.
+ */
 
 /**
- * Suchfeld als GET-Formular; übrige Filter bleiben als versteckte Felder erhalten.
- * extra: weitere Felder im selben Formular (z. B. Auswahl des Standorts), stehen vor dem Suchfeld.
+ * Ganze Tabellenzeile klickbar („Stretched Link“): an den Haupt-Link der Zeile hängen, die Zeile bekommt `relative`.
+ * Weitere Links und Knöpfe in der Zeile brauchen `relative z-10`, damit sie darüber liegen.
  */
-export function SearchForm({
-  action,
-  id,
-  value,
-  label,
-  placeholder,
-  keep = {},
-  extra,
-}: {
-  action: string;
-  id: string;
-  value: string;
-  label: string;
-  placeholder: string;
-  keep?: Record<string, string | undefined>;
-  extra?: ReactNode;
-}) {
-  return (
-    <form action={action} method="get" role="search" className="flex w-full flex-wrap gap-2 sm:flex-nowrap lg:w-auto">
-      {Object.entries(keep).map(([name, v]) => (v ? <input key={name} type="hidden" name={name} value={v} /> : null))}
-      {extra}
-      <div className="flex min-w-0 flex-1 gap-2">
-        <label htmlFor={id} className="sr-only">
-          {label}
-        </label>
-        <Input id={id} name="q" type="search" defaultValue={value} placeholder={placeholder} className="h-9 lg:w-72" />
-        <Button type="submit" variant="secondary" size="sm" className="h-9">
-          <Search className="size-4" aria-hidden />
-          Suchen
-        </Button>
-      </div>
-    </form>
-  );
-}
+export const rowLinkClass = "after:absolute after:inset-0";
+
+/** Innere Links und Knöpfe einer klickbaren Zeile */
+export const aboveRowLinkClass = "relative z-10";
 
 export function firstParam(value: string | string[] | undefined): string {
   return ((Array.isArray(value) ? value[0] : value) ?? "").trim();

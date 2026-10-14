@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Select } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination, parsePage } from "@/components/ui/pagination";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { TD, TH, THead, TR, Table } from "@/components/ui/table";
-import { FilterPill, SearchForm, cleanId, firstParam } from "@/components/admin/companies/list-tools";
-import { CompanyActiveBadge } from "@/components/admin/companies/status-badges";
-import { AutoSubmitSelect } from "@/components/admin/locations/auto-submit-select";
+import { ListFilters, ListResults, ListSearchForm } from "@/components/admin/companies/list-filters";
+import { aboveRowLinkClass, cleanId, firstParam, rowLinkClass } from "@/components/admin/companies/list-tools";
 import { requireStaff } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { CUSTOMER_ROLES, OPEN_STATUSES } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { portalHost, portalUrl } from "@/lib/hosts";
@@ -54,14 +57,10 @@ function LocationCell({ company }: { company: { location: LocationRef; children:
     ).values(),
   ];
   return (
-    <>
-      {company.location ? (
-        <span className="text-ink">{company.location.name}</span>
-      ) : (
-        <span className="text-ink-muted">–</span>
-      )}
-      {others.length > 0 ? <p className="text-xs text-ink-muted">Unterkunden: {others.join(", ")}</p> : null}
-    </>
+    <span>
+      {company.location ? <span className="text-ink">{company.location.name}</span> : <span className="text-ink-muted">–</span>}
+      {others.length > 0 ? <span className="block text-xs text-ink-muted">Unterkunden: {others.join(", ")}</span> : null}
+    </span>
   );
 }
 
@@ -87,16 +86,15 @@ export default async function CompaniesPage({
   };
   const page = parsePage(sp.seite);
 
-  const and: Prisma.CompanyWhereInput[] = [{ parentId: null }];
-  if (filters.status === "aktiv") and.push({ active: true });
-  if (filters.status === "deaktiviert") and.push({ active: false });
+  // Alles außer dem Status – daraus zählen die Reiter
+  const base: Prisma.CompanyWhereInput[] = [{ parentId: null }];
   // Ein Firmenkunde zählt zu einem Standort, wenn er selbst oder eine seiner Unterkunden dort betreut wird
-  if (filters.standort === NO_LOCATION) and.push({ locationId: null });
+  if (filters.standort === NO_LOCATION) base.push({ locationId: null });
   else if (filters.standort) {
-    and.push({ OR: [{ locationId: filters.standort }, { children: { some: { locationId: filters.standort } } }] });
+    base.push({ OR: [{ locationId: filters.standort }, { children: { some: { locationId: filters.standort } } }] });
   }
   if (filters.q) {
-    and.push({
+    base.push({
       OR: [
         { name: { contains: filters.q } },
         { customerNumber: { contains: filters.q } },
@@ -109,9 +107,12 @@ export default async function CompaniesPage({
       ],
     });
   }
+  const and = [...base];
+  if (filters.status === "aktiv") and.push({ active: true });
+  if (filters.status === "deaktiviert") and.push({ active: false });
   const where: Prisma.CompanyWhereInput = { AND: and };
 
-  const [total, companies, anyCompany, locations] = await Promise.all([
+  const [total, companies, anyCompany, locations, statusGroups] = await Promise.all([
     db.company.count({ where }),
     db.company.findMany({
       where,
@@ -134,8 +135,16 @@ export default async function CompaniesPage({
       orderBy: [{ active: "desc" }, { isMain: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
       select: { id: true, name: true, active: true },
     }),
+    db.company.groupBy({ by: ["active"], where: { AND: base }, _count: { _all: true } }),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const activeCount = statusGroups.find((g) => g.active)?._count._all ?? 0;
+  const inactiveCount = statusGroups.find((g) => !g.active)?._count._all ?? 0;
+  const statusCounts: Record<StatusKey, number> = {
+    "": activeCount + inactiveCount,
+    aktiv: activeCount,
+    deaktiviert: inactiveCount,
+  };
 
   // Zahlen je Firmenkunde inkl. Unterkunden
   const rootOf = new Map<string, string>();
@@ -177,32 +186,35 @@ export default async function CompaniesPage({
     <div>
       <PageHeader
         title="Kunden"
-        description="Firmenkunden mit eigenem Kundenportal. Unterkunden und Benutzer finden Sie beim jeweiligen Kunden."
+        description="Firmenkunden mit eigenem Kundenportal. Unterkunden und Benutzer stehen beim jeweiligen Kunden."
         actions={isAdmin ? <ButtonLink href="/admin/kunden/neu">Firmenkunde anlegen</ButtonLink> : null}
       />
 
-      <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <nav aria-label="Filter" className="flex flex-wrap items-center gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <FilterPill key={f.key || "alle"} href={filterHref(filters, { status: f.key })} active={filters.status === f.key}>
-              {f.label}
-            </FilterPill>
-          ))}
-        </nav>
-        <SearchForm
-          action="/admin/kunden"
-          id="kunden-suche"
-          value={filters.q}
-          label="Kunden durchsuchen"
-          placeholder="Name, Kundennummer, Kürzel oder Ort"
-          keep={{ status: filters.status || undefined }}
-          extra={
-            showLocations ? (
+      <ListFilters>
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <SegmentedTabs
+            label="Status"
+            tabs={STATUS_FILTERS.map((f) => ({
+              href: filterHref(filters, { status: f.key }),
+              label: f.label,
+              active: filters.status === f.key,
+              count: statusCounts[f.key],
+            }))}
+          />
+          <ListSearchForm
+            action="/admin/kunden"
+            id="kunden-suche"
+            value={filters.q}
+            label="Kunden durchsuchen"
+            placeholder="Name, Kundennummer, Kürzel oder Ort"
+            keep={{ status: filters.status || undefined }}
+          >
+            {showLocations ? (
               <div className="w-full sm:w-52">
                 <label htmlFor="kunden-standort" className="sr-only">
                   Standort
                 </label>
-                <AutoSubmitSelect id="kunden-standort" name="standort" defaultValue={filters.standort} className="h-9 text-sm">
+                <Select id="kunden-standort" name="standort" defaultValue={filters.standort} className="h-9 text-sm">
                   <option value="">Alle Standorte</option>
                   {locations.map((l) => (
                     <option key={l.id} value={l.id}>
@@ -210,116 +222,134 @@ export default async function CompaniesPage({
                     </option>
                   ))}
                   <option value={NO_LOCATION}>Ohne Standort</option>
-                </AutoSubmitSelect>
+                </Select>
               </div>
-            ) : null
-          }
-        />
-      </div>
+            ) : null}
+          </ListSearchForm>
+        </div>
 
-      {companies.length === 0 ? (
-        anyCompany === 0 ? (
-          <EmptyState
-            title="Noch keine Firmenkunden"
-            action={isAdmin ? <ButtonLink href="/admin/kunden/neu">Ersten Firmenkunden anlegen</ButtonLink> : null}
-          >
-            {isAdmin
-              ? "Legen Sie einen Firmenkunden an. Er bekommt eine eigene Portal-Adresse, unter der sich seine Mitarbeiter anmelden."
-              : "Firmenkunden legt ein Administrator an."}
-          </EmptyState>
-        ) : (
-          <EmptyState
-            title="Keine Kunden für diese Auswahl"
-            action={
-              filtered ? (
-                <ButtonLink href="/admin/kunden" variant="secondary">
-                  Alle Kunden anzeigen
-                </ButtonLink>
-              ) : null
-            }
-          >
-            {filters.q ? `Zu „${filters.q}“ gibt es keinen Kunden. Prüfen Sie die Schreibweise.` : "Ändern Sie den Filter oben."}
-          </EmptyState>
-        )
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-ink-muted">{total === 1 ? "1 Firmenkunde" : `${total} Firmenkunden`}</p>
-          <Table>
-            <THead>
-              <tr>
-                <TH>Firmenkunde</TH>
-                <TH>Kundennr.</TH>
-                <TH>Portal-Adresse</TH>
-                {showLocations ? <TH>Standort</TH> : null}
-                <TH className="text-right">Unterkunden</TH>
-                <TH className="text-right">Aktive Benutzer</TH>
-                <TH className="text-right">Offene Tickets</TH>
-                <TH>Status</TH>
-              </tr>
-            </THead>
-            <tbody>
-              {companies.map((c) => (
-                <TR key={c.id} className={c.active ? undefined : "bg-mist/60"}>
-                  <TD className={showLocations ? "min-w-[12rem]" : "min-w-[14rem]"}>
-                    <Link href={`/admin/kunden/${c.id}`} className="font-semibold break-words text-ink hover:underline">
-                      {c.name}
-                    </Link>
-                    {c.city ? <p className="text-xs text-ink-muted">{c.city}</p> : null}
-                  </TD>
-                  <TD className="whitespace-nowrap">{c.customerNumber ?? <span className="text-ink-muted">–</span>}</TD>
-                  <TD className="whitespace-nowrap">
-                    {c.slug ? (
-                      <a
-                        href={portalUrl(c.slug, "/login")}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-brand-700 hover:underline"
-                      >
-                        {portalHost(c.slug)}
-                      </a>
-                    ) : (
-                      <span className="text-ink-muted">–</span>
-                    )}
-                  </TD>
-                  {showLocations ? (
-                    <TD className="min-w-[9rem]">
-                      <LocationCell company={c} />
-                    </TD>
-                  ) : null}
-                  <TD className="text-right tabular-nums">
-                    <Count value={c.children.length} />
-                  </TD>
-                  <TD className="text-right tabular-nums">
-                    <Count value={activeUsers.get(c.id) ?? 0} />
-                  </TD>
-                  <TD className="text-right tabular-nums">
-                    {(openTickets.get(c.id) ?? 0) > 0 ? (
-                      <Link
-                        href={`/admin/tickets?kunde=${c.id}`}
-                        className="font-semibold text-brand-700 hover:underline"
-                        aria-label={`Offene Tickets von ${c.name}`}
-                      >
-                        {openTickets.get(c.id)}
-                      </Link>
-                    ) : (
-                      <Count value={0} />
-                    )}
-                  </TD>
-                  <TD>
-                    <CompanyActiveBadge active={c.active} />
-                  </TD>
-                </TR>
-              ))}
-            </tbody>
-          </Table>
-          <Pagination
-            page={Math.min(page, pageCount)}
-            pageCount={pageCount}
-            basePath="/admin/kunden"
-            baseQuery={{ status: filters.status || undefined, standort: filters.standort || undefined, q: filters.q || undefined }}
-          />
-        </>
-      )}
+        <ListResults>
+          {companies.length === 0 ? (
+            anyCompany === 0 ? (
+              <EmptyState
+                title="Noch keine Firmenkunden"
+                action={isAdmin ? <ButtonLink href="/admin/kunden/neu">Ersten Firmenkunden anlegen</ButtonLink> : null}
+              >
+                {isAdmin
+                  ? "Legen Sie einen Firmenkunden an. Er bekommt eine eigene Portal-Adresse, unter der sich seine Mitarbeiter anmelden."
+                  : "Firmenkunden legt ein Administrator an."}
+              </EmptyState>
+            ) : (
+              <EmptyState
+                title="Keine Kunden für diese Auswahl"
+                action={
+                  filtered ? (
+                    <ButtonLink href="/admin/kunden" variant="secondary">
+                      Alle Kunden anzeigen
+                    </ButtonLink>
+                  ) : null
+                }
+              >
+                {filters.q
+                  ? `Zu „${filters.q}“ gibt es keinen Kunden. Prüfen Sie die Schreibweise.`
+                  : "Ändern Sie den Filter oben."}
+              </EmptyState>
+            )
+          ) : (
+            <>
+              <Table stack>
+                <THead>
+                  <tr>
+                    <TH>Firmenkunde</TH>
+                    <TH>Kundenportal</TH>
+                    {showLocations ? <TH>Standort</TH> : null}
+                    <TH className="text-right">Unterkunden</TH>
+                    <TH className="text-right">Aktive Benutzer</TH>
+                    <TH className="text-right">Offene Tickets</TH>
+                  </tr>
+                </THead>
+                <tbody>
+                  {companies.map((c) => {
+                    const open = openTickets.get(c.id) ?? 0;
+                    return (
+                      <TR key={c.id} className={cn("relative", !c.active && "bg-mist/60")}>
+                        <TD className="min-w-[13rem]">
+                          <span className="min-w-0">
+                            <Link
+                              href={`/admin/kunden/${c.id}`}
+                              className={cn("font-semibold break-words text-ink hover:underline", rowLinkClass)}
+                            >
+                              {c.name}
+                            </Link>
+                            {!c.active ? (
+                              <Badge tone="gray" className="ml-2 align-middle">
+                                Deaktiviert
+                              </Badge>
+                            ) : null}
+                            {c.customerNumber || c.city ? (
+                              <span className="block text-xs text-ink-muted">
+                                {[c.customerNumber, c.city].filter(Boolean).join(" · ")}
+                              </span>
+                            ) : null}
+                          </span>
+                        </TD>
+                        <TD label="Kundenportal" className="whitespace-nowrap">
+                          {c.slug ? (
+                            <a
+                              href={portalUrl(c.slug, "/login")}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={cn("text-brand-700 hover:underline", aboveRowLinkClass)}
+                            >
+                              {portalHost(c.slug)}
+                            </a>
+                          ) : (
+                            <span className="text-ink-muted">–</span>
+                          )}
+                        </TD>
+                        {showLocations ? (
+                          <TD label="Standort" className="min-w-[9rem]">
+                            <LocationCell company={c} />
+                          </TD>
+                        ) : null}
+                        <TD label="Unterkunden" className="text-right tabular-nums">
+                          <Count value={c.children.length} />
+                        </TD>
+                        <TD label="Aktive Benutzer" className="text-right tabular-nums">
+                          <Count value={activeUsers.get(c.id) ?? 0} />
+                        </TD>
+                        <TD label="Offene Tickets" className="text-right tabular-nums">
+                          {open > 0 ? (
+                            <Link
+                              href={`/admin/tickets?kunde=${c.id}`}
+                              className={cn("font-semibold text-brand-700 hover:underline", aboveRowLinkClass)}
+                              aria-label={`Offene Tickets von ${c.name}: ${open}`}
+                            >
+                              {open}
+                            </Link>
+                          ) : (
+                            <Count value={0} />
+                          )}
+                        </TD>
+                      </TR>
+                    );
+                  })}
+                </tbody>
+              </Table>
+              <Pagination
+                page={Math.min(page, pageCount)}
+                pageCount={pageCount}
+                basePath="/admin/kunden"
+                baseQuery={{
+                  status: filters.status || undefined,
+                  standort: filters.standort || undefined,
+                  q: filters.q || undefined,
+                }}
+              />
+            </>
+          )}
+        </ListResults>
+      </ListFilters>
     </div>
   );
 }
