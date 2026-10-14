@@ -25,12 +25,15 @@ export function LiveConversation({
   spec,
   audience,
   selfName,
+  companyName,
   className,
 }: {
   spec: Spec;
   audience: "customer" | "staff";
   /** eigener Name, wird aus Anwesenheit/Tippen herausgefiltert */
   selfName?: string;
+  /** Firmenname aus den Firmendaten, steht beim Kunden hinter den Namen unserer Mitarbeiter */
+  companyName?: string;
   className?: string;
 }) {
   const router = useRouter();
@@ -55,9 +58,10 @@ export function LiveConversation({
   const customersHere = others(presence.customers);
   const typingNames = typing.filter((t) => t.name !== selfName);
 
+  const company = companyName ? ` (${companyName})` : "";
   let presenceText: string | null = null;
   if (audience === "customer") {
-    if (staffHere.length > 0) presenceText = `${joinNames(staffHere)} von Hertlin ${staffHere.length > 1 ? "sind" : "ist"} gerade im Gespräch.`;
+    if (staffHere.length > 0) presenceText = `${joinNames(staffHere)}${company} ${staffHere.length > 1 ? "lesen" : "liest"} gerade mit.`;
   } else {
     const parts: string[] = [];
     if (customersHere.length > 0) parts.push(`${joinNames(customersHere)} ${customersHere.length > 1 ? "sind" : "ist"} gerade online`);
@@ -67,7 +71,7 @@ export function LiveConversation({
 
   const typingText =
     typingNames.length > 0
-      ? `${joinNames(typingNames.map((t) => (audience === "customer" && t.staff ? `${t.name} (Hertlin)` : t.name)))} ${
+      ? `${joinNames(typingNames.map((t) => (audience === "customer" && t.staff ? `${t.name}${company}` : t.name)))} ${
           typingNames.length > 1 ? "schreiben" : "schreibt"
         } gerade …`
       : null;

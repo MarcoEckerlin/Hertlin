@@ -5,7 +5,7 @@ import { z } from "zod";
 export const trimmed = (max = 200) => z.string().trim().max(max, `Höchstens ${max} Zeichen.`);
 
 export const requiredText = (label: string, max = 200) =>
-  z.string({ error: `${label} fehlt.` }).trim().min(1, `Bitte ${label} angeben.`).max(max, `Höchstens ${max} Zeichen.`);
+  z.string({ error: `Bitte ${label} angeben.` }).trim().min(1, `Bitte ${label} angeben.`).max(max, `Höchstens ${max} Zeichen.`);
 
 export const optionalText = (max = 200) =>
   z

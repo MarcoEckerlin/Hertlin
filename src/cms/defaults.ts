@@ -145,7 +145,7 @@ const SERVICES: Service[] = [
     short: "Virenschutz, Firewall, Updates und klare Regeln, wer worauf zugreifen darf.",
     text: [
       "Sicherheit besteht aus vielen kleinen Dingen, die zuverlässig erledigt werden müssen: Updates, ein zentral überwachter Virenschutz, eine sauber eingestellte Firewall und Benutzerkonten ohne unnötige Administratorrechte.",
-      "Wenn trotzdem etwas passiert ist – eine verdächtige Rechnung wurde geöffnet, ein Passwort ist in falsche Hände geraten –, helfen wir sofort, trennen betroffene Geräte vom Netz und sagen Ihnen, was als Nächstes zu tun ist.",
+      "Wenn trotzdem etwas passiert ist – eine verdächtige Rechnung wurde geöffnet, ein Passwort ist in falsche Hände geraten –, rufen Sie bitte gleich an. Wir trennen betroffene Geräte vom Netz und sagen Ihnen, was als Nächstes zu tun ist.",
     ],
     tasks: [
       "Virenschutz mit zentraler Übersicht",
@@ -182,7 +182,7 @@ const SERVICES: Service[] = [
 const HOME: DefaultPageSource = {
   title: "Startseite",
   description:
-    "{firma} betreut die IT kleiner und mittlerer Unternehmen und hilft Privatkunden bei Problemen mit PC, WLAN und Drucker. Störungen melden Firmenkunden im eigenen Kundenportal.",
+    "{firma} betreut die IT kleiner Firmen und hilft Privatkunden bei PC, WLAN und Drucker. Störungen melden Firmenkunden im eigenen Kundenportal.",
   showInNav: false,
   showInFooter: false,
   navOrder: 0,
@@ -193,11 +193,11 @@ const HOME: DefaultPageSource = {
       visual: "portal",
       tone: "blue",
       eyebrow: "Für Firmen und Privatkunden",
-      title: "IT-Service, bei dem Sie wissen, woran Sie sind.",
+      title: "IT-Service, bei dem Sie wissen, woran Sie sind",
       text: md(
         "Wir betreuen die IT kleiner und mittlerer Unternehmen – vom Arbeitsplatz über das Netzwerk bis zu Microsoft 365. Privatkunden helfen wir, wenn zu Hause der Laptop, das WLAN oder der Drucker nicht mitspielt.",
         "Jede Störung bekommt ein Ticket. Darin sehen Sie, wer sich darum kümmert und was gemacht wurde.",
-        "**Bestandskunde mit Störung?** Rufen Sie an: {telefon}",
+        "**Steht bei Ihnen der Betrieb still?** Rufen Sie an: {telefon}. Andere Störungen melden Firmenkunden im Kundenportal.",
       ),
       primary: { label: "Anfrage stellen", href: "/kontakt" },
       secondary: { label: "Zum Kundenportal", href: "/login" },
@@ -207,7 +207,7 @@ const HOME: DefaultPageSource = {
       type: "split",
       tone: "white",
       eyebrow: "Für wen wir arbeiten",
-      title: "Zwei Arten von Kunden, zwei passende Wege.",
+      title: "Für Firmen und für Privatleute",
       intro:
         "Firmen brauchen jemanden, der ihre IT kennt und dauerhaft im Blick behält. Privatleute brauchen meistens schnelle Hilfe bei einem konkreten Problem. Beides machen wir – aber nicht auf dieselbe Art.",
       panels: [
@@ -260,7 +260,7 @@ const HOME: DefaultPageSource = {
       eyebrow: "Ablauf",
       title: "So läuft eine Störungsmeldung ab",
       intro:
-        "Ob der Drucker streikt oder der Server nicht mehr erreichbar ist: Der Ablauf ist immer derselbe. So weiß jeder, was als Nächstes passiert.",
+        "Vom Drucker, der nicht mehr druckt, bis zum ausgefallenen Server: Jede Störung läuft bei uns gleich ab. So weiß jeder, was als Nächstes passiert.",
       items: [
         {
           title: "Sie melden die Störung",
@@ -323,8 +323,8 @@ const HOME: DefaultPageSource = {
       id: "abschluss",
       type: "cta",
       tone: "blue",
-      title: "Erzählen Sie uns, worum es geht.",
-      text: "Ob eine Firma mit zwanzig Arbeitsplätzen einen neuen IT-Dienstleister sucht oder zu Hause der Drucker streikt: Schreiben Sie uns kurz, was los ist, oder rufen Sie während der Servicezeiten an. Sie sprechen dann direkt mit jemandem, der sich auskennt.",
+      title: "Erzählen Sie uns, worum es geht",
+      text: "Schreiben Sie uns kurz, was los ist, oder rufen Sie während der Servicezeiten an. Sie sprechen dann direkt mit jemandem, der sich auskennt.",
       primary: CTA_DEFAULT_PRIMARY,
       secondary: CTA_DEFAULT_SECONDARY,
       showPhone: true,
@@ -339,7 +339,7 @@ const HOME: DefaultPageSource = {
 const LEISTUNGEN: DefaultPageSource = {
   title: "Leistungen",
   description:
-    "Arbeitsplätze, Netzwerk und WLAN, Microsoft 365, Server und Datensicherung, IT-Sicherheit und Telefonie: was {firma} für Firmen und Privatkunden übernimmt und wie abgerechnet wird.",
+    "Arbeitsplätze, Netzwerk, Microsoft 365, Server, Datensicherung, IT-Sicherheit und Telefonie: was {firma} übernimmt und wie wir abrechnen.",
   navLabel: "Leistungen",
   showInNav: true,
   showInFooter: false,
@@ -422,7 +422,7 @@ const LEISTUNGEN: DefaultPageSource = {
 const UNTERNEHMEN: DefaultPageSource = {
   title: "IT-Betreuung für Unternehmen",
   description:
-    "Laufende IT-Betreuung für kleine und mittlere Unternehmen: feste Ansprechpartner, Kundenportal mit eigener Subdomain, Unterkunden für Filialen und Standorte, verbindliche Reaktionszeiten.",
+    "IT-Betreuung für kleine und mittlere Unternehmen: feste Ansprechpartner, eigenes Kundenportal, Unterkunden für Standorte, verbindliche Reaktionszeiten.",
   navLabel: "Für Unternehmen",
   showInNav: true,
   showInFooter: false,
@@ -435,7 +435,7 @@ const UNTERNEHMEN: DefaultPageSource = {
       tone: "blue",
       eyebrow: "Für Unternehmen",
       title: "IT-Betreuung für Firmen ohne eigene IT-Abteilung",
-      text: "Ob fünf Arbeitsplätze oder fünfzig, ein Standort oder mehrere: Wir kümmern uns laufend um Ihre IT, kennen Ihre Umgebung und sind erreichbar, wenn etwas nicht funktioniert.",
+      text: "Wir betreuen Firmen mit fünf bis fünfzig Arbeitsplätzen, gern auch mit mehreren Standorten. Wir kümmern uns laufend um Ihre IT, kennen Ihre Umgebung und sind erreichbar, wenn etwas nicht funktioniert.",
       primary: { label: "Erstgespräch anfragen", href: "/kontakt" },
       secondary: { label: "Zum Kundenportal", href: "/login" },
     },
@@ -460,7 +460,7 @@ const UNTERNEHMEN: DefaultPageSource = {
       eyebrow: "Laufende Betreuung",
       title: "Was Betreuung bei uns bedeutet",
       intro:
-        "Betreuung heißt nicht nur, dass wir kommen, wenn etwas kaputt ist. Ein großer Teil der Arbeit passiert vorher, damit es gar nicht erst so weit kommt.",
+        "Ein großer Teil der Betreuung passiert, bevor etwas kaputtgeht. Darum kümmern wir uns laufend:",
       items: [
         {
           title: "Überwachung",
@@ -484,7 +484,7 @@ const UNTERNEHMEN: DefaultPageSource = {
         },
         {
           title: "Dokumentation",
-          text: "Geräte, Netzwerk, Zugänge und Sicherungen sind dokumentiert. Die Dokumentation gehört Ihnen.",
+          text: "Geräte, Netzwerk, Zugänge und Sicherungen sind dokumentiert – verständlich auch für jemanden, der Ihre IT nicht kennt.",
         },
       ],
     },
@@ -632,7 +632,7 @@ const UNTERNEHMEN: DefaultPageSource = {
       id: "abschluss",
       type: "cta",
       tone: "blue",
-      title: "Erzählen Sie uns von Ihrer Firma.",
+      title: "Erzählen Sie uns von Ihrer Firma",
       text: "Schreiben Sie uns kurz, wie viele Arbeitsplätze Sie haben und was Sie gerade beschäftigt. Wir melden uns und vereinbaren ein erstes Gespräch – am Telefon oder bei Ihnen vor Ort.",
       primary: CTA_DEFAULT_PRIMARY,
       secondary: CTA_DEFAULT_SECONDARY,
@@ -648,7 +648,7 @@ const UNTERNEHMEN: DefaultPageSource = {
 const PRIVATKUNDEN: DefaultPageSource = {
   title: "Computerhilfe für Privatkunden",
   description:
-    "Hilfe zu Hause bei PC, Laptop, WLAN, Drucker und verdächtigen E-Mails – per Fernwartung oder vor Ort. Problem im Formular schildern, ohne Konto, mit persönlichem Status-Link.",
+    "Hilfe zu Hause bei PC, Laptop, WLAN, Drucker und verdächtigen E-Mails – per Fernwartung oder vor Ort. Formular ohne Konto, mit persönlichem Status-Link.",
   navLabel: "Für Privatkunden",
   showInNav: true,
   showInFooter: false,
@@ -674,7 +674,7 @@ const PRIVATKUNDEN: DefaultPageSource = {
       eyebrow: "Gut zu wissen",
       items: [
         "Sie brauchen kein Kundenkonto und kein Passwort.",
-        "Den Stand Ihrer Anfrage sehen Sie über einen persönlichen Link, den wir Ihnen per E-Mail schicken.",
+        "Den Stand Ihres Tickets sehen Sie über einen persönlichen Link, den wir Ihnen per E-Mail schicken.",
         "Abgerechnet wird nach Aufwand im 15-Minuten-Takt. Vor-Ort-Termine kosten zusätzlich eine Anfahrtspauschale.",
       ],
     },
@@ -750,7 +750,7 @@ const PRIVATKUNDEN: DefaultPageSource = {
       items: [
         {
           title: "Was der Status-Link kann",
-          text: "Über den Link aus unserer E-Mail sehen Sie jederzeit, wie weit wir sind, lesen unsere Antworten und können selbst antworten. Geben Sie den Link bitte nicht weiter – wer ihn kennt, kann Ihre Anfrage lesen.",
+          text: "Über den Link aus unserer E-Mail sehen Sie jederzeit, wie weit wir sind, lesen unsere Antworten und können selbst antworten. Geben Sie den Link bitte nicht weiter – wer ihn kennt, kann Ihr Ticket lesen.",
         },
       ],
     },
@@ -808,28 +808,28 @@ const UEBER_UNS: DefaultPageSource = {
       eyebrow: "Arbeitsweise",
       title: "Wie wir arbeiten",
       intro:
-        "Gute IT-Betreuung fällt vor allem dann auf, wenn sie fehlt. Diese vier Grundsätze bestimmen, wie wir mit Ihrer IT und mit Ihnen umgehen.",
+        "Diese vier Grundsätze gelten bei uns für jeden Auftrag, vom einzelnen Notebook bis zum Server.",
       items: [
         {
-          title: "Wir erklären, was wir tun.",
+          title: "Wir erklären, was wir tun",
           text: md(
             "Sie müssen kein Technikexperte werden. Aber Sie sollen verstehen, warum ein Gerät ersetzt werden muss oder was eine Änderung bringt, bevor wir loslegen.",
             "Im Ticket steht hinterher in normalen Worten, was die Ursache war und was wir geändert haben.",
           ),
         },
         {
-          title: "Wir dokumentieren Ihre IT so, dass auch ein anderer Dienstleister damit arbeiten könnte.",
+          title: "Wir dokumentieren Ihre IT so, dass auch ein anderer Dienstleister damit arbeiten könnte",
           text: md(
             "Geräteliste, Netzwerkplan, Zugänge und Sicherungskonzept liegen geordnet vor und gehören Ihnen.",
             "Das macht Sie unabhängig von uns. Wir finden: Kunden sollen bleiben, weil sie zufrieden sind, nicht weil nur wir wissen, wie alles zusammenhängt.",
           ),
         },
         {
-          title: "Sie haben feste Ansprechpartner.",
+          title: "Sie haben feste Ansprechpartner",
           text: "Jeder Firmenkunde hat bei uns feste Techniker, die seine Umgebung und seine Mitarbeiter kennen. Sie müssen nicht bei jedem Anruf neu erklären, wie Ihr Netzwerk aufgebaut ist oder welches Programm in der Buchhaltung läuft.",
         },
         {
-          title: "Wir sagen auch, wenn sich etwas nicht lohnt.",
+          title: "Wir sagen auch, wenn sich etwas nicht lohnt",
           text: md(
             "Manchmal ist ein neues Gerät günstiger als die Reparatur. Manchmal ist es umgekehrt, und das fünf Jahre alte Notebook läuft mit einer neuen SSD noch ein paar Jahre gut.",
             "Wir empfehlen, was für Sie sinnvoll ist – auch wenn es der kleinere Auftrag ist.",
@@ -896,7 +896,7 @@ const SUPPORT: DefaultPageSource = {
           title: "Privatkunden",
           text: md(
             "Neues Problem? Schildern Sie es im Formular für Privatkunden, ein Konto brauchen Sie dafür nicht.",
-            "Sie haben schon eine Anfrage gestellt? Den Stand sehen Sie über den persönlichen Link aus unserer Bestätigungs-E-Mail. Wenn Sie die E-Mail nicht mehr finden, schicken wir Ihnen den Link erneut zu: [Status-Link anfordern](/status)",
+            "Sie haben schon ein Ticket? Den Stand sehen Sie über den persönlichen Link aus unserer Bestätigungs-E-Mail. Wenn Sie die E-Mail nicht mehr finden, schicken wir Ihnen den Link erneut zu: [Status-Link anfordern](/status)",
           ),
           points: [],
           link: { label: "Problem schildern", href: "/privatkunden#hilfe-anfordern" },
@@ -916,7 +916,7 @@ const SUPPORT: DefaultPageSource = {
         { title: "Anrufen", text: "Rufen Sie uns an, oder wir rufen Sie zum vereinbarten Termin an." },
         {
           title: "Programm starten",
-          text: "Laden Sie über den Button unten das Fernwartungsprogramm herunter und öffnen Sie es. Installieren müssen Sie in der Regel nichts.",
+          text: "Klicken Sie unten auf „Fernwartung herunterladen“ und öffnen Sie die Datei. Installieren müssen Sie in der Regel nichts.",
         },
         { title: "ID durchgeben", text: "Das Programm zeigt eine ID und ein Kennwort. Lesen Sie uns beides am Telefon vor." },
         {
@@ -959,7 +959,7 @@ const SUPPORT: DefaultPageSource = {
 const KONTAKT: DefaultPageSource = {
   title: "Kontakt und Anfrage",
   description:
-    "Schreiben Sie uns, was ansteht – IT-Betreuung für Ihre Firma oder Hilfe für zu Hause. Wir melden uns innerhalb eines Werktags.",
+    "Schreiben Sie uns, was ansteht – IT-Betreuung für Ihre Firma oder Hilfe für zu Hause. Wir melden uns in der Regel innerhalb eines Werktags.",
   navLabel: "Kontakt",
   showInNav: true,
   showInFooter: false,
@@ -971,10 +971,10 @@ const KONTAKT: DefaultPageSource = {
       visual: "none",
       tone: "blue",
       eyebrow: "Kontakt",
-      title: "Schreiben Sie uns, was ansteht.",
+      title: "Schreiben Sie uns, was ansteht",
       text: md(
-        "Ob Sie für Ihre Firma jemanden suchen, der sich dauerhaft um die IT kümmert, oder zu Hause ein neues Notebook eingerichtet haben möchten: Schildern Sie kurz Ihr Anliegen.",
-        "Wir melden uns innerhalb eines Werktags – bei Firmen meist mit einem Terminvorschlag für ein erstes Kennenlernen.",
+        "Sie suchen jemanden, der sich dauerhaft um die IT Ihrer Firma kümmert? Oder Sie brauchen Hilfe mit einem neuen Notebook? Schildern Sie kurz Ihr Anliegen.",
+        "Wir melden uns in der Regel innerhalb eines Werktags – bei Firmen meist mit einem Terminvorschlag für ein erstes Kennenlernen.",
       ),
     },
     {
@@ -986,7 +986,7 @@ const KONTAKT: DefaultPageSource = {
         {
           icon: "building",
           title: "Schon Firmenkunde bei uns?",
-          text: "Störungen und Aufträge melden Sie am schnellsten im Kundenportal Ihrer Firma. Dort sehen Sie auch den Stand aller Tickets.",
+          text: "Störungen und Anfragen melden Sie im Kundenportal Ihrer Firma. Dort sehen Sie auch den Stand aller Tickets. Steht der Betrieb still, rufen Sie bitte an.",
           link: { label: "Zum Kundenportal", href: "/login" },
         },
         {
@@ -1008,11 +1008,11 @@ const KONTAKT: DefaultPageSource = {
         "Felder ohne den Zusatz „optional“ brauchen wir, um Ihnen antworten zu können.",
         "## So geht es weiter",
         numbered(
-          "Sie bekommen direkt eine Bestätigung per E-Mail mit Ihrer Anfragenummer.",
-          "Innerhalb eines Werktags melden wir uns – so, wie Sie es im Formular wählen.",
+          "Sie bekommen direkt eine Bestätigung per E-Mail mit Ihrer Anfragenummer und einem persönlichen Link, über den Sie uns schreiben können.",
+          "Wir melden uns in der Regel innerhalb eines Werktags – so, wie Sie es im Formular wählen.",
           "Firmen bekommen meist einen Terminvorschlag für ein erstes Gespräch. Bei Privatkunden klären wir, ob wir per Fernwartung helfen können oder vorbeikommen.",
         ),
-        "Link zu Ihrer Privatkunden-Anfrage verloren? [Status-Link erneut anfordern](/status)",
+        "Link zu Ihrer Anfrage verloren? Rufen Sie uns kurz an unter {telefon}, dann schicken wir ihn noch einmal. Den Status-Link zu einem Ticket aus dem Hilfe-Formular für Privatkunden können Sie [selbst neu anfordern](/status).",
       ),
     },
     {
@@ -1222,7 +1222,7 @@ const AGB_TEIL_1 = md(
 
   "## § 2 Vertragsschluss",
   "(1) Angaben auf unserer Website sind kein verbindliches Angebot, sondern eine Einladung, bei uns anzufragen. Unsere Angebote sind freibleibend, sofern sie nicht ausdrücklich als verbindlich bezeichnet sind.",
-  "(2) Ein Vertrag kommt zustande, wenn wir einen Auftrag in Textform bestätigen (z. B. per E-Mail oder im Ticket) oder mit der Arbeit beginnen. Meldet ein Kunde eine Störung über das Kundenportal, das Hilfe-Formular oder per Telefon, beauftragt er uns damit, die Störung nach Aufwand zu bearbeiten, soweit nichts anderes vereinbart ist.",
+  "(2) Ein Vertrag kommt zustande, wenn wir einen Auftrag in Textform bestätigen (z. B. per E-Mail oder im Ticket) oder mit der Arbeit beginnen. Meldet ein Unternehmer eine Störung über das Kundenportal oder per Telefon, beauftragt er uns damit, die Störung nach Aufwand zu bearbeiten, soweit nichts anderes vereinbart ist. Bei Verbrauchern kommt ein Auftrag erst zustande, wenn wir ihn nach Rücksprache in Textform bestätigen.",
   "(3) Kostenvoranschläge sind unverbindlich, sofern nicht ausdrücklich ein Festpreis vereinbart ist. Zeichnet sich ab, dass der Aufwand einen Kostenvoranschlag um mehr als 20 Prozent übersteigt, informieren wir den Kunden, bevor wir weiterarbeiten.",
 
   "## § 3 Leistungsumfang",

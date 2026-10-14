@@ -100,14 +100,20 @@ export default async function PortalDashboardPage({
         />
         <StatCard
           href="/tickets?status=wartet"
-          label="Rückfrage an Sie"
+          label={ctx.isAdmin ? "Rückfrage offen" : "Rückfrage an Sie"}
           value={waitingCount}
           note={
-            waitingCount === 0
-              ? "Gerade wartet keine Frage auf Sie."
-              : waitingCount === 1
-                ? "Wir brauchen Ihre Antwort, um weiterzumachen."
-                : "Wir brauchen Ihre Antworten, um weiterzumachen."
+            ctx.isAdmin
+              ? waitingCount === 0
+                ? "Gerade wartet keine Rückfrage auf Antwort."
+                : waitingCount === 1
+                  ? "Wir warten auf eine Antwort – von Ihnen oder von der Person, die das Ticket gemeldet hat."
+                  : "Wir warten auf Antworten – von Ihnen oder von den Personen, die die Tickets gemeldet haben."
+              : waitingCount === 0
+                ? "Gerade wartet keine Frage auf Sie."
+                : waitingCount === 1
+                  ? "Wir brauchen Ihre Antwort, um weiterzumachen."
+                  : "Wir brauchen Ihre Antworten, um weiterzumachen."
           }
           highlight={waitingCount > 0}
         />
@@ -245,7 +251,7 @@ function AdminHint({ isRootAdmin, companyName }: { isRootAdmin: boolean; company
       <p className="mt-1 text-sm leading-relaxed text-ink-soft">
         {isRootAdmin
           ? "Als Hauptansprechpartner legen Sie Zugänge für Kolleginnen und Kollegen an. Für Standorte, Filialen oder Firmen, die Sie mitbetreuen, richten Sie Unterkunden ein – jede mit eigenen Benutzern und Tickets."
-          : `Als Hauptansprechpartner legen Sie Zugänge für Kolleginnen und Kollegen von ${companyName} an und sehen alle Tickets der Firma.`}
+          : `Als Hauptansprechpartner von ${companyName} legen Sie Zugänge für Ihre Kolleginnen und Kollegen an und sehen alle Tickets von ${companyName}.`}
       </p>
       <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold">
         <Link href="/benutzer" className="text-brand-700 hover:underline">

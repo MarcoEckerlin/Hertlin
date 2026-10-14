@@ -43,7 +43,7 @@ export default async function StaffProfilePage() {
         description="Ihre Kontaktdaten, Einstellungen und Ihr Passwort für die Verwaltung."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader title="Angaben" />

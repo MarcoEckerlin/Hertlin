@@ -32,7 +32,7 @@ import {
 } from "./guest-ticket";
 
 export const metadata: Metadata = {
-  title: "Status Ihrer Anfrage",
+  title: "Status Ihres Tickets",
   robots: { index: false, follow: false, nocache: true },
   referrer: "no-referrer",
 };
@@ -59,7 +59,7 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
       <section className="border-b border-line bg-brand-50">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
           <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">
-            Ihre Anfrage {formatTicketNumber(ticket.id)}
+            Ihr Ticket {formatTicketNumber(ticket.id)}
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight break-words text-ink sm:text-4xl">{ticket.subject}</h1>
           <p className="mt-2 text-ink-soft">{categoryLabel}</p>
@@ -129,7 +129,7 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
             >
               {ticket.messages.length === 0 ? (
                 <EmptyState title="Noch keine Nachrichten">
-                  Sobald wir uns Ihre Anfrage angesehen haben, steht unsere Antwort hier.
+                  Sobald wir uns Ihre Meldung angesehen haben, steht unsere Antwort hier.
                 </EmptyState>
               ) : (
                 <ol className="space-y-4">
@@ -152,6 +152,7 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
             spec={{ t: "sub", ch: "ticket", id: ticket.id, token }}
             audience="customer"
             selfName={ticket.contactName ?? undefined}
+            companyName={site.name}
             className="mt-4 min-h-5 px-1"
           />
         </section>
@@ -183,12 +184,12 @@ export default async function GuestStatusPage({ params }: { params: Promise<{ to
                 Antworten nicht mehr möglich
               </h2>
               <p className="mt-1.5 text-[0.9375rem] leading-relaxed text-ink-soft">
-                Diese Anfrage ist geschlossen. Wenn ein neues Problem auftaucht, schreiben Sie uns bitte über das Formular –
+                Dieses Ticket ist geschlossen. Wenn ein neues Problem auftaucht, schreiben Sie uns bitte über das Formular –
                 Sie bekommen dann eine neue Ticketnummer.
               </p>
               <div className="mt-4">
                 <ButtonLink href="/privatkunden#hilfe-anfordern" variant="secondary" size="sm">
-                  Neue Anfrage stellen
+                  Neues Problem schildern
                 </ButtonLink>
               </div>
             </div>
@@ -213,7 +214,7 @@ function StatusNotice({ ticket }: { ticket: GuestTicket }) {
   switch (ticket.status) {
     case "NEW":
       return (
-        <Alert tone="info" title="Ihre Anfrage ist bei uns eingegangen">
+        <Alert tone="info" title="Ihr Ticket ist bei uns eingegangen">
           Wir sehen sie uns an und melden uns in der Regel innerhalb eines Werktags, meistens mit einem kurzen Anruf.
         </Alert>
       );
@@ -236,12 +237,12 @@ function StatusNotice({ ticket }: { ticket: GuestTicket }) {
       return (
         <Alert tone="success" title="Gelöst">
           Aus unserer Sicht ist das Problem behoben{ticket.resolvedAt ? ` (seit ${formatDateTime(ticket.resolvedAt)})` : ""}.
-          Falls nicht, antworten Sie einfach unten – dann öffnen wir die Anfrage wieder.
+          Falls nicht, antworten Sie einfach unten – dann öffnen wir das Ticket wieder.
         </Alert>
       );
     case "CLOSED":
       return (
-        <Alert tone="info" title="Diese Anfrage ist abgeschlossen">
+        <Alert tone="info" title="Dieses Ticket ist abgeschlossen">
           {ticket.closedAt ? `Geschlossen am ${formatDateTime(ticket.closedAt)}. ` : null}
           Den Verlauf können Sie hier weiterhin nachlesen.
         </Alert>
@@ -365,7 +366,7 @@ function InvalidLink({ site }: { site: SiteSettings }) {
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
           <ButtonLink href="/status">Link erneut anfordern</ButtonLink>
           <ButtonLink href="/privatkunden#hilfe-anfordern" variant="secondary">
-            Neue Anfrage stellen
+            Neues Problem schildern
           </ButtonLink>
         </div>
         <p className="mt-8 text-sm text-ink-muted">

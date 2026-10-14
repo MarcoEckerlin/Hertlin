@@ -86,7 +86,11 @@ function originAllowed(req: IncomingMessage, host: string): boolean {
 async function identify(req: IncomingMessage, host: string): Promise<Identity> {
   const token = readCookie(req, SESSION_COOKIE);
   if (!token) return { kind: "anonymous" };
-  const sessionHash = sha256(token);
+  return loadIdentity(sha256(token), host);
+}
+
+/** Identität zu einer Sitzung, jeweils frisch aus der Datenbank (Rolle, Firma, Sperren). */
+async function loadIdentity(sessionHash: string, host: string): Promise<Identity> {
   const session = await prisma.session.findUnique({
     where: { tokenHash: sessionHash },
     select: {
@@ -132,18 +136,54 @@ async function identify(req: IncomingMessage, host: string): Promise<Identity> {
   return { kind: "anonymous" };
 }
 
-/** Ist die Sitzung noch gültig? (Benutzer gesperrt, abgemeldet, Firma deaktiviert …) */
-async function stillValid(conn: Connection): Promise<boolean> {
-  const id = conn.identity;
-  if (id.kind === "anonymous") return true;
-  const session = await prisma.session.findUnique({
-    where: { tokenHash: id.sessionHash },
-    select: { expiresAt: true, user: { select: { active: true, company: { select: { active: true, parent: { select: { active: true } } } } } } },
-  });
-  if (!session || session.expiresAt.getTime() < Date.now() || !session.user.active) return false;
-  const c = session.user.company;
-  if (c && (!c.active || (c.parent && !c.parent.active))) return false;
+/** Gleiche Rechte? (Der Name darf sich ändern, alles andere nicht.) */
+export function sameRights(a: Identity, b: Identity): boolean {
+  if (a.kind === "anonymous" || b.kind === "anonymous") return a.kind === b.kind;
+  if (a.kind === "staff" || b.kind === "staff") return a.kind === b.kind && a.userId === b.userId && a.sessionHash === b.sessionHash;
+  return (
+    a.userId === b.userId &&
+    a.sessionHash === b.sessionHash &&
+    a.rootCompanyId === b.rootCompanyId &&
+    a.companyId === b.companyId &&
+    a.isAdmin === b.isAdmin &&
+    a.isRootAdmin === b.isRootAdmin
+  );
+}
+
+/**
+ * Identität einer Verbindung neu laden. Sitzung beendet oder Benutzer gesperrt: Verbindung schließen (4401,
+ * der Browser verbindet sich nicht neu). Rolle oder Firma geändert: schließen (4403), der Browser verbindet
+ * sich neu und meldet seine Kanäle mit den neuen Rechten erneut an.
+ * Gibt false zurück, wenn die Verbindung geschlossen wurde.
+ */
+async function refreshIdentity(conn: Connection): Promise<boolean> {
+  const current = conn.identity;
+  if (current.kind === "anonymous") return true;
+  const fresh = await loadIdentity(current.sessionHash, conn.host);
+  if (fresh.kind === "anonymous") {
+    conn.socket.close(4401, "Sitzung beendet");
+    return false;
+  }
+  if (!sameRights(current, fresh)) {
+    conn.socket.close(4403, "Rechte geändert");
+    return false;
+  }
+  conn.identity = fresh;
   return true;
+}
+
+/** Regelmäßige Prüfung: Sitzung und Rechte unverändert? Abonnierte Tickets noch sichtbar? */
+async function recheck(conn: Connection): Promise<void> {
+  if (!(await refreshIdentity(conn))) return;
+  const id = conn.identity;
+  if (id.kind !== "customer") return;
+  const ticketIds = [...conn.channels.keys()].flatMap((key) => (key.startsWith("ticket:") ? [Number(key.slice(7))] : []));
+  if (ticketIds.length === 0) return;
+  const tickets = await prisma.ticket.findMany({ where: { id: { in: ticketIds } }, select: customerTicketSelect });
+  const visible = new Set(tickets.filter((t) => ticketVisibleTo(id, t)).map((t) => t.id));
+  for (const ticketId of ticketIds) {
+    if (!visible.has(ticketId)) leaveChannel(conn, `ticket:${ticketId}`);
+  }
 }
 
 function send(conn: Connection, message: ServerMessage) {
@@ -182,13 +222,18 @@ function leaveChannel(conn: Connection, key: ChannelKey) {
   }
 }
 
+const customerTicketSelect = {
+  id: true,
+  companyId: true,
+  createdById: true,
+  company: { select: { id: true, parentId: true } },
+} as const;
+
+type TicketScope = { companyId: string | null; createdById: string | null; company: { id: string; parentId: string | null } | null };
+
 /** Darf ein Portalbenutzer dieses Ticket sehen? Gleiche Regeln wie portalTicketWhere(). */
-async function customerCanSeeTicket(id: Extract<Identity, { kind: "customer" }>, ticketId: number): Promise<boolean> {
-  const ticket = await prisma.ticket.findUnique({
-    where: { id: ticketId },
-    select: { companyId: true, createdById: true, company: { select: { id: true, parentId: true } } },
-  });
-  if (!ticket || !ticket.company) return false;
+export function ticketVisibleTo(id: Extract<Identity, { kind: "customer" }>, ticket: TicketScope): boolean {
+  if (!ticket.company) return false;
   const ticketRoot = ticket.company.parentId ?? ticket.company.id;
   if (ticketRoot !== id.rootCompanyId) return false;
   const inScope = id.isRootAdmin ? true : ticket.companyId === id.companyId;
@@ -196,7 +241,14 @@ async function customerCanSeeTicket(id: Extract<Identity, { kind: "customer" }>,
   return id.isAdmin ? true : ticket.createdById === id.userId;
 }
 
+async function customerCanSeeTicket(id: Extract<Identity, { kind: "customer" }>, ticketId: number): Promise<boolean> {
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: customerTicketSelect });
+  return !!ticket && ticketVisibleTo(id, ticket);
+}
+
 async function handleSubscribe(conn: Connection, msg: Extract<ClientMessage, { t: "sub" }>) {
+  // Rechte frisch prüfen: Wer inzwischen gesperrt, herabgestuft oder umgehängt wurde, abonniert nichts mehr
+  if (!(await refreshIdentity(conn))) return;
   const id = conn.identity;
 
   if (msg.ch === "staff") {
@@ -381,13 +433,7 @@ export function attachRealtime(
   }, 30_000).unref();
 
   setInterval(() => {
-    for (const conn of connections) {
-      stillValid(conn)
-        .then((ok) => {
-          if (!ok) conn.socket.close(4401, "Sitzung beendet");
-        })
-        .catch(() => undefined);
-    }
+    for (const conn of connections) recheck(conn).catch(() => undefined);
   }, SESSION_RECHECK_MS).unref();
 }
 

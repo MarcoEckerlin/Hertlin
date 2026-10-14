@@ -55,7 +55,7 @@ export function TicketTable({
               {showCompany ? <TH>Firma</TH> : null}
               {showCreator ? <TH>Gemeldet von</TH> : null}
               <TH>Status</TH>
-              <TH>Priorität</TH>
+              <TH>Dringlichkeit</TH>
               <TH>Aktualisiert</TH>
             </tr>
           </THead>

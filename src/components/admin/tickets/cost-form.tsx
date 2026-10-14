@@ -39,7 +39,7 @@ export function CostForm({
   const values = state.status === "error" ? (state.values ?? null) : null;
 
   return (
-    <form key={formKey} ref={formRef} action={action} noValidate className="space-y-4">
+    <form key={formKey} ref={formRef} action={action} noValidate className="@container space-y-4">
       <input type="hidden" name="ticketId" value={ticketId} />
       {costId ? <input type="hidden" name="costId" value={costId} /> : null}
       <FormMessage state={state} />
@@ -109,7 +109,7 @@ function CostFields({
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
+      <div className="grid gap-4 @md:grid-cols-[12rem_minmax(0,1fr)]">
         <Field label="Art" htmlFor="kosten-kind" error={errors.kind}>
           <Select
             {...fieldA11y("kosten-kind", errors.kind)}
@@ -143,7 +143,7 @@ function CostFields({
         </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 @md:grid-cols-3 @2xl:grid-cols-5">
         <Field label="Datum" htmlFor="kosten-date" error={errors.performedAt}>
           <Input
             {...fieldA11y("kosten-date", errors.performedAt)}

@@ -27,9 +27,17 @@ export function validateFiles(files: File[]): string | null {
   return null;
 }
 
-function safeFileName(name: string): string {
-  const base = path.basename(name).replace(/[\u0000-\u001f"\\/<>:|?*]+/g, "_").trim();
-  return base.slice(0, 180) || "datei";
+/**
+ * Anzeigename einer hochgeladenen Datei. Unicode-Formatzeichen wie U+202E (Schreibrichtung umkehren)
+ * entfernen wir, weil sie die Endung verschleiern: Aus „Rechnung‮fdp.xls“ würde sonst „Rechnungslx.pdf“.
+ */
+export function safeFileName(name: string, fallback = "datei"): string {
+  const base = path
+    .basename(name)
+    .replace(/\p{Cf}+/gu, "")
+    .replace(/[\p{Cc}\p{Zl}\p{Zp}"\\/<>:|?*]+/gu, "_")
+    .trim();
+  return base.slice(0, 180) || fallback;
 }
 
 export async function storeFiles(files: File[]): Promise<StoredFile[]> {

@@ -126,7 +126,7 @@ function MessageItem({
             <span
               className={cn(
                 "grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold",
-                fromStaff ? "bg-brand-400 text-white" : "bg-brand-100 text-brand-800",
+                fromStaff ? "bg-brand-400 text-ink" : "bg-brand-100 text-brand-800",
               )}
               aria-hidden
             >

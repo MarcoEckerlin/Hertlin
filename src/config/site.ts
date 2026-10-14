@@ -25,10 +25,10 @@ export const site = {
   ],
   /** Reaktionszeiten für Firmenkunden mit Betreuungsvertrag, innerhalb der Servicezeiten */
   responseTimes: [
-    { priority: "CRITICAL", label: "Kritisch – der Betrieb steht", time: "innerhalb von 1 Stunde" },
-    { priority: "HIGH", label: "Hoch – mehrere Arbeitsplätze betroffen", time: "innerhalb von 4 Stunden" },
-    { priority: "NORMAL", label: "Normal – einzelner Arbeitsplatz", time: "am nächsten Werktag" },
-    { priority: "LOW", label: "Niedrig – Frage oder Wunsch", time: "innerhalb von 3 Werktagen" },
+    { priority: "CRITICAL", label: "Kritisch – der Betrieb steht, niemand kann arbeiten", time: "innerhalb von 1 Stunde" },
+    { priority: "HIGH", label: "Hoch – mehrere Personen oder ein wichtiges System betroffen", time: "innerhalb von 4 Stunden" },
+    { priority: "NORMAL", label: "Normal – eine Person oder ein Arbeitsplatz eingeschränkt", time: "am nächsten Werktag" },
+    { priority: "LOW", label: "Niedrig – Frage, Wunsch oder etwas, das warten kann", time: "innerhalb von 3 Werktagen" },
   ],
   /** Für die Datenschutzerklärung */
   hostingProvider: "TODO Name und Anschrift des Hosting-Anbieters",

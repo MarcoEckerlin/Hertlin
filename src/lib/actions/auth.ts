@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/crypto";
@@ -13,11 +14,12 @@ import {
   isMainHost,
 } from "@/lib/auth";
 import { consumeAuthToken, createAuthToken, findValidAuthToken, portalSlugOfCompany } from "@/lib/auth-tokens";
-import { clientIp, rateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { clientIp, rateLimit, rateLimitReached, resetRateLimit } from "@/lib/rate-limit";
 import { errorState, fromZodError, successState, type FormState } from "@/lib/forms";
 import { email as emailSchema, password as passwordSchema } from "@/lib/validation";
-import { mainUrl, portalUrl } from "@/lib/hosts";
+import { mainUrl, portalUrl, safeLocalPath } from "@/lib/hosts";
 import { sendPasswordResetMail } from "@/lib/notifications";
+import { getSiteSettings } from "@/lib/settings";
 
 type Area = { kind: "staff" } | { kind: "portal"; slug: string; companyId: string };
 
@@ -28,6 +30,14 @@ async function currentArea(): Promise<Area | null> {
   if (!slug) return null;
   const company = await getPortalCompany(slug);
   return company ? { kind: "portal", slug, companyId: company.id } : null;
+}
+
+/** Kundenportal zur Subdomain gibt es nicht (mehr) oder es ist deaktiviert. */
+async function portalUnavailable(): Promise<FormState> {
+  const site = await getSiteSettings();
+  return errorState(
+    `Dieses Kundenportal ist gerade nicht erreichbar. Bitte prüfen Sie die Adresse oder rufen Sie uns an: ${site.phone}.`,
+  );
 }
 
 /** Darf sich dieser Benutzer in diesem Bereich anmelden? */
@@ -47,9 +57,9 @@ function getDummyHash(): Promise<string> {
   return (dummyHash ??= hashPassword("kein-echtes-passwort"));
 }
 
+/** Ziel nach der Anmeldung: nur Pfade auf diesem Host (siehe safeLocalPath). */
 function safeNext(next: unknown, fallback: string): string {
-  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
-  return next;
+  return safeLocalPath(next, fallback);
 }
 
 const loginSchema = z.object({
@@ -59,7 +69,7 @@ const loginSchema = z.object({
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const area = await currentArea();
-  if (!area) return errorState("Dieses Portal ist nicht verfügbar.");
+  if (!area) return portalUnavailable();
 
   const parsed = loginSchema.safeParse({ email: formData.get("email"), password: formData.get("password") });
   if (!parsed.success) return fromZodError(parsed.error, formData);
@@ -69,7 +79,9 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const key = `login:${ip}:${email}`;
   const limit = rateLimit(key, 8, 15 * 60 * 1000);
   const ipLimit = rateLimit(`login-ip:${ip}`, 40, 15 * 60 * 1000);
-  if (!limit.ok || !ipLimit.ok) {
+  // Fehlversuche je Konto über alle Adressen, falls die IP nicht verlässlich ist (z. B. falsch eingerichteter Proxy)
+  const accountKey = `login-account:${email}`;
+  if (!limit.ok || !ipLimit.ok || rateLimitReached(accountKey, 20)) {
     return errorState("Zu viele Anmeldeversuche. Bitte warten Sie 15 Minuten und versuchen Sie es dann erneut.", formData);
   }
 
@@ -89,10 +101,12 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const companyActive = !user?.company || (user.company.active && (user.company.parent?.active ?? true));
 
   if (!user || !passwordOk || !user.active || !companyActive || !userBelongsToArea(user, area)) {
+    rateLimit(accountKey, 20, 15 * 60 * 1000);
     return errorState("E-Mail-Adresse oder Passwort stimmen nicht.", formData);
   }
 
   resetRateLimit(key);
+  resetRateLimit(accountKey);
   await createSession(user.id);
   redirect(safeNext(formData.get("next"), area.kind === "staff" ? "/admin" : "/"));
 }
@@ -107,14 +121,19 @@ const resetRequestSchema = z.object({ email: emailSchema });
 
 export async function requestPasswordResetAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const area = await currentArea();
-  if (!area) return errorState("Dieses Portal ist nicht verfügbar.");
+  if (!area) return portalUnavailable();
 
   const parsed = resetRequestSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return fromZodError(parsed.error, formData);
 
   const ip = await clientIp();
-  if (!rateLimit(`reset:${ip}`, 5, 60 * 60 * 1000).ok) {
-    return errorState("Zu viele Anfragen. Bitte versuchen Sie es später noch einmal.", formData);
+  const limit = rateLimit(`reset:${ip}`, 5, 60 * 60 * 1000);
+  if (!limit.ok) {
+    const minutes = Math.max(1, Math.ceil(limit.retryAfterMs / 60_000));
+    return errorState(
+      `Zu viele Versuche. Bitte warten Sie ${minutes === 1 ? "eine Minute" : `${minutes} Minuten`} und versuchen Sie es dann noch einmal.`,
+      formData,
+    );
   }
 
   const user = await db.user.findUnique({
@@ -122,10 +141,19 @@ export async function requestPasswordResetAction(_prev: FormState, formData: For
     select: { id: true, name: true, email: true, role: true, active: true, company: { select: { id: true, parentId: true } } },
   });
 
-  if (user && user.active && userBelongsToArea(user, area)) {
-    const token = await createAuthToken(user.id, "RESET");
-    const link = area.kind === "staff" ? mainUrl(`/admin/passwort/${token}`) : portalUrl(area.slug, `/passwort/${token}`);
-    await sendPasswordResetMail({ to: user.email, name: user.name, link });
+  // Je Konto nur wenige Links pro Stunde, auch wenn die Anfragen von wechselnden Adressen kommen
+  if (user && user.active && userBelongsToArea(user, area) && rateLimit(`reset-account:${user.id}`, 5, 60 * 60 * 1000).ok) {
+    const { id, name, email } = user;
+    // Erst nach der Antwort: Sonst verrät die längere Antwortzeit, dass es das Konto gibt
+    after(async () => {
+      try {
+        const token = await createAuthToken(id, "RESET");
+        const link = area.kind === "staff" ? mainUrl(`/admin/passwort/${token}`) : portalUrl(area.slug, `/passwort/${token}`);
+        await sendPasswordResetMail({ to: email, name, link });
+      } catch (error) {
+        console.error("[auth] Link zum Zurücksetzen konnte nicht verschickt werden:", error instanceof Error ? error.message : error);
+      }
+    });
   }
 
   // Immer dieselbe Antwort, damit nicht erkennbar ist, ob es das Konto gibt
@@ -147,7 +175,7 @@ const setPasswordSchema = z
 
 export async function setPasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const area = await currentArea();
-  if (!area) return errorState("Dieses Portal ist nicht verfügbar.");
+  if (!area) return portalUnavailable();
 
   const parsed = setPasswordSchema.safeParse({
     token: formData.get("token"),
@@ -164,13 +192,22 @@ export async function setPasswordAction(_prev: FormState, formData: FormData): P
     area.kind === "staff"
       ? user.role === "ADMIN" || user.role === "TECHNICIAN"
       : portalSlugOfCompany(user.company) === area.slug;
-  if (!belongs) return errorState("Dieser Link gehört zu einem anderen Zugang.");
+  if (!belongs) {
+    return errorState(
+      "Dieser Link gehört zu einem anderen Zugang. Bitte öffnen Sie ihn direkt aus Ihrer E-Mail oder fordern Sie einen neuen an.",
+    );
+  }
 
   if (!(await consumeAuthToken(record.id))) {
     return errorState("Der Link wurde bereits verwendet. Bitte fordern Sie einen neuen an.");
   }
 
-  await db.user.update({ where: { id: user.id }, data: { passwordHash: await hashPassword(parsed.data.password) } });
+  const passwordHash = await hashPassword(parsed.data.password);
+  await db.$transaction([
+    db.user.update({ where: { id: user.id }, data: { passwordHash } }),
+    // Andere offene Einladungs- und Passwortlinks verfallen, sonst ließe sich das Passwort darüber erneut setzen
+    db.authToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } }),
+  ]);
   await destroyAllSessions(user.id);
   await createSession(user.id);
   redirect(area.kind === "staff" ? "/admin" : "/");
@@ -199,7 +236,7 @@ export async function findPortalAction(_prev: FormState, formData: FormData): Pr
   const company = await getPortalCompany(parsed.data.slug);
   if (!company) {
     return errorState(
-      "Zu diesem Kürzel haben wir kein Kundenportal gefunden. Das Kürzel steht in Ihrer Zugangs-E-Mail, z. B. „firma“ in firma.hertlin.de.",
+      "Zu diesem Kürzel haben wir kein Kundenportal gefunden. Das Kürzel steht in Ihrer Einladungs-E-Mail, z. B. „firma“ in firma.hertlin.de.",
       formData,
       { slug: "Unbekanntes Kürzel" },
     );

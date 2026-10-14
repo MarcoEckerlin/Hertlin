@@ -16,7 +16,7 @@ import { emptyToUndefined, errorState, fromZodError, successState, type FormStat
 import { portalUrl } from "@/lib/hosts";
 import { sendInviteMail, sendPasswordResetMail } from "@/lib/notifications";
 import { portalManageableUserWhere } from "@/lib/permissions";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, rateLimitReached } from "@/lib/rate-limit";
 import { cleanId, searchKey } from "@/components/portal/admin/data";
 import {
   checkbox,
@@ -239,9 +239,23 @@ const updateUserSchema = userBaseSchema.extend({
 });
 
 const EMAIL_TAKEN = "Diese E-Mail-Adresse wird bereits verwendet.";
+const EMAIL_UNAVAILABLE =
+  "Diese Adresse können Sie hier nicht verwenden. Falls die Person bei uns schon einen Zugang hat, melden Sie sich bitte – wir klären das.";
+const EMAIL_LOCKED =
+  "Die Adresse eines eingerichteten Zugangs können Sie hier nicht ändern. Melden Sie sich bitte bei uns, wir stellen sie nach Rücksprache mit der Person um.";
 
-/** Fehlermeldung für eine schon vergebene E-Mail-Adresse. Benutzer im eigenen Bereich werden mit Namen genannt. */
+/** Höchstens so viele Treffer auf fremde Adressen pro Stunde, damit sich nicht durchprobieren lässt, wer ein Konto hat. */
+const FOREIGN_EMAIL_LIMIT = 10;
+
+/**
+ * Fehlermeldung für eine schon vergebene E-Mail-Adresse. Benutzer im eigenen Bereich werden mit Namen genannt,
+ * für alle anderen Adressen gibt es eine neutrale Meldung.
+ */
 async function emailTakenMessage(ctx: PortalContext, email: string, exceptUserId?: string): Promise<string | null> {
+  const foreignKey = `portal-user-foreign-email:${ctx.user.id}`;
+  if (rateLimitReached(foreignKey, FOREIGN_EMAIL_LIMIT)) {
+    return "Sie haben gerade mehrere Adressen eingegeben, die hier nicht verwendet werden können. Bitte warten Sie eine Stunde oder melden Sie sich bei uns.";
+  }
   const existing = await db.user.findUnique({ where: { email }, select: { id: true } });
   if (!existing || existing.id === exceptUserId) return null;
   const visible = await db.user.findFirst({
@@ -251,7 +265,8 @@ async function emailTakenMessage(ctx: PortalContext, email: string, exceptUserId
   if (visible) {
     return `${EMAIL_TAKEN} Sie gehört zum Zugang von ${visible.name}${visible.company ? ` (${visible.company.name})` : ""}.`;
   }
-  return `${EMAIL_TAKEN} Jede Adresse kann nur zu einem Zugang gehören. Falls die Person bei uns schon ein Konto hat, melden Sie sich bitte – wir klären das.`;
+  rateLimit(foreignKey, FOREIGN_EMAIL_LIMIT, 60 * 60 * 1000);
+  return EMAIL_UNAVAILABLE;
 }
 
 /** Zielfirma eines Benutzers: Firmenkunde oder Unterkunde im Verwaltungsbereich. */
@@ -436,6 +451,11 @@ export async function updatePortalUserAction(_prev: FormState, formData: FormDat
   }
 
   const emailChanged = data.email !== target.email;
+  // Bei eingerichteten Zugängen anderer Personen bleibt die Anmeldeadresse fest. Sonst ließe sie sich auf ein
+  // eigenes Postfach umstellen und das Konto über „Link senden“ oder „Passwort vergessen“ übernehmen.
+  if (emailChanged && !invited && !isSelf) {
+    return errorState("Bitte prüfen Sie die markierten Felder.", formData, { email: EMAIL_LOCKED });
+  }
   if (emailChanged) {
     const taken = await emailTakenMessage(ctx, data.email, target.id);
     if (taken) return errorState("Bitte prüfen Sie die markierten Felder.", formData, { email: taken });

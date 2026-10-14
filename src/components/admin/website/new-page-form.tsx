@@ -60,7 +60,7 @@ export function NewPageForm({ takenSlugs, siteHost }: { takenSlugs: string[]; si
         error={slugError}
         hint="Wird aus dem Titel vorgeschlagen. Nur Kleinbuchstaben, Ziffern und Bindestriche – Umlaute werden zu ae, oe, ue."
       >
-        <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand-500 focus-within:ring-3 focus-within:ring-brand-200/70">
+        <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand-600 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600">
           <span className="flex items-center border-r border-line bg-mist px-3 text-sm whitespace-nowrap text-ink-muted">{siteHost}/</span>
           <input
             id="new-slug"
@@ -95,7 +95,7 @@ export function NewPageForm({ takenSlugs, siteHost }: { takenSlugs: string[]; si
         htmlFor="new-navLabel"
         optional
         error={e.navLabel}
-        hint="Kurzform für Menü und Footer. Leer lassen, um den Seitentitel zu verwenden."
+        hint="Kurzform für Menü und Fußzeile. Leer lassen, um den Seitentitel zu verwenden."
       >
         <Input
           id="new-navLabel"
@@ -107,11 +107,11 @@ export function NewPageForm({ takenSlugs, siteHost }: { takenSlugs: string[]; si
       </Field>
 
       <fieldset className="space-y-3">
-        <legend className="mb-1 text-sm font-semibold text-ink">Verlinken im …</legend>
+        <legend className="mb-1 text-sm font-semibold text-ink">Wo soll die Seite verlinkt sein?</legend>
         <Checkbox name="showInNav" label="Hauptmenü" hint="Oben in der Kopfzeile der Website." defaultChecked={v?.showInNav === "on"} />
         <Checkbox
           name="showInFooter"
-          label="Footer"
+          label="Fußzeile"
           hint="Unten auf jeder Seite. Passend z. B. für AGB oder Stellenangebote."
           defaultChecked={v?.showInFooter === "on"}
         />

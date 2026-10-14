@@ -42,7 +42,7 @@ function LinkedIn({ page }: { page: PageSummary }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {page.showInNav ? <Badge tone="blue">Hauptmenü</Badge> : null}
-      {page.showInFooter ? <Badge tone="blue">Footer</Badge> : null}
+      {page.showInFooter ? <Badge tone="blue">Fußzeile</Badge> : null}
     </div>
   );
 }
@@ -222,8 +222,8 @@ export default async function WebsiteOverviewPage({ searchParams }: { searchPara
                 </ButtonLink>
               }
             >
-              Legen Sie eine Seite an, wenn ein Thema auf den Kernseiten keinen Platz hat. Sie bestimmen selbst, ob sie im Menü oder im Footer
-              erscheint.
+              Legen Sie eine Seite an, wenn ein Thema auf den Kernseiten keinen Platz hat. Sie bestimmen selbst, ob sie im Menü oder in der
+              Fußzeile erscheint.
             </EmptyState>
           )}
         </section>

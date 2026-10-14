@@ -49,10 +49,10 @@ export function SlugInput({
       </div>
       <div
         className={cn(
-          "flex h-11 items-stretch overflow-hidden rounded-xl border bg-white shadow-[inset_0_1px_1px_rgb(16_36_58/0.03)] transition-colors focus-within:ring-3",
+          "flex h-11 items-stretch overflow-hidden rounded-xl border bg-white shadow-[inset_0_1px_1px_rgb(16_36_58/0.03)] transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600",
           error
-            ? "border-red-400 focus-within:ring-red-100"
-            : "border-line-strong hover:border-brand-300 focus-within:border-brand-500 focus-within:ring-brand-200/70",
+            ? "border-red-400"
+            : "border-line-strong hover:border-brand-300 focus-within:border-brand-600",
         )}
       >
         <input

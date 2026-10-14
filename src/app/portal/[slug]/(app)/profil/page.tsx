@@ -38,11 +38,10 @@ export default async function PortalProfilePage() {
         ? `${ROLE_DESCRIPTIONS[role]} Zugänge verwaltet Ihr Hauptansprechpartner.`
         : ROLE_DESCRIPTIONS[role];
 
-  const emailHint = ctx.isRootAdmin
-    ? "Die Adresse ist gleichzeitig Ihr Anmeldename. Ändert sie sich, sagen Sie uns bitte Bescheid – wir tragen sie um."
-    : `Die Adresse ist gleichzeitig Ihr Anmeldename. Ändern kann sie ${
-        isSubCustomer && ctx.isAdmin ? `der Hauptansprechpartner von ${ctx.root.name}` : "Ihr Hauptansprechpartner"
-      } oder Hertlin.`;
+  // Hauptansprechpartner (auch von Unterkunden) können ihre eigene Adresse unter „Benutzer“ ändern
+  const emailHint = ctx.isAdmin
+    ? "Die Adresse ist gleichzeitig Ihr Anmeldename. Ändern können Sie sie selbst unter „Benutzer“."
+    : "Die Adresse ist gleichzeitig Ihr Anmeldename. Ändern kann sie Ihr Hauptansprechpartner oder Hertlin.";
 
   return (
     <>
@@ -52,7 +51,7 @@ export default async function PortalProfilePage() {
         description="Ihre Kontaktdaten, die Sprache für Nachrichten und Ihr Passwort für das Kundenportal."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader

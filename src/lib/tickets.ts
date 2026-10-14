@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { removeStoredFiles, storeFiles } from "@/lib/uploads";
 import { mainUrl, portalUrl } from "@/lib/hosts";
-import type { TicketStatus } from "@/lib/constants";
+import { CUSTOMER_ROLES, type TicketStatus } from "@/lib/constants";
 import { publish } from "@/realtime/bus";
 
 /**
@@ -153,9 +153,48 @@ export function customerTicketLink(ticket: {
   return ticket.guestToken ? mainUrl(`/status/${ticket.guestToken}`) : null;
 }
 
+/** Kundenkonto mit den Angaben, die für die Sichtbarkeit im Portal zählen. */
+type PortalAccount = {
+  id: string;
+  role: string;
+  active: boolean;
+  company: { id: string; parentId: string | null; active: boolean; parent: { active: boolean } | null } | null;
+};
+
+const portalAccountSelect = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  active: true,
+  company: { select: { id: true, parentId: true, active: true, parent: { select: { active: true } } } },
+} as const;
+
+/**
+ * Sieht dieses Kundenkonto das Ticket im Portal? Gleiche Regeln wie getPortalContext() und portalTicketWhere():
+ * Konto, Firma und Firmenkunde aktiv; Hauptansprechpartner sehen die Tickets ihrer Firma (beim Firmenkunden
+ * auch die der Unterkunden), Mitarbeiter nur selbst erstellte.
+ */
+export function portalAccountSeesTicket(
+  account: PortalAccount,
+  ticket: { companyId: string | null; createdById: string | null; company: { parentId: string | null } | null },
+): boolean {
+  if (!(CUSTOMER_ROLES as readonly string[]).includes(account.role)) return false;
+  const company = account.company;
+  if (!account.active || !company || !company.active || company.parent?.active === false) return false;
+  if (!ticket.companyId || !ticket.company) return false;
+  const isAdmin = account.role === "CUSTOMER_ADMIN";
+  const inScope =
+    ticket.companyId === company.id || (isAdmin && company.parentId === null && ticket.company.parentId === company.id);
+  return inScope && (isAdmin || ticket.createdById === account.id);
+}
+
 /**
  * Empfänger für Benachrichtigungen an den Kunden:
- * Ersteller des Tickets (aktiver Portalbenutzer) bzw. hinterlegte Kontaktadresse.
+ * - Ticket aus dem Portal (Ersteller ist ein Kundenkonto): der Ersteller, solange er das Ticket im Portal
+ *   noch sehen darf. Sonst (gesperrt, umgehängt, herabgestuft) ein aktiver Hauptansprechpartner, der es sieht –
+ *   nie die alte Kontaktadresse, denn die ist bei Portal-Tickets die Adresse des Erstellers.
+ * - Sonst (Privatkunde, von Hertlin angelegt): die hinterlegte Kontaktadresse.
  */
 export async function customerRecipient(ticketId: number): Promise<{ email: string; name: string; link: string } | null> {
   const ticket = await db.ticket.findUnique({
@@ -165,8 +204,10 @@ export async function customerRecipient(ticketId: number): Promise<{ email: stri
       guestToken: true,
       contactEmail: true,
       contactName: true,
-      createdBy: { select: { email: true, name: true, active: true, role: true } },
-      company: { select: { slug: true, email: true, name: true, parent: { select: { slug: true } } } },
+      companyId: true,
+      createdById: true,
+      createdBy: { select: portalAccountSelect },
+      company: { select: { slug: true, email: true, name: true, parentId: true, parent: { select: { slug: true } } } },
     },
   });
   if (!ticket) return null;
@@ -174,9 +215,21 @@ export async function customerRecipient(ticketId: number): Promise<{ email: stri
   if (!link) return null;
 
   const creator = ticket.createdBy;
-  if (creator && creator.active && (creator.role === "CUSTOMER_ADMIN" || creator.role === "CUSTOMER_USER")) {
-    return { email: creator.email, name: creator.name, link };
+  if (!ticket.company || !creator || !(CUSTOMER_ROLES as readonly string[]).includes(creator.role)) {
+    return ticket.contactEmail ? { email: ticket.contactEmail, name: ticket.contactName ?? "", link } : null;
   }
-  if (ticket.contactEmail) return { email: ticket.contactEmail, name: ticket.contactName ?? "", link };
-  return null;
+  if (portalAccountSeesTicket(creator, ticket)) return { email: creator.email, name: creator.name, link };
+
+  // Hauptansprechpartner der Ticketfirma zuerst, danach die des Firmenkunden
+  const companyIds = [ticket.company.parentId, ticket.companyId].filter((id): id is string => !!id);
+  const admins = await db.user.findMany({
+    where: { role: "CUSTOMER_ADMIN", active: true, companyId: { in: companyIds } },
+    select: portalAccountSelect,
+    orderBy: { createdAt: "asc" },
+    take: 50,
+  });
+  const fallback = [...admins]
+    .sort((a, b) => Number(a.company?.id !== ticket.companyId) - Number(b.company?.id !== ticket.companyId))
+    .find((admin) => portalAccountSeesTicket(admin, ticket));
+  return fallback ? { email: fallback.email, name: fallback.name, link } : null;
 }

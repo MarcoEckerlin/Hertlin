@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidSlug, parseHost } from "@/lib/hosts";
+import { isValidSlug, parseHost, safeLocalPath } from "@/lib/hosts";
 
 describe("parseHost", () => {
   const root = "hertlin.de";
@@ -41,5 +41,39 @@ describe("isValidSlug", () => {
     expect(isValidSlug("muster_gmbh")).toBe(false);
     expect(isValidSlug("www")).toBe(false);
     expect(isValidSlug("admin")).toBe(false);
+  });
+});
+
+describe("safeLocalPath (Ziel nach der Anmeldung)", () => {
+  it("übernimmt Pfade auf demselben Host samt Query und Anker", () => {
+    expect(safeLocalPath("/tickets/12", "/")).toBe("/tickets/12");
+    expect(safeLocalPath("/admin/tickets?status=NEW#verlauf", "/admin")).toBe("/admin/tickets?status=NEW#verlauf");
+  });
+
+  it("fällt bei fehlenden oder relativen Werten auf das Standardziel zurück", () => {
+    expect(safeLocalPath(null, "/admin")).toBe("/admin");
+    expect(safeLocalPath("", "/")).toBe("/");
+    expect(safeLocalPath("tickets", "/")).toBe("/");
+    expect(safeLocalPath("https://evil.example/", "/")).toBe("/");
+  });
+
+  it("lässt keine fremden Hosts durch, auch nicht über Steuerzeichen oder Backslashes", () => {
+    for (const value of [
+      "//evil.example",
+      "/\\evil.example",
+      "/\t/evil.example/x",
+      "/\n/evil.example",
+      "/\r\n/evil.example",
+      "/ /evil.example",
+      "/\u0000/evil.example",
+      "/\\/evil.example",
+      "/.//evil.example",
+      "/%09/evil.example",
+    ]) {
+      const result = safeLocalPath(value, "/");
+      expect(new URL(result, "https://muster.hertlin.de").host).toBe("muster.hertlin.de");
+    }
+    expect(safeLocalPath("/\t/evil.example/x", "/")).toBe("/");
+    expect(safeLocalPath("/.//evil.example", "/")).toBe("/");
   });
 });

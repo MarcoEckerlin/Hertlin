@@ -197,7 +197,7 @@ export function CostEntriesForm({
               </div>
               <p className="text-sm font-semibold whitespace-nowrap text-ink tabular-nums">{ticket.subtotal}</p>
             </header>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full min-w-[44rem] border-collapse text-left text-sm">
                 <thead className="text-xs text-ink-muted">
                   <tr className="border-b border-line">

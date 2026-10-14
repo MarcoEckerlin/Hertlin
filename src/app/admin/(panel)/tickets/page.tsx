@@ -78,11 +78,11 @@ export default async function AdminTicketsPage({ searchParams }: { searchParams:
               aria-current={active ? "page" : undefined}
               className={cn(
                 "inline-flex h-9 items-center gap-2 rounded-full px-4 text-sm font-semibold ring-1 ring-inset transition-colors",
-                active ? "bg-ink text-white ring-ink" : "bg-white text-ink-soft ring-line-strong hover:bg-brand-50 hover:text-ink",
+                active ? "bg-brand-100 text-ink ring-brand-300" : "bg-white text-ink-soft ring-line-strong hover:bg-brand-50 hover:text-ink",
               )}
             >
               {VIEW_LABELS[view]}
-              <span className={cn("tabular-nums", active ? "text-white/75" : "text-ink-muted")}>{viewCounts[i]}</span>
+              <span className={cn("tabular-nums", active ? "text-ink-soft" : "text-ink-muted")}>{viewCounts[i]}</span>
             </Link>
           );
         })}

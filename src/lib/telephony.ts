@@ -34,6 +34,8 @@ import { publish } from "@/realtime/bus";
 
 export const TELEPHONY_PATH = "/api/telefonie";
 export const TOKEN_HEADER = "x-hertlin-token";
+/** Kürzere Zugangsschlüssel lehnt der Webhook ab, weil sie sich erraten lassen. */
+export const TOKEN_MIN_LENGTH = 24;
 
 /** Zugangsschlüssel aus TELEPHONY_WEBHOOK_TOKEN oder null, wenn nicht eingerichtet. */
 export function telephonyToken(): string | null {
@@ -89,7 +91,7 @@ export function telephonyStatus() {
   const state = diagnostics();
   return {
     tokenSet: token !== null,
-    tokenTooShort: token !== null && token.length < 24,
+    tokenTooShort: token !== null && token.length < TOKEN_MIN_LENGTH,
     allowedIps: telephonyAllowedIps(),
     defaultCountry: defaultCountry(),
     lastRejection: state.lastRejection,
@@ -102,7 +104,8 @@ export function telephonyStatus() {
 /* ------------------------------------------------------------------ */
 
 export type CallerMatch = {
-  source: "user" | "company" | "ticket" | "inquiry";
+  /** "ambiguous": verschiedene Kunden haben diese Nummer hinterlegt – nichts zuordnen */
+  source: "user" | "company" | "ticket" | "inquiry" | "ambiguous";
   /** z. B. "Claudia Berger · Muster Steuerberatung GmbH" */
   label: string;
   userId: string | null;
@@ -164,9 +167,200 @@ async function idsWithPhoneSuffix(
 
 const CUSTOMER_ROLES = ["CUSTOMER_ADMIN", "CUSTOMER_USER"];
 
+/** Anzeige, wenn verschiedene Kunden dieselbe Nummer hinterlegt haben. */
+export const AMBIGUOUS_CALLER_LABEL = "Nummer bei mehreren Kunden hinterlegt";
+
+/** Mehrdeutige Treffer ordnen nichts zu – weder Kunde noch Ansprechpartner. */
+export function isAmbiguousCaller(match: CallerMatch | null | undefined): boolean {
+  return match?.source === "ambiguous";
+}
+
+/** Bezeichnung, die am Anruf gespeichert wird (bei mehrdeutigen Treffern keine). */
+export function storedCallerLabel(match: CallerMatch | null | undefined): string | null {
+  return match && !isAmbiguousCaller(match) ? match.label : null;
+}
+
+type CandidateCompany = CompanyRef & {
+  active: boolean;
+  parent: { id: string; name: string; active: boolean } | null;
+};
+
+/** Alle Einträge mit derselben Nummer, jeweils in der gewünschten Reihenfolge. */
+export type CallerCandidates = {
+  /** Benutzer eines Kunden (zuletzt angemeldet zuerst) */
+  users: Array<{ id: string; name: string; email: string; active: boolean; company: CandidateCompany }>;
+  /** Firmenkunden und Unterkunden (älteste zuerst) */
+  companies: CandidateCompany[];
+  /** Tickets mit dieser Kontaktnummer (jüngstes zuerst) */
+  tickets: Array<{ id: number; contactName: string | null; contactEmail: string | null; company: CandidateCompany | null }>;
+  /** Anfragen (jüngste zuerst) */
+  inquiries: Array<{ id: number; name: string; companyName: string | null; email: string; company: CompanyRef | null }>;
+};
+
+function companyIsActive(company: CandidateCompany): boolean {
+  return company.active && company.parent?.active !== false;
+}
+
+/** Nur die aktiven Einträge, wenn es welche gibt – sonst alle (z. B. ehemaliger Kunde). */
+function preferActive<T>(items: T[], isActive: (item: T) => boolean): T[] {
+  const active = items.filter(isActive);
+  return active.length > 0 ? active : items;
+}
+
+function distinctCount(values: string[]): number {
+  return new Set(values).size;
+}
+
+function ambiguousMatch(): CallerMatch {
+  return {
+    source: "ambiguous",
+    label: AMBIGUOUS_CALLER_LABEL,
+    userId: null,
+    companyId: null,
+    rootCompanyId: null,
+    rootCompanyName: null,
+    ticketId: null,
+    inquiryId: null,
+    contactName: null,
+    contactEmail: null,
+  };
+}
+
+function companyMatch(company: CompanyRef): CallerMatch {
+  const root = rootOf(company);
+  return {
+    source: "company",
+    label: companyPath(company),
+    userId: null,
+    companyId: company.id,
+    rootCompanyId: root.id,
+    rootCompanyName: root.name,
+    ticketId: null,
+    inquiryId: null,
+    contactName: null,
+    contactEmail: null,
+  };
+}
+
+function ticketMatch(ticket: CallerCandidates["tickets"][number]): CallerMatch {
+  const root = ticket.company ? rootOf(ticket.company) : null;
+  return {
+    source: "ticket",
+    label: ticket.company
+      ? `${ticket.contactName ?? "Ansprechpartner"} · ${companyPath(ticket.company)}`
+      : `Privatkunde: ${ticket.contactName ?? "Name unbekannt"} (${formatTicketNumber(ticket.id)})`,
+    userId: null,
+    companyId: ticket.company?.id ?? null,
+    rootCompanyId: root?.id ?? null,
+    rootCompanyName: root?.name ?? null,
+    ticketId: ticket.id,
+    inquiryId: null,
+    contactName: ticket.contactName,
+    contactEmail: ticket.contactEmail,
+  };
+}
+
 /**
- * Sucht zu mehreren Nummern die passenden Kunden. Reihenfolge:
- * Benutzer eines Kunden (aktive zuerst) → Firmen-/Unterkunden-Nummer → Ticket-Kontakt (jüngstes) → Anfrage (jüngste).
+ * Entscheidet, wem eine Nummer gehört. Reihenfolge:
+ * 1. Nummer eines aktiven Firmenkunden – die pflegt nur Hertlin, sie legt den Kunden fest.
+ *    Gleiche Nummern, die andere Kunden selbst eingetragen haben, zählen dann nicht.
+ * 2. Von Kunden selbst gepflegte Nummern (Benutzer, Unterkunden, Kontaktnummer in Firmen-Tickets):
+ *    nur, wenn sie alle zum selben Firmenkunden gehören. Teilen sich mehrere Personen eine Nummer
+ *    (z. B. die Zentrale), schlagen wir nur die Firma vor.
+ * 3. Privatkunden-Ticket, 4. Anfrage – jeweils nur, wenn alle Treffer zur selben Person gehören.
+ * Nennen verschiedene Kunden dieselbe Nummer, wird nichts automatisch zugeordnet („mehrdeutig“).
+ */
+export function resolveCaller(candidates: CallerCandidates): CallerMatch | null {
+  const roots = candidates.companies.filter((c) => c.parentId === null);
+  const activeRoots = roots.filter(companyIsActive);
+  if (distinctCount(activeRoots.map((c) => c.id)) > 1) return ambiguousMatch();
+  if (activeRoots.length === 1) return companyMatch(activeRoots[0]);
+
+  const companyTickets = candidates.tickets.filter(
+    (t): t is CallerCandidates["tickets"][number] & { company: CandidateCompany } => t.company !== null,
+  );
+  const claims = [
+    ...candidates.users.map((u) => ({ root: rootOf(u.company), active: u.active && companyIsActive(u.company) })),
+    ...candidates.companies.map((c) => ({ root: rootOf(c), active: companyIsActive(c) })),
+    ...companyTickets.map((t) => ({ root: rootOf(t.company), active: companyIsActive(t.company) })),
+  ];
+  const tenants = preferActive(claims, (c) => c.active).map((c) => c.root);
+  if (distinctCount(tenants.map((r) => r.id)) > 1) return ambiguousMatch();
+
+  if (tenants.length > 0) {
+    const tenant = tenants[0];
+    const inTenant = (company: CompanyRef) => rootOf(company).id === tenant.id;
+    const tenantRoot: CompanyRef = { id: tenant.id, name: tenant.name, parentId: null, parent: null };
+
+    const users = preferActive(
+      candidates.users.filter((u) => inTenant(u.company)),
+      (u) => u.active && companyIsActive(u.company),
+    );
+    if (users.length === 1) {
+      const user = users[0];
+      const root = rootOf(user.company);
+      return {
+        source: "user",
+        label: `${user.name} · ${companyPath(user.company)}`,
+        userId: user.id,
+        companyId: user.company.id,
+        rootCompanyId: root.id,
+        rootCompanyName: root.name,
+        ticketId: null,
+        inquiryId: null,
+        contactName: user.name,
+        contactEmail: user.email,
+      };
+    }
+    if (users.length > 1) {
+      return companyMatch(distinctCount(users.map((u) => u.company.id)) === 1 ? users[0].company : tenantRoot);
+    }
+
+    const companies = preferActive(candidates.companies.filter(inTenant), companyIsActive);
+    if (companies.length > 0) return companyMatch(companies.length === 1 ? companies[0] : tenantRoot);
+
+    const ticket = companyTickets.find((t) => inTenant(t.company));
+    return ticket ? ticketMatch(ticket) : companyMatch(tenantRoot);
+  }
+
+  // Privatkunden: dieselbe Person erkennen wir an der E-Mail-Adresse
+  const privateTickets = candidates.tickets.filter((t) => t.company === null);
+  if (privateTickets.length > 0) {
+    const owners = privateTickets.map((t) => t.contactEmail?.trim().toLowerCase() || `ticket:${t.id}`);
+    return distinctCount(owners) > 1 ? ambiguousMatch() : ticketMatch(privateTickets[0]);
+  }
+
+  if (candidates.inquiries.length > 0) {
+    const owners = candidates.inquiries.map((i) => (i.company ? `kunde:${rootOf(i.company).id}` : i.email.trim().toLowerCase()));
+    if (distinctCount(owners) > 1) return ambiguousMatch();
+    const inquiry = candidates.inquiries[0];
+    const root = inquiry.company ? rootOf(inquiry.company) : null;
+    return {
+      source: "inquiry",
+      label: inquiry.company
+        ? `${inquiry.name} · ${companyPath(inquiry.company)}`
+        : `Interessent: ${inquiry.name}${inquiry.companyName ? `, ${inquiry.companyName}` : ""}`,
+      userId: null,
+      companyId: inquiry.company?.id ?? null,
+      rootCompanyId: root?.id ?? null,
+      rootCompanyName: root?.name ?? null,
+      ticketId: null,
+      inquiryId: inquiry.id,
+      contactName: inquiry.name,
+      contactEmail: inquiry.email,
+    };
+  }
+  return null;
+}
+
+const candidateCompanySelect = {
+  ...companyRefSelect,
+  active: true,
+  parent: { select: { id: true, name: true, active: true } },
+} satisfies Prisma.CompanySelect;
+
+/**
+ * Sucht zu mehreren Nummern die passenden Kunden (Regeln siehe resolveCaller).
  * Mitarbeiter von Hertlin werden nie zugeordnet. Schlüssel der Ergebnis-Map: normalisierte Nummer.
  */
 export async function matchCallers(numbers: Array<string | null | undefined>): Promise<Map<string, CallerMatch>> {
@@ -188,28 +382,21 @@ export async function matchCallers(numbers: Array<string | null | undefined>): P
     userIds.length
       ? db.user.findMany({
           where: { id: { in: userIds.map(String) }, role: { in: CUSTOMER_ROLES }, companyId: { not: null } },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            active: true,
-            company: { select: { ...companyRefSelect, active: true, parent: { select: { id: true, name: true, active: true } } } },
-          },
+          select: { id: true, name: true, email: true, phone: true, active: true, company: { select: candidateCompanySelect } },
           orderBy: [{ lastLoginAt: "desc" }, { createdAt: "desc" }],
         })
       : [],
     companyIds.length
       ? db.company.findMany({
           where: { id: { in: companyIds.map(String) } },
-          select: { ...companyRefSelect, phone: true, active: true, email: true },
+          select: { ...candidateCompanySelect, phone: true },
           orderBy: { createdAt: "asc" },
         })
       : [],
     ticketIds.length
       ? db.ticket.findMany({
           where: { id: { in: ticketIds.map(Number) } },
-          select: { id: true, contactName: true, contactEmail: true, contactPhone: true, company: { select: companyRefSelect } },
+          select: { id: true, contactName: true, contactEmail: true, contactPhone: true, company: { select: candidateCompanySelect } },
           orderBy: { createdAt: "desc" },
         })
       : [],
@@ -222,87 +409,14 @@ export async function matchCallers(numbers: Array<string | null | undefined>): P
       : [],
   ]);
 
-  // Aktive Benutzer aktiver Kunden zuerst, sonst Reihenfolge der Abfrage (zuletzt angemeldet zuerst)
-  const userRank = (u: (typeof users)[number]) =>
-    u.active && u.company?.active && u.company.parent?.active !== false ? 0 : 1;
-  const sortedUsers = [...users].sort((a, b) => userRank(a) - userRank(b));
-  const sortedCompanies = [...companies].sort((a, b) => Number(!a.active) - Number(!b.active));
-
   for (const target of targets) {
-    const user = sortedUsers.find((u) => u.company && normalizePhone(u.phone) === target);
-    if (user?.company) {
-      const root = rootOf(user.company);
-      result.set(target, {
-        source: "user",
-        label: `${user.name} · ${companyPath(user.company)}`,
-        userId: user.id,
-        companyId: user.company.id,
-        rootCompanyId: root.id,
-        rootCompanyName: root.name,
-        ticketId: null,
-        inquiryId: null,
-        contactName: user.name,
-        contactEmail: user.email,
-      });
-      continue;
-    }
-
-    const company = sortedCompanies.find((c) => normalizePhone(c.phone) === target);
-    if (company) {
-      const root = rootOf(company);
-      result.set(target, {
-        source: "company",
-        label: companyPath(company),
-        userId: null,
-        companyId: company.id,
-        rootCompanyId: root.id,
-        rootCompanyName: root.name,
-        ticketId: null,
-        inquiryId: null,
-        contactName: null,
-        contactEmail: null,
-      });
-      continue;
-    }
-
-    const ticket = tickets.find((t) => normalizePhone(t.contactPhone) === target);
-    if (ticket) {
-      const root = ticket.company ? rootOf(ticket.company) : null;
-      result.set(target, {
-        source: "ticket",
-        label: ticket.company
-          ? `${ticket.contactName ?? "Ansprechpartner"} · ${companyPath(ticket.company)}`
-          : `Privatkunde: ${ticket.contactName ?? "Name unbekannt"} (${formatTicketNumber(ticket.id)})`,
-        userId: null,
-        companyId: ticket.company?.id ?? null,
-        rootCompanyId: root?.id ?? null,
-        rootCompanyName: root?.name ?? null,
-        ticketId: ticket.id,
-        inquiryId: null,
-        contactName: ticket.contactName,
-        contactEmail: ticket.contactEmail,
-      });
-      continue;
-    }
-
-    const inquiry = inquiries.find((i) => normalizePhone(i.phone) === target);
-    if (inquiry) {
-      const root = inquiry.company ? rootOf(inquiry.company) : null;
-      result.set(target, {
-        source: "inquiry",
-        label: inquiry.company
-          ? `${inquiry.name} · ${companyPath(inquiry.company)}`
-          : `Interessent: ${inquiry.name}${inquiry.companyName ? `, ${inquiry.companyName}` : ""}`,
-        userId: null,
-        companyId: inquiry.company?.id ?? null,
-        rootCompanyId: root?.id ?? null,
-        rootCompanyName: root?.name ?? null,
-        ticketId: null,
-        inquiryId: inquiry.id,
-        contactName: inquiry.name,
-        contactEmail: inquiry.email,
-      });
-    }
+    const match = resolveCaller({
+      users: users.flatMap((u) => (u.company && normalizePhone(u.phone) === target ? [{ ...u, company: u.company }] : [])),
+      companies: companies.filter((c) => normalizePhone(c.phone) === target),
+      tickets: tickets.filter((t) => normalizePhone(t.contactPhone) === target),
+      inquiries: inquiries.filter((i) => normalizePhone(i.phone) === target),
+    });
+    if (match) result.set(target, match);
   }
   return result;
 }
@@ -387,7 +501,7 @@ async function processOnce(event: CallEvent, now: Date): Promise<ProcessedCall> 
         startedAt: event.at ?? now,
         companyId: match?.companyId ?? null,
         userId: match?.userId ?? null,
-        callerLabel: match?.label ?? null,
+        callerLabel: storedCallerLabel(match),
       },
       select: { id: true },
     });
@@ -422,7 +536,7 @@ async function processOnce(event: CallEvent, now: Date): Promise<ProcessedCall> 
   const counterpartNew = current.direction === "OUT" ? (data.toNumber as string | undefined) : (data.fromNumber as string | undefined);
   if (counterpartNew && !existing.companyId && !existing.callerLabel) {
     const match = await matchCaller(counterpartNew);
-    if (match) {
+    if (match && !isAmbiguousCaller(match)) {
       data.companyId = match.companyId;
       data.userId = match.userId;
       data.callerLabel = match.label;

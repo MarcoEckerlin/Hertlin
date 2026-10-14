@@ -95,7 +95,7 @@ Datenbank neu aufsetzen: `npm run db:reset`
 Die Anrufe selbst nimmt Ihre Telefonanlage an – Ihre Mitarbeiter nutzen dafür die App des Anbieters (z. B. sipgate, Placetel, 3CX) oder einen SIP-Softphone-Client wie Linphone oder Zoiper auf Handy und PC. Die Anlage meldet jeden Anruf per Webhook an `https://hertlin.de/api/telefonie?token=…`. Die Verwaltung zeigt den Anruf sofort an, erkennt den Kunden an der Telefonnummer und führt eine Anrufliste.
 
 - Einrichtung und Anleitung (sipgate.io Push-API, JSON-Format für Asterisk/FreePBX/3CX): Verwaltung → Anrufe → Einrichtung
-- Zugang: `TELEPHONY_WEBHOOK_TOKEN` setzen (z. B. `openssl rand -hex 32`); optional `TELEPHONY_ALLOWED_IPS`
+- Zugang: `TELEPHONY_WEBHOOK_TOKEN` setzen (z. B. `openssl rand -hex 32`, mindestens 24 Zeichen – kürzere lehnt der Webhook ab); optional `TELEPHONY_ALLOWED_IPS`
 - Mit „Testanruf simulieren“ lässt sich die Live-Anzeige ohne Anlage prüfen
 
 ## Übersetzung
@@ -139,7 +139,7 @@ Reservierte Kürzel, die nie an Kunden vergeben werden (z. B. `www`, `admin`, `m
 
 ### Reverse Proxy
 
-Die Anwendung erwartet den originalen Hostnamen (`Host` oder `X-Forwarded-Host`) und die Client-IP in `X-Forwarded-For`. Der Proxy muss `X-Forwarded-For` **selbst setzen** (nicht vom Client übernehmen), sonst greifen die Schutzgrenzen gegen zu viele Anmeldeversuche nicht zuverlässig.
+Die Anwendung erwartet den originalen Hostnamen (`Host` oder `X-Forwarded-Host`) und die Client-IP in `X-Forwarded-For`. Der Proxy muss `X-Forwarded-For` **selbst setzen** (nicht vom Client übernehmen), sonst greifen die Schutzgrenzen gegen zu viele Anmeldeversuche nicht zuverlässig. Ausgewertet wird der letzte Eintrag. Die Anwendung selbst darf nur für den Proxy erreichbar sein (Docker: Port nur an `127.0.0.1`, ohne Docker: `LISTEN_HOST=127.0.0.1`) – direkt aus dem Netz könnte jeder Client die IP frei angeben.
 
 Beispiel nginx:
 
@@ -189,7 +189,7 @@ Datenbank und Anhänge liegen im Volume `hertlin-data` (`/data`). Sichern Sie di
 npm ci
 npx prisma migrate deploy
 npm run build
-npm start          # Port 3000 (Next.js + WebSocket-Server aus server.ts), z. B. als systemd-Dienst
+LISTEN_HOST=127.0.0.1 npm start   # Port 3000 (Next.js + WebSocket-Server aus server.ts), nur für den Reverse Proxy erreichbar, z. B. als systemd-Dienst
 ```
 
 ## Tests

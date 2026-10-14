@@ -44,7 +44,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
               error={e.slug}
               hint="Nur Kleinbuchstaben, Ziffern und Bindestriche. Achtung: Bestehende Links auf die alte Adresse funktionieren danach nicht mehr."
             >
-              <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand-500 focus-within:ring-3 focus-within:ring-brand-200/70">
+              <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-white focus-within:border-brand-600 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-600">
                 <span className="hidden items-center border-r border-line bg-mist px-3 text-sm text-ink-muted sm:flex">{siteHost}/</span>
                 <input
                   id="settings-slug"
@@ -66,7 +66,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
             htmlFor="settings-navLabel"
             optional
             error={e.navLabel}
-            hint={`Kurzform für Menü und Footer. Leer lassen, um den Seitentitel „${page.title}“ zu verwenden.`}
+            hint={`Kurzform für Menü und Fußzeile. Leer lassen, um den Seitentitel „${page.title}“ zu verwenden.`}
           >
             <Input
               id="settings-navLabel"
@@ -79,7 +79,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
           </Field>
 
           <fieldset className="space-y-3">
-            <legend className="mb-1 text-sm font-semibold text-ink">Verlinkt im …</legend>
+            <legend className="mb-1 text-sm font-semibold text-ink">Wo ist die Seite verlinkt?</legend>
             <Checkbox
               name="showInNav"
               label="Hauptmenü"
@@ -88,7 +88,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
             />
             <Checkbox
               name="showInFooter"
-              label="Footer"
+              label="Fußzeile"
               hint="Unten auf jeder Seite, z. B. für Impressum und AGB."
               defaultChecked={checked("showInFooter", page.showInFooter)}
             />
@@ -126,7 +126,7 @@ export function PageSettingsForm({ page, siteHost }: { page: PageSettingsValues;
               disabled={!page.everPublished}
               hint={
                 page.everPublished
-                  ? "Ausgeblendete Seiten sind nicht erreichbar und verschwinden aus Menü und Footer. Der Inhalt bleibt erhalten."
+                  ? "Ausgeblendete Seiten sind nicht erreichbar und verschwinden aus Menü und Fußzeile. Der Inhalt bleibt erhalten."
                   : "Wird beim ersten Veröffentlichen automatisch eingeschaltet."
               }
               defaultChecked={page.everPublished ? checked("published", page.published) : false}

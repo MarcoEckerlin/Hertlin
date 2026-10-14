@@ -58,6 +58,26 @@ export function isValidSlug(slug: string): boolean {
   return SLUG_PATTERN.test(slug) && !RESERVED_SLUGS.has(slug);
 }
 
+const LOCAL_BASE = "http://hertlin.invalid";
+
+/**
+ * Pfad für Weiterleitungen nach der Anmeldung (?next=…): nur Ziele auf demselben Host.
+ * Steuerzeichen, Leerraum und Backslashes lehnen wir ab, weil Browser sie entfernen oder umdeuten
+ * („/\t/evil.example“ wird zu „//evil.example“). Zurück kommt der bereinigte Pfad samt Query und Anker.
+ */
+export function safeLocalPath(value: unknown, fallback: string): string {
+  if (typeof value !== "string" || value.length > 2000 || !value.startsWith("/")) return fallback;
+  if (/[\u0000-\u001F\u007F\\\s]/.test(value)) return fallback;
+  let url: URL;
+  try {
+    url = new URL(value, LOCAL_BASE);
+  } catch {
+    return fallback;
+  }
+  if (url.origin !== LOCAL_BASE || url.pathname.startsWith("//")) return fallback;
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 /** Absolute URL auf der Hauptdomain, z. B. für E-Mails. */
 export function mainUrl(path = "/"): string {
   return `${appProtocol()}://${rootDomain()}${path.startsWith("/") ? path : `/${path}`}`;

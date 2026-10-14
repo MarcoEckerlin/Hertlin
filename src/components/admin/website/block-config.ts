@@ -156,8 +156,8 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
     },
     { kind: "text", name: "title", label: "Überschrift", hint: "Die wichtigste Aussage der Seite.", max: 200 },
     { kind: "textarea", name: "text", label: "Text", max: 1500, rows: 4, markdown: true, optional: "omit" },
-    link("primary", "Hauptbutton", "Auffälliger Button, z. B. „Anfrage stellen“ → /kontakt"),
-    link("secondary", "Zweiter Button", "Dezenter Button daneben."),
+    link("primary", "Hauptschaltfläche", "Auffällige Schaltfläche, z. B. „Anfrage stellen“ → /kontakt"),
+    link("secondary", "Zweite Schaltfläche", "Dezente Schaltfläche daneben."),
     {
       kind: "select",
       name: "visual",
@@ -348,8 +348,8 @@ export const BLOCK_FIELDS: Record<BlockType, FieldDef[]> = {
   cta: [
     { kind: "text", name: "title", label: "Überschrift", max: 200 },
     { kind: "textarea", name: "text", label: "Text", max: 1000, rows: 3, markdown: true, optional: "omit" },
-    link("primary", "Hauptbutton"),
-    link("secondary", "Zweiter Button"),
+    link("primary", "Hauptschaltfläche"),
+    link("secondary", "Zweite Schaltfläche"),
     {
       kind: "checkbox",
       name: "showPhone",

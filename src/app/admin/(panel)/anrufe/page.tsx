@@ -230,7 +230,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
             defaultValue={filters.q}
             placeholder="Nummer, Name oder Notiz"
             maxLength={80}
-            className="block h-10 w-full min-w-0 rounded-full border border-line-strong bg-white px-4 text-sm text-ink placeholder:text-ink-muted/80 hover:border-brand-300 focus:border-brand-500 focus:ring-3 focus:ring-brand-200/70 focus:outline-none lg:w-64"
+            className="block h-10 w-full min-w-0 rounded-full border border-line-strong bg-white px-4 text-sm text-ink placeholder:text-ink-muted/80 hover:border-brand-300 focus:border-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 lg:w-64"
           />
           <Button type="submit" variant="secondary">
             <Search className="size-4" aria-hidden />

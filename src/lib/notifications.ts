@@ -4,6 +4,7 @@ import { isCustomerWatchingTicket, isStaffWatchingTicket } from "@/realtime/bus"
 import { sendMail, staffNotificationAddress } from "@/lib/mail";
 import { formatInquiryNumber, formatTicketNumber } from "@/lib/format";
 import { mainUrl, portalUrl } from "@/lib/hosts";
+import { guestGreeting } from "@/lib/guest-mail";
 import {
   CATEGORY_LABELS,
   CUSTOMER_TYPE_LABELS,
@@ -135,12 +136,15 @@ export async function sendPortalTicketConfirmation(opts: {
       "",
       `Zum Ticket: ${portalUrl(opts.slug, `/tickets/${opts.ticketId}`)}`,
       "",
-      `Wenn es brennt, rufen Sie uns bitte zusätzlich an: ${site.phone}`,
+      `Steht bei Ihnen der Betrieb still, rufen Sie uns bitte zusätzlich an: ${site.phone}`,
     ].join("\n"),
   });
 }
 
-/** Eingangsbestätigung mit persönlichem Status-Link für Privatkunden. */
+/**
+ * Eingangsbestätigung mit persönlichem Status-Link für Privatkunden.
+ * Die Adresse ist unbestätigt: Betreff und freie Namen übernehmen wir nicht in die Mail (siehe guestGreeting).
+ */
 export async function sendPrivateTicketConfirmation(opts: {
   to: string;
   name: string;
@@ -148,18 +152,19 @@ export async function sendPrivateTicketConfirmation(opts: {
   subject: string;
   token: string;
 }) {
+  const number = formatTicketNumber(opts.ticketId);
   await sendMail({
     to: opts.to,
-    subject: `Ihre Anfrage ${formatTicketNumber(opts.ticketId)} ist bei uns angekommen`,
+    subject: `Ihr Ticket ${number} ist bei uns eingegangen`,
     text: [
-      `Guten Tag ${opts.name},`,
+      guestGreeting(opts.name),
       "",
-      `danke für Ihre Nachricht zum Thema „${opts.subject}“. Wir melden uns in der Regel innerhalb eines Werktags bei Ihnen.`,
+      `danke für Ihre Meldung. Sie hat die Ticketnummer ${number}. Wir melden uns in der Regel innerhalb eines Werktags bei Ihnen.`,
       "",
       "Über diesen persönlichen Link sehen Sie jederzeit den Stand und können uns antworten:",
       mainUrl(`/status/${opts.token}`),
       "",
-      "Bitte geben Sie den Link nicht weiter. Wer ihn kennt, kann Ihre Anfrage lesen.",
+      "Bitte geben Sie den Link nicht weiter. Wer ihn kennt, kann Ihr Ticket lesen.",
     ].join("\n"),
   });
 }
@@ -193,6 +198,31 @@ export async function notifyCustomerStaffReply(opts: {
   });
 }
 
+/** Ticket, das Hertlin für einen Firmenkunden angelegt hat (Anruf, E-Mail, vor Ort). link: Portal-Link. */
+export async function sendStaffCreatedTicketMail(opts: {
+  to: string;
+  name: string;
+  ticketId: number;
+  subject: string;
+  body: string;
+  link: string;
+}) {
+  const number = formatTicketNumber(opts.ticketId);
+  await sendMail({
+    to: opts.to,
+    subject: `Ticket ${number} für Sie angelegt: ${opts.subject}`,
+    text: [
+      `Guten Tag ${opts.name},`,
+      "",
+      `wir haben für Sie das Ticket ${number} angelegt:`,
+      "",
+      excerpt(opts.body, 1500),
+      "",
+      `Den Stand sehen Sie im Ticket, dort können Sie uns auch antworten: ${opts.link}`,
+    ].join("\n"),
+  });
+}
+
 /** Statusänderung (gelöst/geschlossen) an den Kunden. */
 export async function notifyCustomerStatusChange(opts: {
   to: string;
@@ -200,8 +230,11 @@ export async function notifyCustomerStatusChange(opts: {
   ticketId: number;
   subject: string;
   statusLabel: string;
+  /** Geschlossene Tickets nehmen keine Antworten mehr an (canCustomerReply). */
+  closed: boolean;
   link: string;
 }) {
+  const site = await getSiteSettings();
   await sendMail({
     to: opts.to,
     subject: `${formatTicketNumber(opts.ticketId)} ist jetzt „${opts.statusLabel}“`,
@@ -209,9 +242,11 @@ export async function notifyCustomerStatusChange(opts: {
       `Guten Tag ${opts.name},`,
       "",
       `der Status Ihres Tickets „${opts.subject}“ wurde auf „${opts.statusLabel}“ gesetzt.`,
-      "Falls das Problem doch noch besteht, antworten Sie einfach im Ticket – es wird dann wieder geöffnet.",
+      opts.closed
+        ? `Das Ticket ist damit abgeschlossen. Taucht das Problem wieder auf, melden Sie es bitte als neues Ticket oder rufen Sie uns an: ${site.phone}.`
+        : "Ist das Problem doch nicht behoben, antworten Sie einfach im Ticket. Dann öffnen wir es wieder.",
       "",
-      opts.link,
+      `Zum Ticket: ${opts.link}`,
     ].join("\n"),
   });
 }
@@ -222,9 +257,9 @@ export async function sendInquiryConfirmation(inquiry: { id: number; name: strin
     to: inquiry.email,
     subject: `Ihre Anfrage bei ${site.name} (${formatInquiryNumber(inquiry.id)})`,
     text: [
-      `Guten Tag ${inquiry.name},`,
+      guestGreeting(inquiry.name),
       "",
-      "vielen Dank für Ihre Anfrage. Wir lesen jede Nachricht selbst und melden uns innerhalb eines Werktags bei Ihnen – " +
+      "vielen Dank für Ihre Anfrage. Wir lesen jede Nachricht selbst und melden uns in der Regel innerhalb eines Werktags bei Ihnen – " +
         (inquiry.customerType === "BUSINESS"
           ? "meist mit einem Vorschlag für ein kurzes Kennenlerngespräch."
           : "telefonisch oder per E-Mail, so wie Sie es angegeben haben."),
@@ -243,19 +278,31 @@ export async function sendInviteMail(opts: {
   isStaff?: boolean;
 }) {
   const site = await getSiteSettings();
-  const where = opts.isStaff ? `die Verwaltung von ${site.name}` : `das Kundenportal${opts.companyName ? ` von ${opts.companyName}` : ""}`;
+  const where = opts.isStaff ? `zur Verwaltung von ${site.name}` : `zum Kundenportal${opts.companyName ? ` von ${opts.companyName}` : ""}`;
+  // Portal-Adresse (Subdomain mit dem Kürzel der Firma) zum Merken – der Login-Seite reicht das Kürzel
+  let portalAddress: string | null = null;
+  if (!opts.isStaff) {
+    try {
+      portalAddress = new URL(opts.link).origin;
+    } catch {
+      portalAddress = null;
+    }
+  }
   await sendMail({
     to: opts.to,
     subject: opts.isStaff ? `Ihr Zugang zur ${site.name}-Verwaltung` : `Ihr Zugang zum ${site.name}-Kundenportal`,
     text: [
       `Guten Tag ${opts.name},`,
       "",
-      `${opts.invitedBy ? `${opts.invitedBy} hat` : "Wir haben"} für Sie einen Zugang für ${where} eingerichtet.`,
-      opts.isStaff ? "" : "Dort melden Sie Störungen, stellen Anfragen und sehen den Stand Ihrer Tickets.",
+      `${opts.invitedBy ? `${opts.invitedBy} hat` : "wir haben"} für Sie einen Zugang ${where} eingerichtet.`,
+      opts.isStaff ? null : "Dort melden Sie Störungen, stellen Anfragen und sehen den Stand Ihrer Tickets.",
       "",
       "Bitte legen Sie über diesen Link Ihr Passwort fest (gültig für 7 Tage):",
       opts.link,
-    ].join("\n"),
+      ...(portalAddress ? ["", "Ihr Kundenportal finden Sie später immer unter dieser Adresse:", portalAddress] : []),
+    ]
+      .filter((l) => l !== null)
+      .join("\n"),
   });
 }
 
@@ -277,14 +324,20 @@ export async function sendPasswordResetMail(opts: { to: string; name: string; li
 
 /** Status-Link erneut zusenden (Privatkunden). */
 export async function sendPrivateStatusLink(opts: { to: string; name: string; ticketId: number; subject: string; token: string }) {
+  const site = await getSiteSettings();
+  const number = formatTicketNumber(opts.ticketId);
   await sendMail({
     to: opts.to,
-    subject: `Ihr Link zu ${formatTicketNumber(opts.ticketId)}`,
+    subject: `Ihr Link zu ${number}`,
     text: [
-      `Guten Tag ${opts.name},`,
+      guestGreeting(opts.name),
       "",
-      `hier ist Ihr persönlicher Link zur Anfrage „${opts.subject}“:`,
+      `hier ist Ihr persönlicher Link zu Ihrem Ticket ${number}:`,
       mainUrl(`/status/${opts.token}`),
+      "",
+      "Bitte geben Sie den Link nicht weiter. Wer ihn kennt, kann Ihr Ticket lesen.",
+      "",
+      `Bei Fragen erreichen Sie uns unter ${site.phone}.`,
     ].join("\n"),
   });
 }

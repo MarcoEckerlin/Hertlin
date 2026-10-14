@@ -18,9 +18,12 @@ export type BusEvent =
 type RealtimeGlobal = {
   emitter: EventEmitter;
   /** Kanal -> Verbindung -> Teilnehmer */
-  presence: Map<ChannelKey, Map<string, { name: string; staff: boolean }>>;
+  presence: Map<ChannelKey, Map<string, PresenceEntry>>;
   serverAttached: boolean;
 };
+
+/** Teilnehmer eines Kanals. userId: angemeldetes Konto (Portal, Verwaltung); fehlt bei Gästen mit Status- oder Chat-Link. */
+export type PresenceEntry = { name: string; staff: boolean; userId?: string };
 
 const g = globalThis as unknown as { __hertlinRealtime?: RealtimeGlobal };
 
@@ -54,7 +57,7 @@ export function markServerAttached(): void {
 
 /* ---------- Anwesenheit ---------- */
 
-export function setPresence(key: ChannelKey, connectionId: string, info: { name: string; staff: boolean } | null): void {
+export function setPresence(key: ChannelKey, connectionId: string, info: PresenceEntry | null): void {
   const map = state().presence;
   let channel = map.get(key);
   if (!channel) {
@@ -75,9 +78,27 @@ export function getPresence(key: ChannelKey): PresenceInfo {
   return { staff: [...staff], customers: [...customers] };
 }
 
-/** Hat gerade ein Kunde das Ticket offen? Dann ist eine zusätzliche E-Mail meist überflüssig. */
+/** Hat gerade irgendein Kunde das Ticket offen? Für E-Mails isRecipientWatchingTicket() nehmen. */
 export function isCustomerWatchingTicket(ticketId: number): boolean {
   return getPresence(`ticket:${ticketId}`).customers.length > 0;
+}
+
+/**
+ * Hat genau der Empfänger der E-Mail das Ticket gerade offen? Nur dann ist die Mail überflüssig.
+ * recipientUserId: Portalkonto des Empfängers (siehe customerRecipient). null = Empfänger ohne Konto,
+ * z. B. Privatkunde mit Status-Link: Dann zählen nur Gäste im Kanal, nicht andere Portalbenutzer derselben Firma.
+ */
+export function isRecipientWatchingTicket(ticketId: number, recipientUserId: string | null): boolean {
+  return isRecipientPresent(state().presence.get(`ticket:${ticketId}`)?.values() ?? [], recipientUserId);
+}
+
+/** Reine Prüfung für isRecipientWatchingTicket (auch für Tests). */
+export function isRecipientPresent(entries: Iterable<PresenceEntry>, recipientUserId: string | null): boolean {
+  for (const entry of entries) {
+    if (entry.staff) continue;
+    if (recipientUserId ? entry.userId === recipientUserId : !entry.userId) return true;
+  }
+  return false;
 }
 
 export function isStaffWatchingTicket(ticketId: number): boolean {

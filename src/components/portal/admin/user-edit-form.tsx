@@ -11,6 +11,7 @@ import { InviteLinkBox } from "@/components/portal/admin/invite-link-box";
 import { RoleChoice, adminRoleDescription } from "@/components/portal/admin/role-choice";
 import { useFormFocus } from "@/components/portal/admin/use-form-focus";
 import type { CompanyOption, PortalRole, PortalUserFormValues } from "@/components/portal/admin/types";
+import { useFormKey } from "@/lib/use-form-key";
 
 /** Benutzer bearbeiten: Kontaktdaten, Rolle, Zuordnung und Zugang. */
 export function UserEditForm({
@@ -29,6 +30,7 @@ export function UserEditForm({
 }) {
   const [state, formAction] = useActionState(updatePortalUserAction, initialFormState);
   const formRef = useFormFocus(state);
+  const formKey = useFormKey(state);
   const errors = state.fieldErrors ?? {};
   const values = state.values;
   const [companyId, setCompanyId] = useState(user.companyId);
@@ -46,9 +48,13 @@ export function UserEditForm({
   const subs = companies.filter((c) => !c.isRoot);
   const role = ((values?.role as PortalRole | undefined) ?? user.role) === "CUSTOMER_ADMIN" ? "CUSTOMER_ADMIN" : "CUSTOMER_USER";
   const active = isSelf ? true : values ? values.active === "on" : user.active;
+  // Eingerichtete Zugänge anderer Personen: Die Anmeldeadresse ändert nur Hertlin (Schutz vor Kontoübernahme)
+  const emailLocked = !invited && !isSelf;
 
+  // Nach jedem Ergebnis und nach einem Firmenwechsel neu aufbauen: Die Firmenauswahl springt sonst beim Zurücksetzen
+  // auf die Firma vom ersten Anzeigen, und das nächste Speichern würde den Benutzer unbemerkt zurückhängen.
   return (
-    <form ref={formRef} action={formAction} noValidate className="@container space-y-5">
+    <form key={`${formKey}-${user.companyId}`} ref={formRef} action={formAction} noValidate className="@container space-y-5">
       <input type="hidden" name="id" value={user.id} />
       <FormMessage state={state} />
       {state.status === "success" && state.data?.inviteLink ? (
@@ -73,7 +79,9 @@ export function UserEditForm({
         hint={
           invited
             ? "Wenn Sie die Adresse ändern, schicken wir die Einladung an die neue Adresse. Der alte Link verfällt."
-            : "Mit dieser Adresse meldet sich die Person an. Eine Änderung gilt sofort, das Passwort bleibt gleich."
+            : isSelf
+              ? "Mit dieser Adresse melden Sie sich an. Eine Änderung gilt sofort, Ihr Passwort bleibt gleich."
+              : "Mit dieser Adresse meldet sich die Person an. Ändern können Sie sie hier nicht – melden Sie sich bei uns, wir stellen sie nach Rücksprache mit der Person um."
         }
       >
         <Input
@@ -83,7 +91,9 @@ export function UserEditForm({
           required
           maxLength={200}
           autoComplete="off"
-          defaultValue={values?.email ?? user.email}
+          readOnly={emailLocked}
+          className={emailLocked ? "bg-mist text-ink-muted" : undefined}
+          defaultValue={emailLocked ? user.email : (values?.email ?? user.email)}
         />
       </Field>
 

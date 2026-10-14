@@ -121,8 +121,8 @@ export async function changeStaffPasswordAction(_prev: FormState, formData: Form
     const passwordHash = await hashPassword(parsed.data.password);
     await db.$transaction([
       db.user.update({ where: { id: user.id }, data: { passwordHash } }),
-      // Ein noch offener Link „Passwort vergessen“ soll danach nicht mehr funktionieren
-      db.authToken.updateMany({ where: { userId: user.id, purpose: "RESET", usedAt: null }, data: { usedAt: new Date() } }),
+      // Noch offene Links („Passwort vergessen“, Einladung) sollen danach nicht mehr funktionieren
+      db.authToken.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } }),
     ]);
     // Andere Geräte abmelden, diese Sitzung bleibt bestehen
     await destroyAllSessions(user.id, true);

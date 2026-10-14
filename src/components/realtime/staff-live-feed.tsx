@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Inbox, MessageSquare, Phone, Ticket, X } from "lucide-react";
 import { useChannel } from "@/realtime/client";
 import type { StaffNotice } from "@/realtime/protocol";
@@ -47,8 +47,38 @@ export function StaffLiveFeed() {
   const pathname = usePathname();
   const [toasts, setToasts] = useState<Toast[]>([]);
   const counter = useRef(0);
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  /** Solange die Maus über den Hinweisen ist oder einer davon den Fokus hat, verschwindet nichts. */
+  const paused = useRef(false);
 
-  const dismiss = (id: string) => setToasts((t) => t.filter((x) => x.id !== id));
+  const dismiss = (id: string) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.delete(id);
+    setToasts((t) => t.filter((x) => x.id !== id));
+  };
+
+  const schedule = (id: string, ms: number) => {
+    clearTimeout(timers.current.get(id));
+    timers.current.set(id, setTimeout(() => dismiss(id), ms));
+  };
+
+  const pause = () => {
+    paused.current = true;
+    for (const timer of timers.current.values()) clearTimeout(timer);
+    timers.current.clear();
+  };
+
+  const resume = () => {
+    paused.current = false;
+    for (const t of toasts) if (!t.sticky) schedule(t.id, 5000);
+  };
+
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      for (const timer of pending.values()) clearTimeout(timer);
+    };
+  }, []);
 
   useChannel(SPEC, (message) => {
     if (message.t !== "notice") return;
@@ -74,16 +104,27 @@ export function StaffLiveFeed() {
     counter.current += 1;
     const toast: Toast = { id: `${Date.now()}-${counter.current}`, notice: n, sticky: n.kind === "call.incoming" };
     setToasts((t) => [toast, ...t].slice(0, 5));
-    if (!toast.sticky) setTimeout(() => dismiss(toast.id), 9000);
+    if (!toast.sticky && !paused.current) schedule(toast.id, 9000);
 
     if (n.kind === "call.incoming") showSystemNotification("Eingehender Anruf", n.callerLabel ?? n.from, href);
     if (n.kind === "ticket.created") showSystemNotification(`Neues Ticket ${formatTicketNumber(n.ticketId)}`, n.subject, href);
   });
 
-  if (toasts.length === 0) return null;
-
+  // Die Live-Region bleibt immer im Dokument, sonst lesen Screenreader den ersten Hinweis nicht vor.
+  // Mobil oben unter der Kopfzeile und höchstens zwei Hinweise, damit Eingabefelder und Speichern-Leisten frei bleiben.
   return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col gap-2" aria-live="polite">
+    <div
+      className="pointer-events-none fixed right-4 bottom-4 z-50 flex w-[22rem] max-w-[calc(100vw-2rem)] flex-col gap-2 max-sm:top-16 max-sm:bottom-auto max-sm:[&>:nth-child(n+3)]:hidden"
+      aria-live="polite"
+      onMouseEnter={pause}
+      onMouseLeave={(e) => {
+        if (!e.currentTarget.contains(document.activeElement)) resume();
+      }}
+      onFocus={pause}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) resume();
+      }}
+    >
       {toasts.map(({ id, notice: n }) => {
         const href = noticeHref(n);
         let icon = <Ticket className="size-4" aria-hidden />;

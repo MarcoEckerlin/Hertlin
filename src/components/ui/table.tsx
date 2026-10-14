@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 /** Tabelle in einer Karte mit horizontalem Scrollen auf kleinen Bildschirmen. */
 export function Table({ className, children, ...props }: ComponentProps<"table">) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
+    <div className="relative overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
       <table className={cn("w-full min-w-[40rem] border-collapse text-left text-sm", className)} {...props}>
         {children}
       </table>

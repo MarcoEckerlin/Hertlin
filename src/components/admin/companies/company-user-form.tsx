@@ -12,6 +12,7 @@ import { InviteLinkBox } from "@/components/admin/companies/invite-link-box";
 import { createCompanyUserAction, updateCompanyUserAction } from "@/lib/actions/admin-companies";
 import { cn } from "@/lib/cn";
 import { initialFormState } from "@/lib/forms";
+import { useFormKey } from "@/lib/use-form-key";
 
 export type CompanyOption = { id: string; name: string; isRoot: boolean; active: boolean };
 
@@ -160,6 +161,7 @@ function CompanyUserCreateForm({
 }) {
   const [state, formAction] = useActionState(createCompanyUserAction, initialFormState);
   const formRef = useFormFocus(state);
+  const formKey = useFormKey(state);
   const errors = state.fieldErrors ?? {};
   const values = state.values ?? {};
   const initialCompanyId = values.companyId ?? defaultCompanyId;
@@ -183,8 +185,9 @@ function CompanyUserCreateForm({
     );
   }
 
+  // Nach einem Fehler neu aufbauen, sonst springt die Firmenauswahl auf die vorgeschlagene Firma zurück
   return (
-    <form ref={formRef} action={formAction} noValidate className="space-y-6">
+    <form key={formKey} ref={formRef} action={formAction} noValidate className="space-y-6">
       <input type="hidden" name="rootId" value={rootId} />
       <FormMessage state={state} />
 
@@ -286,6 +289,7 @@ export function CompanyUserEditForm({
 }) {
   const [state, formAction] = useActionState(updateCompanyUserAction, initialFormState);
   const formRef = useFormFocus(state);
+  const formKey = useFormKey(state);
   const errors = state.fieldErrors ?? {};
   const values: Partial<Record<string, string>> = state.values ?? {
     name: user.name,
@@ -306,8 +310,10 @@ export function CompanyUserEditForm({
   const company = companies.find((c) => c.id === companyId);
   const active = state.values ? state.values.active === "on" : user.active;
 
+  // Nach jedem Ergebnis und nach einem Firmenwechsel neu aufbauen: Die Firmenauswahl springt sonst beim Zurücksetzen
+  // auf die Firma vom ersten Anzeigen, und das nächste Speichern würde den Benutzer unbemerkt zurückhängen.
   return (
-    <form ref={formRef} action={formAction} noValidate className="space-y-6">
+    <form key={`${formKey}-${user.companyId}`} ref={formRef} action={formAction} noValidate className="space-y-6">
       <input type="hidden" name="id" value={user.id} />
       <input type="hidden" name="rootId" value={rootId} />
       <FormMessage state={state} />

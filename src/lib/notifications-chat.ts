@@ -3,6 +3,7 @@ import { getSiteSettings } from "@/lib/settings";
 import { sendMail, staffNotificationAddress } from "@/lib/mail";
 import { formatInquiryNumber } from "@/lib/format";
 import { mainUrl } from "@/lib/hosts";
+import { guestGreeting } from "@/lib/guest-mail";
 import { rateLimit } from "@/lib/rate-limit";
 import { isLangCode, languageLabel } from "@/lib/languages";
 import { translateText, translationEnabled } from "@/lib/translate";
@@ -46,9 +47,9 @@ export async function sendInquiryConfirmationWithChat(inquiry: {
     to: inquiry.email,
     subject: `Ihre Anfrage bei ${site.name} (${number})`,
     text: [
-      `Guten Tag ${inquiry.name},`,
+      guestGreeting(inquiry.name),
       "",
-      "vielen Dank für Ihre Anfrage. Wir lesen jede Nachricht selbst und melden uns innerhalb eines Werktags bei Ihnen – " +
+      "vielen Dank für Ihre Anfrage. Wir lesen jede Nachricht selbst und melden uns in der Regel innerhalb eines Werktags bei Ihnen – " +
         (inquiry.customerType === "BUSINESS"
           ? "meist mit einem Vorschlag für ein kurzes Kennenlerngespräch."
           : "telefonisch oder per E-Mail, so wie Sie es angegeben haben."),
@@ -130,7 +131,7 @@ export async function notifyProspectStaffMessage(opts: {
     text: [
       `Guten Tag ${opts.name},`,
       "",
-      `${opts.staffName} von ${site.name} hat Ihnen zu Ihrer Anfrage geschrieben:`,
+      `${opts.staffName} (${site.name}) hat Ihnen zu Ihrer Anfrage ${number} geschrieben:`,
       "",
       text,
       ...(translated && isLangCode(opts.language)

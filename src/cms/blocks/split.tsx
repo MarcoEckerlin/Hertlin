@@ -66,7 +66,7 @@ export function SplitBlock({ block, ctx, layout }: BlockProps<"split">) {
               ) : null}
               {panel.link ? (
                 <div className="mt-auto pt-8">
-                  <CtaButton cta={panel.link} ctx={ctx} variant="dark" arrow />
+                  <CtaButton cta={panel.link} ctx={ctx} variant="primary" arrow />
                 </div>
               ) : null}
             </article>

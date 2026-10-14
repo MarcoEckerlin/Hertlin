@@ -56,11 +56,13 @@ export function formatDate(date: Date | string | null | undefined): string {
   return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeZone: TZ }).format(new Date(date));
 }
 
+/** "12.10.2026, 21:15 Uhr" */
 export function formatDateTime(date: Date | string | null | undefined): string {
   if (!date) return "–";
-  return new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: TZ }).format(
+  const formatted = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium", timeStyle: "short", timeZone: TZ }).format(
     new Date(date),
   );
+  return `${formatted} Uhr`;
 }
 
 /** Datum für <input type="date">: YYYY-MM-DD in deutscher Zeitzone */

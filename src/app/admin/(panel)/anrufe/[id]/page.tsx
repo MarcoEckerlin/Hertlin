@@ -37,7 +37,7 @@ import {
   phoneHref,
   type CallProvider,
 } from "@/lib/phone";
-import { companyPath, describeCall, matchCaller } from "@/lib/telephony";
+import { companyPath, describeCall, isAmbiguousCaller, matchCaller, storedCallerLabel } from "@/lib/telephony";
 
 export const metadata: Metadata = { title: "Anruf" };
 
@@ -88,7 +88,7 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
   const tel = phoneHref(number);
   // Für Links und Vorschläge: Anrufer (erneut) suchen
   const match = await matchCaller(number);
-  const title = call.callerLabel ?? match?.label ?? formatPhoneDisplay(number);
+  const title = call.callerLabel ?? storedCallerLabel(match) ?? formatPhoneDisplay(number);
   const duration = formatCallDuration(call.answeredAt, call.endedAt);
   const cause = hangupCauseLabel(call.hangupCause);
   const isOut = call.direction === "OUT";
@@ -139,7 +139,12 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
   const defaultCompanyId = call.companyId ?? match?.companyId ?? null;
   const knownCompany = defaultCompanyId ? customers.some((g) => g.companies.some((c) => c.id === defaultCompanyId)) : false;
   const defaults: TicketFormDefaults = {
-    customer: knownCompany && defaultCompanyId ? defaultCompanyId : match && !match.companyId ? PRIVATE_CUSTOMER : "",
+    customer:
+      knownCompany && defaultCompanyId
+        ? defaultCompanyId
+        : match && !match.companyId && !isAmbiguousCaller(match)
+          ? PRIVATE_CUSTOMER
+          : "",
     contactUserId: call.userId ?? (match?.companyId === defaultCompanyId ? (match?.userId ?? "") : ""),
     contactName: match?.userId ? "" : (match?.contactName ?? ""),
     contactPhone: normalized ? formatPhoneDisplay(normalized) : "",
@@ -291,6 +296,14 @@ export default async function CallPage({ params }: { params: Promise<{ id: strin
                       </a>
                     </p>
                   ) : null}
+                </>
+              ) : isAmbiguousCaller(match) ? (
+                <>
+                  <p className="font-semibold text-ink">{match?.label}</p>
+                  <p className="text-ink-soft">
+                    Verschiedene Kunden haben diese Nummer eingetragen. Klären Sie im Gespräch, wer anruft, und wählen Sie den
+                    Kunden beim Ticket selbst aus.
+                  </p>
                 </>
               ) : match ? (
                 <p className="font-semibold text-ink">{match.label}</p>

@@ -21,7 +21,7 @@ export function InviteLinkBox({ link, name }: { link: string; name: string }) {
           value={link}
           aria-label={`Einladungslink für ${name}`}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-10 min-w-0 flex-1 rounded-xl border border-line-strong bg-white px-3 font-mono text-xs text-ink focus:border-brand-500 focus:ring-3 focus:ring-brand-200/70 focus:outline-none"
+          className="h-10 min-w-0 flex-1 rounded-xl border border-line-strong bg-white px-3 font-mono text-xs text-ink focus:border-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
         />
         <CopyButton value={link} label="Link kopieren" />
       </div>

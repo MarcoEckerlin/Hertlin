@@ -4,16 +4,16 @@ import { markResolvedAction, reopenTicketAction } from "@/lib/actions/portal-tic
 import { SubmitButton } from "@/components/ui/submit-button";
 
 /**
- * „Problem ist gelöst“ (solange das Ticket offen ist) bzw. „Wieder öffnen“ (wenn es gelöst ist).
+ * „Problem ist gelöst“ bzw. bei Anfragen „Hat sich erledigt“ (solange das Ticket offen ist) oder „Wieder öffnen“ (wenn es gelöst ist).
  * Die gebundene Ticket-ID prüft die Action erneut gegen den Sichtbereich des Benutzers.
  */
-export function TicketStatusActions({ ticketId, status }: { ticketId: number; status: string }) {
+export function TicketStatusActions({ ticketId, status, type }: { ticketId: number; status: string; type: string }) {
   if ((OPEN_STATUSES as readonly string[]).includes(status)) {
     return (
       <form action={markResolvedAction.bind(null, ticketId)}>
         <SubmitButton variant="secondary" size="sm" pendingText="Wird gespeichert …">
           <CircleCheck className="size-4 text-emerald-600" aria-hidden />
-          Problem ist gelöst
+          {type === "ANFRAGE" ? "Hat sich erledigt" : "Problem ist gelöst"}
         </SubmitButton>
       </form>
     );

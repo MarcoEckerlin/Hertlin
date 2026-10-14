@@ -61,9 +61,12 @@ test.describe("Anmeldung und Mandantentrennung", () => {
   test("Passwort zurücksetzen im Kundenportal", async ({ page }) => {
     await page.goto(portal("baeckerei", "/passwort-vergessen"));
     await page.getByLabel("E-Mail-Adresse").fill("chef@baeckerei.example");
+    const before = (await lastMailTo("chef@baeckerei.example"))?.body ?? null;
     await page.getByRole("button", { name: "Link anfordern" }).click();
     await expect(page.getByText(/haben wir Ihnen gerade eine E-Mail/)).toBeVisible();
 
+    // Die Mail geht erst nach der Antwort raus (gleiche Antwortzeit mit und ohne Konto)
+    await expect.poll(async () => (await lastMailTo("chef@baeckerei.example"))?.body ?? null).not.toBe(before);
     const mail = await lastMailTo("chef@baeckerei.example");
     const link = mail && linkIn(mail.body, /http:\/\/baeckerei\.localhost:3200\/passwort\/[A-Za-z0-9_-]+/);
     expect(link).toBeTruthy();

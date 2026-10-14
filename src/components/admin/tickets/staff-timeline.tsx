@@ -154,7 +154,7 @@ function MessageItem({
               className={cn(
                 "grid size-8 shrink-0 place-items-center rounded-full text-xs font-bold",
                 variant === "note" && "bg-amber-200 text-amber-900",
-                variant === "staff" && "bg-brand-400 text-white",
+                variant === "staff" && "bg-brand-400 text-ink",
                 variant === "customer" && "bg-brand-100 text-brand-800",
               )}
               aria-hidden

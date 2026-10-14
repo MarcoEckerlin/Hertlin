@@ -14,6 +14,7 @@ import { InviteLinkBox } from "@/components/portal/admin/invite-link-box";
 import { RoleChoice, adminRoleDescription } from "@/components/portal/admin/role-choice";
 import { useFormFocus } from "@/components/portal/admin/use-form-focus";
 import type { CompanyOption, PortalRole } from "@/components/portal/admin/types";
+import { useFormKey } from "@/lib/use-form-key";
 
 type Props = {
   /** Auswählbare Firmen (nur aktive). Bei genau einer Firma wird sie fest angezeigt. */
@@ -44,6 +45,7 @@ function UserCreateForm({
 }: Props & { onAnother: () => void }) {
   const [state, formAction] = useActionState(createPortalUserAction, initialFormState);
   const formRef = useFormFocus(state);
+  const formKey = useFormKey(state);
   const successRef = useRef<HTMLDivElement>(null);
   const [companyId, setCompanyId] = useState(defaultCompanyId);
   const errors = state.fieldErrors ?? {};
@@ -81,8 +83,10 @@ function UserCreateForm({
   const subs = companies.filter((c) => !c.isRoot);
   const role = (state.values?.role as PortalRole | undefined) ?? "CUSTOMER_USER";
 
+  // Nach einem Fehler neu aufbauen: Die Firmenauswahl springt sonst beim Zurücksetzen auf die vorgeschlagene Firma,
+  // während Rollenhinweis und Auswahl im State noch die gewählte Unterkunde meinen.
   return (
-    <form ref={formRef} action={formAction} noValidate className="@container space-y-5">
+    <form key={formKey} ref={formRef} action={formAction} noValidate className="@container space-y-5">
       <FormMessage state={state} />
 
       <Field label="Name" htmlFor="user-name" error={errors.name}>

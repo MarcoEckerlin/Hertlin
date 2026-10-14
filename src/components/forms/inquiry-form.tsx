@@ -56,7 +56,7 @@ export function InquiryForm({
   contact: { phone: string; phoneHref: string };
 }) {
   const [state, action] = useActionState(submitInquiryAction, initialFormState);
-  const { formRef, successRef } = useFormFeedback(state);
+  const { formRef, successRef, formKey } = useFormFeedback(state);
   const [customerType, setCustomerType] = useState<CustomerType>(defaultType ?? "BUSINESS");
   const [contactPreference, setContactPreference] = useState<ContactPreference>("EMAIL");
 
@@ -75,7 +75,7 @@ export function InquiryForm({
     presetTopic && (topics as readonly string[]).includes(presetTopic) ? presetTopic : isBusiness ? "" : "PRIVAT_HILFE";
 
   return (
-    <form ref={formRef} action={action} noValidate className="relative space-y-7">
+    <form key={formKey} ref={formRef} action={action} noValidate className="relative space-y-7">
       <Honeypot idPrefix={ID} />
       <FormMessage state={state} />
 
@@ -242,7 +242,7 @@ export function InquiryForm({
           <SubmitButton size="lg" pendingText="Wird gesendet …" className="w-full sm:w-auto">
             Anfrage senden
           </SubmitButton>
-          <p className="text-sm text-ink-muted">Wir melden uns innerhalb eines Werktags.</p>
+          <p className="text-sm text-ink-muted">Sie bekommen sofort eine Bestätigung per E-Mail.</p>
         </div>
       </div>
     </form>
@@ -314,7 +314,7 @@ function InquirySuccess({
         <li className="flex gap-3">
           <StepNumber n={data.email ? 2 : 1} />
           <span>
-            Innerhalb eines Werktags melden wir uns {byPhone ? "telefonisch" : "per E-Mail"} bei Ihnen.
+            In der Regel melden wir uns innerhalb eines Werktags {byPhone ? "telefonisch" : "per E-Mail"} bei Ihnen.
           </span>
         </li>
         <li className="flex gap-3">

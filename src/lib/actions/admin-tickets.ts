@@ -33,6 +33,7 @@ import {
   notifyCustomerStatusChange,
   sendPrivateStatusLink,
   sendPrivateTicketConfirmation,
+  sendStaffCreatedTicketMail,
 } from "@/lib/notifications";
 import { isCustomerWatchingTicket } from "@/realtime/bus";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
@@ -282,7 +283,7 @@ export async function createStaffTicketAction(_prev: FormState, formData: FormDa
       const recipient = await customerRecipient(ticketId);
       if (recipient) {
         after(() =>
-          notifyCustomerStaffReply({
+          sendStaffCreatedTicketMail({
             to: recipient.email,
             name: recipient.name,
             ticketId,
@@ -448,10 +449,11 @@ export async function updateTicketMetaAction(_prev: FormState, formData: FormDat
     const recipient = await customerRecipient(ticket.id);
     if (recipient) {
       const statusLabel = STATUS_LABELS[input.status];
+      const closed = input.status === "CLOSED";
       const subject = ticket.subject;
       const id = ticket.id;
       after(() =>
-        notifyCustomerStatusChange({ to: recipient.email, name: recipient.name, ticketId: id, subject, statusLabel, link: recipient.link }),
+        notifyCustomerStatusChange({ to: recipient.email, name: recipient.name, ticketId: id, subject, statusLabel, closed, link: recipient.link }),
       );
       mailNote = ` Der Kunde wird per E-Mail informiert (${recipient.email}).`;
     } else {

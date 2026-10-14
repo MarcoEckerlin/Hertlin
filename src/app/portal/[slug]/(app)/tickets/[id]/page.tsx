@@ -95,7 +95,7 @@ export default async function PortalTicketPage({ params, searchParams }: { param
             <Badge tone="gray">{labelOf(TYPE_LABELS, ticket.type)}</Badge>
           </>
         }
-        actions={<TicketStatusActions ticketId={ticket.id} status={ticket.status} />}
+        actions={<TicketStatusActions ticketId={ticket.id} status={ticket.status} type={ticket.type} />}
       />
 
       <div className="space-y-4">
@@ -128,7 +128,7 @@ export default async function PortalTicketPage({ params, searchParams }: { param
         {justResolved ? null : <StatusNotice ticket={ticket} currentUserId={ctx.user.id} />}
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <section aria-labelledby="verlauf-titel">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -164,6 +164,7 @@ export default async function PortalTicketPage({ params, searchParams }: { param
               spec={{ t: "sub", ch: "ticket", id: ticket.id }}
               audience="customer"
               selfName={ctx.user.name}
+              companyName={site.name}
               className="mt-4 min-h-5 px-1"
             />
           </section>
@@ -227,7 +228,7 @@ export default async function PortalTicketPage({ params, searchParams }: { param
                 <Detail label="Status">
                   <StatusBadge status={ticket.status} />
                 </Detail>
-                <Detail label="Priorität">
+                <Detail label="Dringlichkeit">
                   <PriorityBadge priority={ticket.priority} />
                 </Detail>
                 <Detail label="Art">{labelOf(TYPE_LABELS, ticket.type)}</Detail>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, Phone, X } from "lucide-react";
 import { buttonClasses } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -20,12 +20,35 @@ export function MobileNav({ items, phone, phoneHref }: { items: SiteNavLink[]; p
     setOpen(false);
   }
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Escape und Klick neben das Menü schließen es
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      buttonRef.current?.focus();
+    }
+    function onPointerDown(event: PointerEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open]);
+
   const links = items.some((i) => i.href === SUPPORT_LINK.href) ? items : [...items, SUPPORT_LINK];
   const tel = telHref(phoneHref);
 
   return (
-    <div className="xl:hidden">
+    <div ref={wrapperRef} className="xl:hidden">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="grid size-10 place-items-center rounded-full text-ink hover:bg-brand-50"

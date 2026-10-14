@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { parseHost } from "@/lib/hosts";
 import { ipAllowed, parseCallWebhook, type ParseResult } from "@/lib/phone";
-import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { clientIp, rateLimit, rateLimitReached } from "@/lib/rate-limit";
 import {
   TOKEN_HEADER,
+  TOKEN_MIN_LENGTH,
   noteWebhookAccepted,
   noteWebhookRejection,
   processCallEvent,
@@ -75,6 +76,10 @@ export async function POST(request: NextRequest) {
 
   const token = telephonyToken();
   if (!token) return json({ error: "Die Anbindung der Telefonanlage ist nicht eingerichtet." }, 503);
+  if (token.length < TOKEN_MIN_LENGTH) {
+    noteWebhookRejection("token", `Zugangsschlüssel auf dem Server zu kurz (mindestens ${TOKEN_MIN_LENGTH} Zeichen)`);
+    return json({ error: "Die Anbindung der Telefonanlage ist nicht vollständig eingerichtet." }, 503);
+  }
 
   const ip = await clientIp();
   if (!rateLimit(`telephony:${ip}`, 600, 60 * 1000).ok) return json({ error: "Zu viele Meldungen." }, 429);
@@ -85,11 +90,15 @@ export async function POST(request: NextRequest) {
     return json({ error: "Absender nicht freigegeben." }, 403);
   }
 
+  // Nach zu vielen Fehlversuchen vergleichen wir gar nicht mehr – sonst ließe sich trotz Sperre weiter raten
+  const authKey = `telephony-auth:${ip}`;
+  if (rateLimitReached(authKey, 20)) return json({ error: "Zu viele Fehlversuche." }, 429);
+
   const given = request.nextUrl.searchParams.get("token") ?? request.headers.get(TOKEN_HEADER);
   if (!tokenMatches(given, token)) {
     noteWebhookRejection("token", given ? "falscher Zugangsschlüssel" : "kein Zugangsschlüssel mitgeschickt");
-    const limited = !rateLimit(`telephony-auth:${ip}`, 20, 10 * 60 * 1000).ok;
-    return json({ error: "Nicht berechtigt." }, limited ? 429 : 401);
+    rateLimit(authKey, 20, 10 * 60 * 1000);
+    return json({ error: "Nicht berechtigt." }, 401);
   }
 
   const parsed = await readPayload(request);

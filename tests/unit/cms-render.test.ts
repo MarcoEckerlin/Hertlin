@@ -370,6 +370,11 @@ describe("Standardinhalte der Kernseiten", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it.each(Object.entries(DEFAULT_PAGE_SOURCES))("„/%s“ hat eine Beschreibung ohne Kürzungs-Warnung im Editor", (_, page) => {
+    // Der Seiten-Editor warnt ab 160 Zeichen, die mitgelieferten Texte sollen darunter bleiben
+    expect(page.description.length).toBeLessThanOrEqual(160);
+  });
+
   it("hat das Menü wie bisher", () => {
     const entries = Object.entries(DEFAULT_PAGES).sort(([, a], [, b]) => a.navOrder - b.navOrder);
     const main = entries.filter(([, p]) => p.showInNav).map(([, p]) => p.navLabel ?? p.title);

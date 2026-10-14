@@ -12,7 +12,7 @@ export function ContactBox({ site, showResponseTimes = true, className }: { site
       <div className="border-b border-brand-200 bg-brand-50 px-5 py-5 sm:px-6">
         <h3 className="text-base font-bold text-ink">Dringend?</h3>
         <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-          Wenn niemand arbeiten kann, rufen Sie bitte direkt an. Ein Ticket können Sie danach immer noch anlegen.
+          Wenn niemand arbeiten kann, rufen Sie bitte direkt an. Das Ticket legen wir dann für Sie an.
         </p>
         <a
           href={`tel:${site.phoneHref}`}
@@ -66,7 +66,8 @@ export function ContactBox({ site, showResponseTimes = true, className }: { site
               Fernwartung
             </h3>
             <p className="mt-1 text-sm leading-relaxed text-ink-soft">
-              Sollen wir uns auf Ihren Bildschirm schalten, starten Sie bitte das Programm und nennen uns die angezeigte ID.
+              Starten Sie die Fernwartung nur, wenn Sie gerade mit uns telefonieren. Laden Sie das Programm herunter, öffnen
+              Sie es und lesen Sie uns ID und Kennwort vor.
             </p>
             <a
               href={remoteUrl}

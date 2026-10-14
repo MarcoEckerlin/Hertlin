@@ -119,7 +119,12 @@ export default async function InquiryChatPage({ params }: { params: Promise<{ to
             <h2 id="chat-titel" className="text-base font-bold text-ink">
               Chat mit {site.name}
             </h2>
-            <LiveConversation spec={{ t: "sub", ch: "inquiry", token }} audience="customer" selfName={chat.name} />
+            <LiveConversation
+              spec={{ t: "sub", ch: "inquiry", token }}
+              audience="customer"
+              selfName={chat.name}
+              companyName={site.name}
+            />
           </div>
 
           <ChatThread

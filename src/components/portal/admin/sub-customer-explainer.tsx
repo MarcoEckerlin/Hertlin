@@ -13,7 +13,7 @@ export function SubCustomerExplainer({
   const points = [
     {
       title: "Eigene Benutzer",
-      text: `Jede Unterkunde bekommt eigene Zugänge. Angemeldet wird sich wie gewohnt unter ${portalHost} – eine eigene Adresse braucht die Unterkunde nicht.`,
+      text: `Jede Unterkunde bekommt eigene Zugänge. Ihre Benutzer melden sich wie gewohnt unter ${portalHost} an, eine eigene Adresse braucht die Unterkunde nicht.`,
     },
     {
       title: "Eigene Tickets",

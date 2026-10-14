@@ -219,7 +219,7 @@ export default async function AdminTicketPage({ params, searchParams }: { params
         </Alert>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <section aria-labelledby="verlauf-titel">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
@@ -260,7 +260,7 @@ export default async function AdminTicketPage({ params, searchParams }: { params
           {costs && CostSection ? <CostSection ticketId={ticket.id} costs={costs} flash={first(query.kosten)} /> : null}
         </div>
 
-        <aside aria-label="Bearbeitung und Kontakt" className="space-y-6">
+        <aside aria-label="Bearbeitung und Kontakt" className="min-w-0 space-y-6">
           <Card>
             <CardHeader title="Bearbeitung" />
             <CardBody>

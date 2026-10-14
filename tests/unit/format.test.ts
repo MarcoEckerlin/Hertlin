@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   centsToInput,
+  formatDateTime,
   formatMoney,
   formatQuantity,
   formatTicketNumber,
@@ -45,6 +46,13 @@ describe("Mengen", () => {
     expect(lineTotalCents(125, 9500)).toBe(11875);
     expect(lineTotalCents(33, 9500)).toBe(3135);
     expect(lineTotalCents(100, 8990)).toBe(8990);
+  });
+});
+
+describe("Datum und Uhrzeit", () => {
+  it("schreibt Uhrzeiten mit „Uhr“ in deutscher Zeit", () => {
+    expect(formatDateTime(new Date("2026-10-12T19:15:00Z")).replace(/\s/g, " ")).toBe("12.10.2026, 21:15 Uhr");
+    expect(formatDateTime(null)).toBe("–");
   });
 });
 

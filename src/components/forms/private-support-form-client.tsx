@@ -103,7 +103,7 @@ export function PrivateSupportFormClient({
   contact: { phone: string; phoneHref: string };
 }) {
   const [state, action] = useActionState(submitPrivateTicketAction, initialFormState);
-  const { formRef, successRef } = useFormFeedback(state);
+  const { formRef, successRef, formKey } = useFormFeedback(state);
 
   if (state.status === "success") {
     return <PrivateSupportSuccess state={state} boxRef={successRef} contact={contact} />;
@@ -113,7 +113,7 @@ export function PrivateSupportFormClient({
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form ref={formRef} action={action} noValidate className="relative space-y-7">
+    <form key={formKey} ref={formRef} action={action} noValidate className="relative space-y-7">
       <Honeypot idPrefix={ID} />
       <FormMessage state={state} />
       <p className="text-sm text-ink-muted">Felder ohne den Zusatz „optional“ brauchen wir für die Bearbeitung.</p>
@@ -254,9 +254,12 @@ export function PrivateSupportFormClient({
         <PrivacyConsent idPrefix={ID} state={state} />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
           <SubmitButton size="lg" pendingText="Wird gesendet …" className="w-full sm:w-auto">
-            Anfrage absenden
+            Meldung absenden
           </SubmitButton>
-          <p className="text-sm text-ink-muted">Sie bekommen sofort eine Ticketnummer.</p>
+          <p className="text-sm text-ink-muted">
+            Sie bekommen sofort eine Ticketnummer. Abgerechnet wird nach Aufwand – bevor wir anfangen, sprechen wir mit
+            Ihnen über die Kosten.
+          </p>
         </div>
       </div>
     </form>
@@ -281,7 +284,7 @@ function PrivateSupportSuccess({
       className="scroll-mt-28 rounded-3xl border border-brand-200 bg-brand-50 p-6 focus:outline-none sm:p-8"
     >
       <CircleCheck className="size-8 text-brand-600" aria-hidden />
-      <h3 className="mt-4 text-2xl font-bold tracking-tight text-ink">Danke, wir haben Ihre Anfrage.</h3>
+      <h3 className="mt-4 text-2xl font-bold tracking-tight text-ink">Danke, Ihre Meldung ist angekommen.</h3>
       {data.number ? (
         <p className="mt-2 text-[0.9375rem] leading-relaxed text-ink-soft">
           Ihre Ticketnummer lautet <strong className="font-semibold text-ink">{data.number}</strong>.
@@ -314,15 +317,15 @@ function PrivateSupportSuccess({
             <CopyButton value={data.statusUrl} label="Link kopieren" />
           </div>
           <p className="mt-4 text-sm text-ink-muted">
-            Bitte geben Sie den Link nicht weiter: Wer ihn kennt, kann Ihre Anfrage lesen und darauf antworten.
+            Bitte geben Sie den Link nicht weiter: Wer ihn kennt, kann Ihr Ticket lesen und darauf antworten.
           </p>
         </div>
       ) : null}
 
       {data.number ? (
         <p className="mt-6 text-[0.9375rem] leading-relaxed text-ink-soft">
-          Wir sehen uns Ihr Anliegen an und melden uns in der Regel innerhalb eines Werktags, meistens mit einem kurzen
-          Anruf. Es eilt?{" "}
+          Wir sehen uns das an und melden uns in der Regel innerhalb eines Werktags, meistens mit einem kurzen Anruf.
+          Es eilt?{" "}
           <a href={`tel:${contact.phoneHref}`} className="font-semibold whitespace-nowrap text-brand-700 hover:underline">
             {contact.phone}
           </a>

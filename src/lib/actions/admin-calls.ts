@@ -13,7 +13,15 @@ import { errorState, fromZodError, successState, type FormState } from "@/lib/fo
 import { formatTicketNumber, parseTicketNumber } from "@/lib/format";
 import { sendPortalTicketConfirmation, sendPrivateTicketConfirmation } from "@/lib/notifications";
 import { formatPhoneDisplay, isInternalNumber, normalizePhone } from "@/lib/phone";
-import { companyPath, describeCall, matchCaller, processCallEvent, publishCallChanged, scheduleTestCallEnd } from "@/lib/telephony";
+import {
+  companyPath,
+  describeCall,
+  matchCaller,
+  processCallEvent,
+  publishCallChanged,
+  scheduleTestCallEnd,
+  storedCallerLabel,
+} from "@/lib/telephony";
 import { createTicketMessage, recordTicketEvent } from "@/lib/tickets";
 import { checkbox, email, optionalText, phone, requiredText } from "@/lib/validation";
 
@@ -408,7 +416,7 @@ export async function simulateTestCallAction(): Promise<FormState> {
 
   revalidateCalls();
   return successState(
-    `Testanruf von ${match?.label ?? "einem Kunden"} (${formatPhoneDisplay(number)}) ist eingegangen. ` +
+    `Testanruf von ${storedCallerLabel(match) ?? "einem Kunden"} (${formatPhoneDisplay(number)}) ist eingegangen. ` +
       "Der Hinweis erscheint jetzt unten rechts bei allen angemeldeten Mitarbeitern und verschwindet nach etwa 20 Sekunden.",
   );
 }

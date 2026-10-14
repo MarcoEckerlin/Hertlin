@@ -122,12 +122,17 @@ export default async function TelephonySetupPage() {
               <StatusRow label="Zugangsschlüssel">
                 {status.tokenSet ? (
                   <span className="space-y-1">
-                    <Badge tone="green">Eingerichtet</Badge>
                     {status.tokenTooShort ? (
-                      <span className="block text-amber-800">
-                        Der Schlüssel ist recht kurz. Verwenden Sie mindestens 32 zufällige Zeichen.
-                      </span>
-                    ) : null}
+                      <>
+                        <Badge tone="red">Zu kurz</Badge>
+                        <span className="block text-red-700">
+                          Meldungen der Anlage werden abgewiesen, bis der Schlüssel mindestens 24 Zeichen hat. Verwenden Sie
+                          32 oder mehr zufällige Zeichen.
+                        </span>
+                      </>
+                    ) : (
+                      <Badge tone="green">Eingerichtet</Badge>
+                    )}
                   </span>
                 ) : (
                   <Badge tone="red">Fehlt</Badge>

@@ -36,7 +36,7 @@ export default async function NewPortalTicketPage({
         description="Beschreiben Sie kurz, worum es geht. Sie bekommen sofort eine Ticketnummer und sehen hier im Portal jederzeit den Stand."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
         <Card>
           <CardBody className="sm:p-8">
             <NewTicketForm

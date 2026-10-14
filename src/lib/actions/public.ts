@@ -76,6 +76,14 @@ async function rateLimitMessage(scope: string, limit: number, windowMs: number):
   return `Von Ihrem Anschluss kamen gerade sehr viele Nachrichten. Bitte versuchen Sie es in ${wait} noch einmal oder rufen Sie uns an: ${phone}.`;
 }
 
+/**
+ * Bestätigungen gehen an Adressen, die niemand bestätigt hat. Damit unsere Formulare nicht zum Mailversand an
+ * fremde Postfächer taugen, schicken wir pro Empfänger und Tag nur wenige (unabhängig von der IP).
+ */
+function confirmationMailAllowed(email: string): boolean {
+  return rateLimit(`public:confirmation-mail:${email.trim().toLowerCase()}`, 5, 24 * HOUR).ok;
+}
+
 /** Fehler aus Zod und eigenen Prüfungen zu einem Formularzustand zusammenführen. */
 function invalidState(
   formData: FormData,
@@ -243,6 +251,7 @@ export async function submitInquiryAction(_prev: FormState, formData: FormData):
     }
 
     // Bestätigung mit Chat-Link; ohne Link (oder wenn das schiefgeht) die einfache Bestätigung
+    if (!confirmationMailAllowed(data.email)) return;
     const confirmation = { id: inquiry.id, name: data.name, email: data.email, customerType: data.customerType };
     if (chatToken) {
       try {
@@ -388,7 +397,9 @@ export async function submitPrivateTicketAction(_prev: FormState, formData: Form
       contactName: data.name,
       body: staffBody,
     });
-    await sendPrivateTicketConfirmation({ to: data.email, name: data.name, ticketId, subject: data.subject, token });
+    if (confirmationMailAllowed(data.email)) {
+      await sendPrivateTicketConfirmation({ to: data.email, name: data.name, ticketId, subject: data.subject, token });
+    }
   });
 
   return successState("Vielen Dank, Ihre Anfrage ist angekommen.", {
@@ -432,7 +443,7 @@ export async function replyAsGuestAction(_prev: FormState, formData: FormData): 
   }
   if (!canCustomerReply(ticket.status)) {
     return errorState(
-      "Diese Anfrage ist bereits abgeschlossen. Bei einem neuen Problem nutzen Sie bitte das Formular für Privatkunden.",
+      "Dieses Ticket ist bereits abgeschlossen. Bei einem neuen Problem nutzen Sie bitte das Formular für Privatkunden.",
     );
   }
 
@@ -574,7 +585,8 @@ export async function resendStatusLinkAction(_prev: FormState, formData: FormDat
         ticket.companyId === null &&
         ticket.guestToken &&
         ticket.contactEmail &&
-        ticket.contactEmail.trim().toLowerCase() === parsed.data.email
+        ticket.contactEmail.trim().toLowerCase() === parsed.data.email &&
+        confirmationMailAllowed(ticket.contactEmail)
       ) {
         const { contactEmail, guestToken } = ticket;
         // Nach der Antwort senden: Die Antwortzeit verrät so nicht, ob es das Ticket gibt.

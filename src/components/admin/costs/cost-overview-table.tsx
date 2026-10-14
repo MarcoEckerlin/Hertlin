@@ -91,7 +91,7 @@ export function CostOverviewTable({
   };
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
+    <div className="relative overflow-x-auto rounded-2xl border border-line bg-white shadow-card">
       <table className="w-full min-w-[46rem] border-collapse text-left text-sm">
         <caption className="sr-only">Kosten pro Konto</caption>
         <thead className="border-b border-line bg-mist text-xs text-ink-muted">

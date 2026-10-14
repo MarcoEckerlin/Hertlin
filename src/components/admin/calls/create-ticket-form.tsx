@@ -14,6 +14,7 @@ import {
   TYPE_LABELS,
 } from "@/lib/constants";
 import { initialFormState, type FormState } from "@/lib/forms";
+import { useFormKey } from "@/lib/use-form-key";
 import { PRIVATE_CUSTOMER, type CustomerGroup, type TicketFormDefaults } from "./types";
 
 function errorProps(state: FormState, name: string) {
@@ -39,6 +40,8 @@ export function CreateTicketFromCallForm({
   callSummary: string;
 }) {
   const [state, formAction] = useActionState(action, initialFormState);
+  // Nach einem Fehler neu aufbauen, sonst springen Art, Bereich und Priorität auf die Vorgaben zurück
+  const formKey = useFormKey(state);
   const [customer, setCustomer] = useState(defaults.customer);
   const [contactUserId, setContactUserId] = useState(defaults.contactUserId);
   const values = state.values ?? {};
@@ -49,7 +52,7 @@ export function CreateTicketFromCallForm({
   const showContactFields = isPrivate || (company !== null && !contactUserId);
 
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form key={formKey} action={formAction} className="space-y-6" noValidate>
       <FormMessage state={state} />
 
       <fieldset className="space-y-4">

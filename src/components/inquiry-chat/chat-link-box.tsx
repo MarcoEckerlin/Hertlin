@@ -39,7 +39,7 @@ export function ChatLinkBox({
               readOnly
               value={url}
               onFocus={(event) => event.currentTarget.select()}
-              className="h-9 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 font-mono text-xs text-ink-soft focus:border-brand-500 focus:ring-3 focus:ring-brand-200/70 focus:outline-none"
+              className="h-9 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 font-mono text-xs text-ink-soft focus:border-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
             />
             <div className="flex shrink-0 flex-wrap gap-2">
               <CopyButton value={url} label="Link kopieren" />

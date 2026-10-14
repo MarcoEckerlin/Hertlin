@@ -27,10 +27,26 @@ export function resetRateLimit(key: string): void {
 }
 
 /**
+ * Ist die Grenze schon erreicht? Zählt nicht mit. Für Sperren, die nur Fehlversuche zählen:
+ * vorher hiermit prüfen, bei einem Fehlversuch rateLimit() aufrufen.
+ */
+export function rateLimitReached(key: string, limit: number): boolean {
+  const bucket = buckets.get(key);
+  return !!bucket && bucket.resetAt >= Date.now() && bucket.count >= limit;
+}
+
+/**
  * IP-Adresse des Besuchers. Hinter einem Reverse Proxy muss dieser X-Forwarded-For
  * selbst setzen (nicht vom Client übernehmen), siehe README.
+ * Wir nehmen den letzten Eintrag: Den hat der eigene Proxy angehängt. Frühere Einträge
+ * kann der Client selbst mitschicken, wenn der Proxy die Liste nur ergänzt.
  */
 export async function clientIp(): Promise<string> {
   const h = await headers();
-  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+  const forwarded = h
+    .get("x-forwarded-for")
+    ?.split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return forwarded?.at(-1) || h.get("x-real-ip") || "unknown";
 }

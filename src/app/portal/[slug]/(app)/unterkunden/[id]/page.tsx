@@ -80,7 +80,7 @@ export default async function SubCustomerPage({ params, searchParams }: { params
         ) : null}
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]">
         <div className="space-y-6">
           <Card>
             <CardHeader

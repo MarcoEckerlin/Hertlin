@@ -4,7 +4,7 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import type { MediaFile } from "@prisma/client";
 import { db } from "@/lib/db";
-import { UPLOAD_DIR } from "@/lib/uploads";
+import { UPLOAD_DIR, safeFileName } from "@/lib/uploads";
 import { CmsError, pagePath } from "@/cms/store";
 import { formatFileSize } from "@/lib/format";
 
@@ -45,14 +45,6 @@ export function sniffImage(bytes: Uint8Array): ImageKind | null {
   return null;
 }
 
-function safeFileName(name: string): string {
-  const base = path
-    .basename(name)
-    .replace(/[\u0000-\u001f"\\/<>:|?*]+/g, "_")
-    .trim();
-  return base.slice(0, 180) || "bild";
-}
-
 /** Prüft Endung und Größe (der Inhalt wird beim Speichern geprüft). Gibt eine Fehlermeldung oder null zurück. */
 export function validateMediaFiles(files: File[]): string | null {
   if (files.length === 0) return "Bitte wählen Sie ein Bild aus.";
@@ -83,7 +75,7 @@ export async function storeMedia(file: File, opts: { alt?: string | null; upload
   try {
     return await db.mediaFile.create({
       data: {
-        fileName: safeFileName(file.name),
+        fileName: safeFileName(file.name, "bild"),
         storedName,
         mimeType: kind.mimeType,
         size: data.byteLength,

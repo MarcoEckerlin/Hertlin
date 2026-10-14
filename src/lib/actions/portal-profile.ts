@@ -128,9 +128,9 @@ export async function changePortalPasswordAction(_prev: FormState, formData: For
     const passwordHash = await hashPassword(parsed.data.password);
     await db.$transaction([
       db.user.update({ where: { id: ctx.user.id }, data: { passwordHash } }),
-      // Ein noch offener Link „Passwort vergessen“ soll danach nicht mehr funktionieren
+      // Noch offene Links („Passwort vergessen“, Einladung) sollen danach nicht mehr funktionieren
       db.authToken.updateMany({
-        where: { userId: ctx.user.id, purpose: "RESET", usedAt: null },
+        where: { userId: ctx.user.id, usedAt: null },
         data: { usedAt: new Date() },
       }),
     ]);

@@ -174,7 +174,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
         />
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <ListCard
             title="Mir zugewiesen"
@@ -193,7 +193,7 @@ export default async function AdminDashboardPage({ searchParams }: { searchParam
           </ListCard>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <ListCard title="Neue Anfragen" count={inquiryCount} footerHref="/admin/anfragen" footerLabel="Alle Anfragen">
             <InquiryList inquiries={inquiries} />
           </ListCard>
