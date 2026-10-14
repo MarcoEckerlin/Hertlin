@@ -29,7 +29,11 @@ export function FormSection({
 }) {
   const headingId = useId();
   return (
-    <section id={id} aria-labelledby={headingId} className="scroll-mt-24 space-y-5 border-t border-line pt-6 first:border-t-0 first:pt-0">
+    <section
+      id={id}
+      aria-labelledby={headingId}
+      className="scroll-mt-24 space-y-5 border-t border-line pt-6 first:border-t-0 first:pt-0"
+    >
       <div>
         <h2 id={headingId} className="text-base font-bold text-ink">
           {title}
@@ -75,11 +79,23 @@ export function CompanyAddressFields({
           />
         </Field>
         <Field label="Ort" htmlFor={id("city")} error={errors.city} optional>
-          <Input {...fieldProps(id("city"), errors.city)} name="city" maxLength={120} autoComplete="off" defaultValue={values.city ?? ""} />
+          <Input
+            {...fieldProps(id("city"), errors.city)}
+            name="city"
+            maxLength={120}
+            autoComplete="off"
+            defaultValue={values.city ?? ""}
+          />
         </Field>
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Telefon" htmlFor={id("phone")} error={errors.phone} optional hint="Zentrale Nummer, z. B. für die Anruferkennung.">
+        <Field
+          label="Telefon"
+          htmlFor={id("phone")}
+          error={errors.phone}
+          optional
+          hint="Zentrale Nummer, z. B. für die Anruferkennung."
+        >
           <Input
             {...fieldProps(id("phone"), errors.phone, true)}
             name="phone"
@@ -108,7 +124,13 @@ export function CustomerNumberField({ prefix, value, error }: { prefix: string; 
   const id = `${prefix}-customerNumber`;
   return (
     <Field label="Kundennummer" htmlFor={id} error={error} optional hint="Wie in der Buchhaltung, z. B. K-1042.">
-      <Input {...fieldProps(id, error, true)} name="customerNumber" maxLength={40} autoComplete="off" defaultValue={value ?? ""} />
+      <Input
+        {...fieldProps(id, error, true)}
+        name="customerNumber"
+        maxLength={40}
+        autoComplete="off"
+        defaultValue={value ?? ""}
+      />
     </Field>
   );
 }

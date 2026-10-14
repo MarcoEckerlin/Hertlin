@@ -153,12 +153,16 @@ export default async function InquiriesPage({
       {inquiries.length === 0 ? (
         anyInquiry === 0 ? (
           <EmptyState title="Noch keine Anfragen">
-            Sobald jemand das Kontaktformular auf der Website abschickt, erscheint die Anfrage hier. Zusätzlich geht eine
-            E-Mail an das Team.
+            Sobald jemand das Kontaktformular auf der Website abschickt, erscheint die Anfrage hier. Zusätzlich geht eine E-Mail
+            an das Team.
           </EmptyState>
         ) : (
           <EmptyState
-            title={filters.status === "offen" && !filters.q && !filters.typ ? "Keine offenen Anfragen" : "Keine Anfragen für diese Auswahl"}
+            title={
+              filters.status === "offen" && !filters.q && !filters.typ
+                ? "Keine offenen Anfragen"
+                : "Keine Anfragen für diese Auswahl"
+            }
             action={
               filtered || filters.status === "offen" ? (
                 <ButtonLink href="/admin/anfragen?status=alle" variant="secondary">

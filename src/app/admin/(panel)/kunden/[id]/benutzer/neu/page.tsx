@@ -46,6 +46,10 @@ export default async function NewCompanyUserPage({
   ];
   const defaultCompanyId = companies.some((c) => c.id === firma) && firma ? firma : company.id;
   const preselected = companies.find((c) => c.id === defaultCompanyId);
+  // Hat die Firma noch keinen aktiven Hauptansprechpartner, schlagen wir diese Rolle vor
+  const hasMainContact = await db.user.count({
+    where: { companyId: defaultCompanyId, role: "CUSTOMER_ADMIN", active: true },
+  });
 
   return (
     <div>
@@ -70,7 +74,12 @@ export default async function NewCompanyUserPage({
         ) : null}
         <Card>
           <CardBody className="sm:p-8">
-            <CompanyUserCreate rootId={company.id} companies={companies} defaultCompanyId={defaultCompanyId} />
+            <CompanyUserCreate
+              rootId={company.id}
+              companies={companies}
+              defaultCompanyId={defaultCompanyId}
+              defaultRole={hasMainContact > 0 ? "CUSTOMER_USER" : "CUSTOMER_ADMIN"}
+            />
           </CardBody>
         </Card>
       </div>

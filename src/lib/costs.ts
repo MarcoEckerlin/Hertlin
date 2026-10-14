@@ -351,9 +351,7 @@ async function privateEmailVariants(email: string): Promise<string[]> {
     distinct: ["contactEmail"],
     select: { contactEmail: true },
   });
-  return rows
-    .map((r) => r.contactEmail)
-    .filter((e): e is string => !!e && e.trim().toLowerCase() === email);
+  return rows.map((r) => r.contactEmail).filter((e): e is string => !!e && e.trim().toLowerCase() === email);
 }
 
 /** Prüft, ob es das Konto gibt, und liefert Bezeichnung und Ticket-Filter. */
@@ -721,9 +719,7 @@ export async function getAccountCostDetail(resolved: ResolvedCostAccount, filter
   }
 
   // Neueste Tickets zuerst, innerhalb eines Tickets chronologisch
-  const list = [...tickets.values()]
-    .map((g) => ({ ...g.ticket, totals: g.builder.totals }))
-    .sort((a, b) => b.id - a.id);
+  const list = [...tickets.values()].map((g) => ({ ...g.ticket, totals: g.builder.totals })).sort((a, b) => b.id - a.id);
 
   return { tickets: list, totals: all.totals };
 }

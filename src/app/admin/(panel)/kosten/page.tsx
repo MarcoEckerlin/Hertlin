@@ -82,8 +82,8 @@ export default async function CostsPage({
               hrefOf={hrefOf}
             />
             <p className="text-sm text-ink-muted">
-              Zeitraum nach Leistungsdatum der Position. Arbeitszeit zählt Positionen der Art „Arbeitszeit“ mit der Einheit
-              Std. oder Min. Privatkunden sind über ihre E-Mail-Adresse zusammengefasst.
+              Zeitraum nach Leistungsdatum der Position. Arbeitszeit zählt Positionen der Art „Arbeitszeit“ mit der Einheit Std.
+              oder Min. Privatkunden sind über ihre E-Mail-Adresse zusammengefasst.
             </p>
           </>
         )}

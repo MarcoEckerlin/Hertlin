@@ -26,19 +26,12 @@ export type StaffValues = {
 
 const STAFF_ROLE_OPTIONS = ["TECHNICIAN", "ADMIN"] as const;
 
-function StaffRoleChoice({
-  value,
-  error,
-  disabled,
-  hint,
-}: {
-  value: string;
-  error?: string;
-  disabled?: boolean;
-  hint?: string;
-}) {
+function StaffRoleChoice({ value, error, disabled, hint }: { value: string; error?: string; disabled?: boolean; hint?: string }) {
   return (
-    <fieldset aria-invalid={error ? true : undefined} aria-describedby={error ? "staff-role-error" : hint ? "staff-role-hint" : undefined}>
+    <fieldset
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? "staff-role-error" : hint ? "staff-role-hint" : undefined}
+    >
       <legend className="mb-1.5 text-sm font-semibold text-ink">Rolle</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {STAFF_ROLE_OPTIONS.map((role) => (
@@ -79,9 +72,21 @@ function StaffContactFields({ values, errors }: { values: Partial<Record<string,
   return (
     <>
       <Field label="Name" htmlFor="staff-name" error={errors.name}>
-        <Input {...fieldProps("staff-name", errors.name)} name="name" required maxLength={120} autoComplete="off" defaultValue={values.name ?? ""} />
+        <Input
+          {...fieldProps("staff-name", errors.name)}
+          name="name"
+          required
+          maxLength={120}
+          autoComplete="off"
+          defaultValue={values.name ?? ""}
+        />
       </Field>
-      <Field label="E-Mail-Adresse" htmlFor="staff-email" error={errors.email} hint="Dienstliche Adresse. Damit meldet sich die Person in der Verwaltung an.">
+      <Field
+        label="E-Mail-Adresse"
+        htmlFor="staff-email"
+        error={errors.email}
+        hint="Dienstliche Adresse. Damit meldet sich die Person in der Verwaltung an."
+      >
         <Input
           {...fieldProps("staff-email", errors.email, true)}
           name="email"
@@ -94,7 +99,14 @@ function StaffContactFields({ values, errors }: { values: Partial<Record<string,
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Telefon" htmlFor="staff-phone" error={errors.phone} optional>
-          <Input {...fieldProps("staff-phone", errors.phone)} name="phone" type="tel" maxLength={40} autoComplete="off" defaultValue={values.phone ?? ""} />
+          <Input
+            {...fieldProps("staff-phone", errors.phone)}
+            name="phone"
+            type="tel"
+            maxLength={40}
+            autoComplete="off"
+            defaultValue={values.phone ?? ""}
+          />
         </Field>
         <Field label="Position" htmlFor="staff-position" error={errors.position} optional>
           <Input
@@ -150,8 +162,8 @@ function StaffCreateForm({ onAgain }: { onAgain: () => void }) {
       <FormSection title="Zugang">
         <StaffRoleChoice value={values.role ?? "TECHNICIAN"} error={errors.role} />
         <p className="text-sm text-ink-muted">
-          Die Person bekommt eine Einladung per E-Mail und legt ihr Passwort selbst fest. Den Link sehen Sie nach dem
-          Anlegen auch hier.
+          Die Person bekommt eine Einladung per E-Mail und legt ihr Passwort selbst fest. Den Link sehen Sie nach dem Anlegen auch
+          hier.
         </p>
       </FormSection>
       <div className="flex flex-wrap items-center gap-3 border-t border-line pt-6">
@@ -191,8 +203,7 @@ export function StaffEditForm({ user, isSelf, invited }: { user: StaffValues; is
         <StaffContactFields values={values} errors={errors} />
         {invited ? (
           <p className="-mt-2 text-sm text-ink-muted">
-            Die Einladung ist noch offen. Ändern Sie die E-Mail-Adresse, geht automatisch eine neue Einladung an die neue
-            Adresse.
+            Die Einladung ist noch offen. Ändern Sie die E-Mail-Adresse, geht automatisch eine neue Einladung an die neue Adresse.
           </p>
         ) : null}
       </FormSection>

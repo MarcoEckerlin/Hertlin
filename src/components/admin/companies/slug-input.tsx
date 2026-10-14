@@ -71,14 +71,20 @@ export function SlugInput({
           className="min-w-0 flex-1 bg-transparent px-3.5 text-[0.9375rem] text-ink placeholder:text-ink-muted/80 focus:outline-none"
           placeholder="kuerzel"
         />
-        <span className="flex items-center border-l border-line bg-mist px-3 text-sm whitespace-nowrap text-ink-muted" aria-hidden>
+        <span
+          className="flex items-center border-l border-line bg-mist px-3 text-sm whitespace-nowrap text-ink-muted"
+          aria-hidden
+        >
           .{rootDomain}
         </span>
       </div>
       {error ? (
         <FieldError id={`${id}-error`}>{error}</FieldError>
       ) : (
-        <p id={`${id}-preview`} className={cn("mt-1.5 text-sm", check?.tone === "warn" ? "font-medium text-amber-800" : "text-ink-muted")}>
+        <p
+          id={`${id}-preview`}
+          className={cn("mt-1.5 text-sm", check?.tone === "warn" ? "font-medium text-amber-800" : "text-ink-muted")}
+        >
           {check ? (
             check.text
           ) : value ? (

@@ -133,14 +133,12 @@ export async function updateStaffAction(_prev: FormState, formData: FormData): P
   if (!existing) return errorState("Dieses Teammitglied gibt es nicht mehr. Bitte laden Sie die Seite neu.");
 
   const isSelf = existing.id === admin.id;
-  const parsed = staffSchema
-    .extend({ active: checkbox })
-    .safeParse({
-      ...readStaff(formData),
-      // Eigene Rolle und eigener Zugang sind im Formular gesperrt und werden nicht übertragen
-      role: isSelf ? existing.role : str(formData, "role"),
-      active: isSelf ? "on" : formData.get("active"),
-    });
+  const parsed = staffSchema.extend({ active: checkbox }).safeParse({
+    ...readStaff(formData),
+    // Eigene Rolle und eigener Zugang sind im Formular gesperrt und werden nicht übertragen
+    role: isSelf ? existing.role : str(formData, "role"),
+    active: isSelf ? "on" : formData.get("active"),
+  });
   if (!parsed.success) return fromZodError(parsed.error, formData);
   const data = parsed.data;
 

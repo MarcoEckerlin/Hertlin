@@ -30,7 +30,12 @@ function parseId(raw: string): number | null {
 
 /** Erste Zeile der Nachricht als Vorschlag für den Ticket-Betreff (höchstens 80 Zeichen, an Wortgrenze gekürzt). */
 function subjectFromMessage(message: string, fallback: string): string {
-  const line = message.trim().split(/\r?\n/).find((l) => l.trim())?.trim() ?? "";
+  const line =
+    message
+      .trim()
+      .split(/\r?\n/)
+      .find((l) => l.trim())
+      ?.trim() ?? "";
   if (!line) return fallback;
   if (line.length <= 80) return line;
   const cut = line.slice(0, 80);
@@ -156,7 +161,10 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
               actions={
                 <>
                   {inquiry.phone ? (
-                    <a href={telHref(inquiry.phone)} className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-brand-700 ring-1 ring-line-strong ring-inset hover:bg-brand-50">
+                    <a
+                      href={telHref(inquiry.phone)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-brand-700 ring-1 ring-line-strong ring-inset hover:bg-brand-50"
+                    >
                       <Phone className="size-4" aria-hidden />
                       Anrufen
                     </a>
@@ -294,8 +302,8 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
               <CardHeader title="Anfrage löschen" />
               <CardBody className="space-y-4">
                 <p className="text-sm leading-relaxed text-ink-soft">
-                  Die Anfrage enthält personenbezogene Daten. Kommt kein Auftrag zustande, löschen Sie sie, sobald sie nicht
-                  mehr gebraucht wird. Gelöscht ist gelöscht – Name, Kontaktdaten, Nachricht und Notiz lassen sich nicht
+                  Die Anfrage enthält personenbezogene Daten. Kommt kein Auftrag zustande, löschen Sie sie, sobald sie nicht mehr
+                  gebraucht wird. Gelöscht ist gelöscht – Name, Kontaktdaten, Nachricht und Notiz lassen sich nicht
                   wiederherstellen.
                 </p>
                 <InquiryDeleteForm id={inquiry.id} number={number} />

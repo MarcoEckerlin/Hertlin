@@ -11,14 +11,7 @@ import { db } from "@/lib/db";
 import { emptyToUndefined, errorState, fromZodError, successState, type FormState } from "@/lib/forms";
 import { isValidSlug, portalHost, portalUrl, RESERVED_SLUGS } from "@/lib/hosts";
 import { sendInviteMail, sendPasswordResetMail } from "@/lib/notifications";
-import {
-  checkbox,
-  email as emailSchema,
-  optionalText,
-  phone as phoneSchema,
-  requiredText,
-  slugField,
-} from "@/lib/validation";
+import { checkbox, email as emailSchema, optionalText, phone as phoneSchema, requiredText, slugField } from "@/lib/validation";
 
 /**
  * Kundenverwaltung in der Verwaltung: Firmenkunden, Unterkunden und Kundenbenutzer.
@@ -51,13 +44,7 @@ function tidy(value: string): string {
 
 /** Vergleichsform für Namen: ohne Groß/Klein, Akzente und doppelte Leerzeichen. */
 function nameKey(value: string): string {
-  return value
-    .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
-    .replace(/ß/g, "ss")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLocaleLowerCase("de");
+  return value.normalize("NFKD").replace(/\p{M}/gu, "").replace(/ß/g, "ss").replace(/\s+/g, " ").trim().toLocaleLowerCase("de");
 }
 
 function revalidateCustomers() {
@@ -212,9 +199,12 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
     contactPhone: str(formData, "contactPhone"),
     contactPosition: str(formData, "contactPosition"),
   };
-  const wantsContact = [contactRaw.contactName, contactRaw.contactEmail, contactRaw.contactPhone ?? "", contactRaw.contactPosition ?? ""].some(
-    (v) => v.trim() !== "",
-  );
+  const wantsContact = [
+    contactRaw.contactName,
+    contactRaw.contactEmail,
+    contactRaw.contactPhone ?? "",
+    contactRaw.contactPosition ?? "",
+  ].some((v) => v.trim() !== "");
   const contact = wantsContact ? contactSchema.safeParse(contactRaw) : null;
 
   const fieldErrors: Record<string, string> = {};
@@ -262,7 +252,10 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
           })
         : null;
       if (inquiryId) {
-        await tx.inquiry.updateMany({ where: { id: inquiryId, companyId: null }, data: { companyId: company.id, status: "WON" } });
+        await tx.inquiry.updateMany({
+          where: { id: inquiryId, companyId: null },
+          data: { companyId: company.id, status: "WON" },
+        });
       }
       return { company: { id: company.id, name: company.name, slug: company.slug ?? data.slug }, user };
     });
@@ -320,7 +313,9 @@ export async function updateCompanyAction(_prev: FormState, formData: FormData):
     await db.company.update({ where: { id: company.id }, data: companyData(parsed.data) });
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return errorState("Bitte prüfen Sie die Kundennummer.", formData, { customerNumber: "Diese Kundennummer ist schon vergeben." });
+      return errorState("Bitte prüfen Sie die Kundennummer.", formData, {
+        customerNumber: "Diese Kundennummer ist schon vergeben.",
+      });
     }
     throw error;
   }
@@ -334,9 +329,7 @@ export async function changeCompanySlugAction(_prev: FormState, formData: FormDa
   await requireAdmin();
 
   const id = idFrom(formData);
-  const company = id
-    ? await db.company.findFirst({ where: { id, parentId: null }, select: { id: true, slug: true } })
-    : null;
+  const company = id ? await db.company.findFirst({ where: { id, parentId: null }, select: { id: true, slug: true } }) : null;
   if (!company) return errorState(COMPANY_GONE);
 
   const parsed = z.object({ slug: slugField }).safeParse({ slug: str(formData, "slug") ?? "" });
@@ -462,7 +455,9 @@ export async function createSubCustomerAction(_prev: FormState, formData: FormDa
     createdId = created.id;
   } catch (error) {
     if (isUniqueViolation(error)) {
-      return errorState("Bitte prüfen Sie die Kundennummer.", formData, { customerNumber: "Diese Kundennummer ist schon vergeben." });
+      return errorState("Bitte prüfen Sie die Kundennummer.", formData, {
+        customerNumber: "Diese Kundennummer ist schon vergeben.",
+      });
     }
     throw error;
   }
@@ -630,7 +625,11 @@ export async function updateCompanyUserAction(_prev: FormState, formData: FormDa
   let inviteLink: string | undefined;
   const invitePending = existing.passwordHash === null;
   if (emailChanged && invitePending && data.active && scope.root.slug && scope.root.active && scope.company.active) {
-    inviteLink = await inviteCustomerUser({ id: existing.id, name: data.name, email: data.email }, scope.root.slug, scope.root.name);
+    inviteLink = await inviteCustomerUser(
+      { id: existing.id, name: data.name, email: data.email },
+      scope.root.slug,
+      scope.root.name,
+    );
   }
 
   revalidateCustomers();

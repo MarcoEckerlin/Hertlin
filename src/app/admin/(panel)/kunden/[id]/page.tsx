@@ -75,68 +75,69 @@ export default async function CompanyPage({
   const treeIds = isSub ? [company.id] : [company.id, ...company.children.map((c) => c.id)];
   const ticketWhere = { companyId: { in: treeIds } };
 
-  const [users, invitedIds, openTickets, openCount, doneTickets, ticketTotal, userGroups, ticketGroups, costs] = await Promise.all([
-    db.user.findMany({
-      where: { companyId: { in: treeIds }, role: { in: [...CUSTOMER_ROLES] } },
-      orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        position: true,
-        role: true,
-        active: true,
-        lastLoginAt: true,
-        company: { select: { id: true, name: true, parentId: true } },
-      },
-    }),
-    db.user.findMany({ where: { companyId: { in: treeIds }, passwordHash: null }, select: { id: true } }),
-    db.ticket.findMany({
-      where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
-      orderBy: { updatedAt: "desc" },
-      take: 10,
-      select: {
-        id: true,
-        subject: true,
-        status: true,
-        priority: true,
-        updatedAt: true,
-        company: { select: { name: true, parentId: true } },
-        assignee: { select: { name: true } },
-      },
-    }),
-    db.ticket.count({ where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } } }),
-    db.ticket.findMany({
-      where: { ...ticketWhere, status: { notIn: [...OPEN_STATUSES] } },
-      orderBy: { updatedAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        subject: true,
-        status: true,
-        updatedAt: true,
-        company: { select: { name: true, parentId: true } },
-      },
-    }),
-    db.ticket.count({ where: ticketWhere }),
-    isSub
-      ? Promise.resolve([])
-      : db.user.groupBy({
-          by: ["companyId"],
-          where: { companyId: { in: treeIds }, active: true, role: { in: [...CUSTOMER_ROLES] } },
-          _count: { _all: true },
-        }),
-    isSub
-      ? Promise.resolve([])
-      : db.ticket.groupBy({
-          by: ["companyId"],
-          where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
-          _count: { _all: true },
-        }),
-    // Kosten nur für Administratoren laden
-    isAdmin ? getCompanyCostSummary(treeIds) : Promise.resolve(null),
-  ]);
+  const [users, invitedIds, openTickets, openCount, doneTickets, ticketTotal, userGroups, ticketGroups, costs] =
+    await Promise.all([
+      db.user.findMany({
+        where: { companyId: { in: treeIds }, role: { in: [...CUSTOMER_ROLES] } },
+        orderBy: [{ active: "desc" }, { name: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          position: true,
+          role: true,
+          active: true,
+          lastLoginAt: true,
+          company: { select: { id: true, name: true, parentId: true } },
+        },
+      }),
+      db.user.findMany({ where: { companyId: { in: treeIds }, passwordHash: null }, select: { id: true } }),
+      db.ticket.findMany({
+        where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
+        orderBy: { updatedAt: "desc" },
+        take: 10,
+        select: {
+          id: true,
+          subject: true,
+          status: true,
+          priority: true,
+          updatedAt: true,
+          company: { select: { name: true, parentId: true } },
+          assignee: { select: { name: true } },
+        },
+      }),
+      db.ticket.count({ where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } } }),
+      db.ticket.findMany({
+        where: { ...ticketWhere, status: { notIn: [...OPEN_STATUSES] } },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          subject: true,
+          status: true,
+          updatedAt: true,
+          company: { select: { name: true, parentId: true } },
+        },
+      }),
+      db.ticket.count({ where: ticketWhere }),
+      isSub
+        ? Promise.resolve([])
+        : db.user.groupBy({
+            by: ["companyId"],
+            where: { companyId: { in: treeIds }, active: true, role: { in: [...CUSTOMER_ROLES] } },
+            _count: { _all: true },
+          }),
+      isSub
+        ? Promise.resolve([])
+        : db.ticket.groupBy({
+            by: ["companyId"],
+            where: { ...ticketWhere, status: { in: [...OPEN_STATUSES] } },
+            _count: { _all: true },
+          }),
+      // Kosten nur für Administratoren laden
+      isAdmin ? getCompanyCostSummary(treeIds) : Promise.resolve(null),
+    ]);
 
   const invited = new Set(invitedIds.map((u) => u.id));
   const usersByCompany = new Map(userGroups.map((g) => [g.companyId, g._count._all]));
@@ -173,7 +174,9 @@ export default async function CompanyPage({
         meta={
           <>
             <CompanyActiveBadge active={company.active} />
-            {company.customerNumber ? <span className="text-sm text-ink-muted">Kundennummer {company.customerNumber}</span> : null}
+            {company.customerNumber ? (
+              <span className="text-sm text-ink-muted">Kundennummer {company.customerNumber}</span>
+            ) : null}
             {slug && !isSub ? (
               <a
                 href={portalUrl(slug, "/login")}
@@ -190,10 +193,12 @@ export default async function CompanyPage({
         }
         actions={
           <>
-            <ButtonLink href={`/admin/tickets/neu?firma=${company.id}`} variant={isAdmin ? "secondary" : "primary"}>
-              Ticket anlegen
-            </ButtonLink>
-            {isAdmin ? <ButtonLink href={`/admin/kunden/${company.id}/bearbeiten`}>Bearbeiten</ButtonLink> : null}
+            {isAdmin ? (
+              <ButtonLink href={`/admin/kunden/${company.id}/bearbeiten`} variant="secondary">
+                Bearbeiten
+              </ButtonLink>
+            ) : null}
+            <ButtonLink href={`/admin/tickets/neu?firma=${company.id}`}>Ticket anlegen</ButtonLink>
           </>
         }
       />
@@ -250,7 +255,11 @@ export default async function CompanyPage({
                   Offene Tickets
                 </h2>
                 <p className="text-sm text-ink-muted">
-                  {openCount === 0 ? "Keine offenen Tickets" : openCount === 1 ? "1 offenes Ticket" : `${openCount} offene Tickets`}
+                  {openCount === 0
+                    ? "Keine offenen Tickets"
+                    : openCount === 1
+                      ? "1 offenes Ticket"
+                      : `${openCount} offene Tickets`}
                   {!isSub && hasChildren ? " inkl. Unterkunden" : ""}
                   {ticketTotal > 0 ? ` · ${ticketTotal} insgesamt` : ""}
                 </p>
@@ -298,7 +307,10 @@ export default async function CompanyPage({
                           {t.subject}
                         </Link>
                         <p className="text-xs text-ink-muted">
-                          {[!isSub && t.company?.parentId ? t.company.name : null, t.assignee ? `bei ${t.assignee.name}` : "nicht zugewiesen"]
+                          {[
+                            !isSub && t.company?.parentId ? t.company.name : null,
+                            t.assignee ? `bei ${t.assignee.name}` : "nicht zugewiesen",
+                          ]
                             .filter(Boolean)
                             .join(" · ")}
                         </p>
@@ -483,7 +495,9 @@ export default async function CompanyPage({
                         ) : null}
                       </TD>
                       {!isSub && hasChildren ? (
-                        <TD className="min-w-[8rem]">{u.company?.parentId ? u.company.name : <span className="text-ink-muted">Firmenkunde</span>}</TD>
+                        <TD className="min-w-[8rem]">
+                          {u.company?.parentId ? u.company.name : <span className="text-ink-muted">Firmenkunde</span>}
+                        </TD>
                       ) : null}
                       <TD>
                         <RoleBadge role={u.role} />
@@ -532,7 +546,15 @@ export default async function CompanyPage({
                 ) : null}
                 <Detail label="Kundennummer">{company.customerNumber ?? <Missing />}</Detail>
                 <Detail label="Anschrift">
-                  {address.length > 0 ? address.map((line) => <span key={line} className="block">{line}</span>) : <Missing />}
+                  {address.length > 0 ? (
+                    address.map((line) => (
+                      <span key={line} className="block">
+                        {line}
+                      </span>
+                    ))
+                  ) : (
+                    <Missing />
+                  )}
                 </Detail>
                 <Detail label="Telefon">
                   {company.phone ? (
@@ -574,7 +596,10 @@ export default async function CompanyPage({
               title="Interne Notiz"
               actions={
                 isAdmin ? (
-                  <Link href={`/admin/kunden/${company.id}/bearbeiten#notiz`} className="text-sm font-semibold text-brand-700 hover:underline">
+                  <Link
+                    href={`/admin/kunden/${company.id}/bearbeiten#notiz`}
+                    className="text-sm font-semibold text-brand-700 hover:underline"
+                  >
                     Ändern
                   </Link>
                 ) : null
@@ -591,7 +616,10 @@ export default async function CompanyPage({
 
           {costs ? (
             <Card>
-              <CardHeader title="Kosten" description={isSub ? "Nur diese Unterkunde, gesamter Zeitraum" : "Inkl. Unterkunden, gesamter Zeitraum"} />
+              <CardHeader
+                title="Kosten"
+                description={isSub ? "Nur diese Unterkunde, gesamter Zeitraum" : "Inkl. Unterkunden, gesamter Zeitraum"}
+              />
               <CardBody className="space-y-4">
                 <dl className="grid grid-cols-2 gap-4">
                   <div>

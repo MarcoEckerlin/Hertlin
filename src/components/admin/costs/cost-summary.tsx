@@ -31,11 +31,7 @@ export function CostSummary({
     <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       <Tile label={sumLabel} value={formatMoney(totals.totalCents)} note={periodLabel} />
       {billing === "alle" ? (
-        <Tile
-          label="davon offen"
-          value={formatMoney(totals.openCents)}
-          note={`${formatMoney(totals.billedCents)} abgerechnet`}
-        />
+        <Tile label="davon offen" value={formatMoney(totals.openCents)} note={`${formatMoney(totals.billedCents)} abgerechnet`} />
       ) : (
         <Tile
           label="Positionen"
@@ -45,7 +41,11 @@ export function CostSummary({
       )}
       <Tile label="Arbeitszeit" value={`${hours} Std.`} note="Positionen in Std. oder Min." />
       {accounts !== undefined ? (
-        <Tile label="Konten" value={accounts} note={totals.tickets === 1 ? "1 Ticket mit Kosten" : `${totals.tickets} Tickets mit Kosten`} />
+        <Tile
+          label="Konten"
+          value={accounts}
+          note={totals.tickets === 1 ? "1 Ticket mit Kosten" : `${totals.tickets} Tickets mit Kosten`}
+        />
       ) : (
         <Tile label="Material" value={formatMoney(totals.materialCents)} />
       )}

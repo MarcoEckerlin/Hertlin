@@ -16,7 +16,13 @@ import { updateCompanyAction } from "@/lib/actions/admin-companies";
 import { initialFormState } from "@/lib/forms";
 
 /** Stammdaten eines Firmenkunden oder einer Unterkunde bearbeiten. */
-export function CompanyEditForm({ company, isSub }: { company: CompanyFieldValues & { id: string; name: string }; isSub: boolean }) {
+export function CompanyEditForm({
+  company,
+  isSub,
+}: {
+  company: CompanyFieldValues & { id: string; name: string };
+  isSub: boolean;
+}) {
   const [state, formAction] = useActionState(updateCompanyAction, initialFormState);
   const formRef = useFormFocus(state);
   const errors = state.fieldErrors ?? {};

@@ -177,7 +177,13 @@ function CompanyCreateForm({
               defaultValue={values.contactPosition ?? ""}
             />
           </Field>
-          <Field label="E-Mail-Adresse" htmlFor="contact-email" error={errors.contactEmail} optional hint="Damit meldet sich die Person an.">
+          <Field
+            label="E-Mail-Adresse"
+            htmlFor="contact-email"
+            error={errors.contactEmail}
+            optional
+            hint="Damit meldet sich die Person an."
+          >
             <Input
               {...fieldProps("contact-email", errors.contactEmail, true)}
               name="contactEmail"

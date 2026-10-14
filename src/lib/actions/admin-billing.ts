@@ -36,13 +36,10 @@ export async function setCostsBilledAction(_prev: FormState, formData: FormData)
   const resolved = account ? await resolveCostAccount(account) : null;
   if (!resolved) return errorState("Dieses Konto gibt es nicht mehr. Bitte laden Sie die Seite neu.");
 
-  const ids = [
-    ...new Set(
-      formData
-        .getAll("ids")
-        .filter((v): v is string => typeof v === "string" && ID_PATTERN.test(v)),
-    ),
-  ].slice(0, MAX_IDS);
+  const ids = [...new Set(formData.getAll("ids").filter((v): v is string => typeof v === "string" && ID_PATTERN.test(v)))].slice(
+    0,
+    MAX_IDS,
+  );
   if (ids.length === 0) return errorState("Bitte wählen Sie mindestens eine Position aus.");
 
   const markBilled = intent === "billed";
@@ -66,7 +63,5 @@ export async function setCostsBilledAction(_prev: FormState, formData: FormData)
   const done = markBilled
     ? `${positions(result.count)} als abgerechnet markiert.`
     : `${positions(result.count)} wieder als offen markiert.`;
-  return successState(
-    skipped > 0 ? `${done} ${positions(skipped)} hatte${skipped === 1 ? "" : "n"} diesen Stand schon.` : done,
-  );
+  return successState(skipped > 0 ? `${done} ${positions(skipped)} hatte${skipped === 1 ? "" : "n"} diesen Stand schon.` : done);
 }

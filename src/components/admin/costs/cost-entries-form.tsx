@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { Badge, StatusBadge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { setCostsBilledAction } from "@/lib/actions/admin-billing";
 import { cn } from "@/lib/cn";
 import { formatMoney } from "@/lib/format";
@@ -79,13 +79,17 @@ export function CostEntriesForm({
   account: Record<string, string>;
   total: string;
 }) {
-  const [state, formAction] = useActionState(setCostsBilledAction, initialFormState);
+  const [state, formAction, isPending] = useActionState(setCostsBilledAction, initialFormState);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+
+  // Meldung der letzten Aktion; verschwindet, sobald die Auswahl wieder geändert wird
+  const [showMessage, setShowMessage] = useState(false);
 
   // Nach erfolgreicher Aktion Auswahl leeren (vorherigen Zustand merken statt Effekt)
   const [prevState, setPrevState] = useState(state);
   if (prevState !== state) {
     setPrevState(state);
+    setShowMessage(true);
     if (state.status === "success") setSelected(new Set());
   }
 
@@ -96,7 +100,8 @@ export function CostEntriesForm({
   const chosenBilled = chosen.filter((e) => e.billed);
   const chosenCents = chosen.reduce((sum, e) => sum + e.totalCents, 0);
 
-  const setMany = (ids: string[], on: boolean) =>
+  const setMany = (ids: string[], on: boolean) => {
+    setShowMessage(false);
     setSelected((prev) => {
       const next = new Set(prev);
       for (const id of ids) {
@@ -105,6 +110,11 @@ export function CostEntriesForm({
       }
       return next;
     });
+  };
+  const clearSelection = () => {
+    setShowMessage(false);
+    setSelected(new Set());
+  };
 
   const allIds = allEntries.map((e) => e.id);
   const allChecked = allIds.length > 0 && allIds.every((id) => selected.has(id));
@@ -112,15 +122,22 @@ export function CostEntriesForm({
   const openIds = allEntries.filter((e) => !e.billed).map((e) => e.id);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        // Ohne automatisches Zurücksetzen des Formulars: Die Auswahl steuert der Zustand oben
+        event.preventDefault();
+        const submitter = (event.nativeEvent as SubmitEvent).submitter;
+        const formData = new FormData(event.currentTarget, submitter);
+        startTransition(() => formAction(formData));
+      }}
+    >
       {Object.entries(account).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {chosen.map((e) => (
         <input key={e.id} type="hidden" name="ids" value={e.id} />
       ))}
-
-      <FormMessage state={state} />
 
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
         <label className="flex cursor-pointer items-center gap-3 font-semibold text-ink">
@@ -136,7 +153,10 @@ export function CostEntriesForm({
           <button
             type="button"
             className="font-semibold text-brand-700 hover:underline"
-            onClick={() => setSelected(new Set(openIds))}
+            onClick={() => {
+              setShowMessage(false);
+              setSelected(new Set(openIds));
+            }}
           >
             Nur offene auswählen ({openIds.length})
           </button>
@@ -148,7 +168,11 @@ export function CostEntriesForm({
         const all = ids.every((id) => selected.has(id));
         const some = !all && ids.some((id) => selected.has(id));
         return (
-          <section key={ticket.id} aria-labelledby={`ticket-${ticket.id}`} className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+          <section
+            key={ticket.id}
+            aria-labelledby={`ticket-${ticket.id}`}
+            className="overflow-hidden rounded-2xl border border-line bg-white shadow-card"
+          >
             <header className="flex flex-wrap items-start gap-x-3 gap-y-2 border-b border-line bg-mist/60 px-4 py-3 sm:px-5">
               <span className="pt-0.5">
                 <TriStateCheckbox
@@ -180,20 +204,37 @@ export function CostEntriesForm({
                     <th scope="col" className="w-10 py-2 pl-4 sm:pl-5">
                       <span className="sr-only">Auswahl</span>
                     </th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Datum</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Art</th>
-                    <th scope="col" className="px-3 py-2 font-semibold">Beschreibung</th>
-                    <th scope="col" className="px-3 py-2 text-right font-semibold">Menge</th>
-                    <th scope="col" className="px-3 py-2 text-right font-semibold">Einzelpreis</th>
-                    <th scope="col" className="px-3 py-2 text-right font-semibold">Gesamt</th>
-                    <th scope="col" className="py-2 pr-4 pl-3 font-semibold sm:pr-5">Abrechnung</th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Datum
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Art
+                    </th>
+                    <th scope="col" className="px-3 py-2 font-semibold">
+                      Beschreibung
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">
+                      Menge
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">
+                      Einzelpreis
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-right font-semibold">
+                      Gesamt
+                    </th>
+                    <th scope="col" className="py-2 pr-4 pl-3 font-semibold sm:pr-5">
+                      Abrechnung
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {ticket.entries.map((e) => {
                     const isSelected = selected.has(e.id);
                     return (
-                      <tr key={e.id} className={cn("border-b border-line last:border-0", isSelected ? "bg-brand-50" : "hover:bg-brand-50/40")}>
+                      <tr
+                        key={e.id}
+                        className={cn("border-b border-line last:border-0", isSelected ? "bg-brand-50" : "hover:bg-brand-50/40")}
+                      >
                         <td className="py-2.5 pl-4 align-top sm:pl-5">
                           <input
                             type="checkbox"
@@ -209,9 +250,15 @@ export function CostEntriesForm({
                           <span className="break-words">{e.description}</span>
                           {e.createdBy ? <span className="block text-xs text-ink-muted">erfasst von {e.createdBy}</span> : null}
                         </td>
-                        <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">{e.quantity}</td>
-                        <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">{e.unitPrice}</td>
-                        <td className="px-3 py-2.5 text-right align-top font-semibold whitespace-nowrap text-ink tabular-nums">{e.total}</td>
+                        <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
+                          {e.quantity}
+                        </td>
+                        <td className="px-3 py-2.5 text-right align-top whitespace-nowrap text-ink-soft tabular-nums">
+                          {e.unitPrice}
+                        </td>
+                        <td className="px-3 py-2.5 text-right align-top font-semibold whitespace-nowrap text-ink tabular-nums">
+                          {e.total}
+                        </td>
                         <td className="py-2.5 pr-4 pl-3 align-top whitespace-nowrap sm:pr-5">
                           {e.billed ? (
                             <Badge tone="green">{e.billedLabel ? `abgerechnet ${e.billedLabel}` : "abgerechnet"}</Badge>
@@ -237,40 +284,46 @@ export function CostEntriesForm({
 
       <div
         className={cn(
-          "sticky bottom-4 z-20 flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 shadow-lift sm:flex-row sm:items-center sm:justify-between",
-          chosen.length === 0 && "hidden",
+          "sticky bottom-4 z-20 space-y-3 rounded-2xl border border-line bg-white p-4 shadow-lift",
+          chosen.length === 0 && !(showMessage && state.message) && "hidden",
         )}
-        aria-live="polite"
       >
-        <p className="text-sm text-ink">
-          <span className="font-semibold">
-            {chosen.length === 1 ? "1 Position" : `${chosen.length} Positionen`} ausgewählt
-          </span>
-          <span className="text-ink-muted"> · </span>
-          <span className="font-semibold tabular-nums">{formatMoney(chosenCents)}</span>
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <SubmitButton name="intent" value="billed" size="sm" disabled={chosenOpen.length === 0} pendingText="Wird gespeichert …">
-            Als abgerechnet markieren{chosenOpen.length > 0 && chosenOpen.length < chosen.length ? ` (${chosenOpen.length})` : ""}
-          </SubmitButton>
-          <SubmitButton
-            name="intent"
-            value="open"
-            variant="secondary"
-            size="sm"
-            disabled={chosenBilled.length === 0}
-            pendingText="Wird gespeichert …"
-          >
-            Als offen markieren{chosenBilled.length > 0 && chosenBilled.length < chosen.length ? ` (${chosenBilled.length})` : ""}
-          </SubmitButton>
-          <button
-            type="button"
-            className="inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold text-ink-soft hover:bg-brand-50 hover:text-ink"
-            onClick={() => setSelected(new Set())}
-          >
-            Auswahl aufheben
-          </button>
-        </div>
+        {showMessage ? <FormMessage state={state} /> : null}
+        {chosen.length > 0 ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-ink" aria-live="polite">
+              <span className="font-semibold">
+                {chosen.length === 1 ? "1 Position" : `${chosen.length} Positionen`} ausgewählt
+              </span>
+              <span className="text-ink-muted"> · </span>
+              <span className="font-semibold tabular-nums">{formatMoney(chosenCents)}</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" name="intent" value="billed" size="sm" disabled={isPending || chosenOpen.length === 0}>
+                {isPending ? "Wird gespeichert …" : "Als abgerechnet markieren"}
+                {!isPending && chosenOpen.length > 0 && chosenOpen.length < chosen.length ? ` (${chosenOpen.length})` : ""}
+              </Button>
+              <Button
+                type="submit"
+                name="intent"
+                value="open"
+                variant="secondary"
+                size="sm"
+                disabled={isPending || chosenBilled.length === 0}
+              >
+                Als offen markieren
+                {chosenBilled.length > 0 && chosenBilled.length < chosen.length ? ` (${chosenBilled.length})` : ""}
+              </Button>
+              <button
+                type="button"
+                className="inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold text-ink-soft hover:bg-brand-50 hover:text-ink"
+                onClick={clearSelection}
+              >
+                Auswahl aufheben
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </form>
   );

@@ -42,10 +42,7 @@ export default async function PrivateCostsPage({
   return (
     <div>
       <PageHeader
-        breadcrumbs={[
-          { label: "Kosten pro Konto", href: withCostFilter("/admin/kosten", filter) },
-          { label: resolved.label },
-        ]}
+        breadcrumbs={[{ label: "Kosten pro Konto", href: withCostFilter("/admin/kosten", filter) }, { label: resolved.label }]}
         title={<span className="break-words">{resolved.label}</span>}
         description={
           account.kind === "private"

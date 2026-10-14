@@ -34,7 +34,8 @@ export default async function TeamPage() {
         description="Alle Zugänge zur Verwaltung. Administratoren sehen zusätzlich Kosten, verwalten Kunden und das Team; Techniker bearbeiten Tickets und Anfragen."
         meta={
           <span className="text-sm text-ink-muted">
-            {admins === 1 ? "1 Administrator" : `${admins} Administratoren`} · {technicians === 1 ? "1 Techniker" : `${technicians} Techniker`}
+            {admins === 1 ? "1 Administrator" : `${admins} Administratoren`} ·{" "}
+            {technicians === 1 ? "1 Techniker" : `${technicians} Techniker`}
           </span>
         }
         actions={<ButtonLink href="/admin/team/neu">Person einladen</ButtonLink>}

@@ -117,7 +117,12 @@ export default async function StaffMemberPage({ params }: { params: Promise<{ id
                         ? "Neue Einladung per E-Mail. Ältere Einladungslinks werden dabei ungültig."
                         : "Schickt einen Link zum Zurücksetzen, z. B. wenn die Person ihr Passwort vergessen hat. Er ist eine Stunde gültig."}
                     </p>
-                    <ResendAccessForm action={resendStaffAccessAction} hidden={{ id: user.id }} invited={invited} name={user.name} />
+                    <ResendAccessForm
+                      action={resendStaffAccessAction}
+                      hidden={{ id: user.id }}
+                      invited={invited}
+                      name={user.name}
+                    />
                   </>
                 ) : (
                   <p className="text-sm text-ink-soft">Der Zugang ist deaktiviert. Aktivieren Sie ihn zuerst.</p>

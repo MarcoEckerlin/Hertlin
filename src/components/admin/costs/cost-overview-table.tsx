@@ -21,7 +21,9 @@ function Cells({ totals, showOpen, muted }: { totals: CostTotals; showOpen: bool
       <td className={cls}>{totals.materialCents > 0 ? formatMoney(totals.materialCents) : "–"}</td>
       <td className={cn(num, muted ? "text-ink-muted" : "font-semibold text-ink")}>{formatMoney(totals.totalCents)}</td>
       {showOpen ? (
-        <td className={cn(num, muted ? "text-ink-muted" : totals.openCents > 0 ? "font-semibold text-amber-800" : "text-ink-muted")}>
+        <td
+          className={cn(num, muted ? "text-ink-muted" : totals.openCents > 0 ? "font-semibold text-amber-800" : "text-ink-muted")}
+        >
           {totals.openCents > 0 ? formatMoney(totals.openCents) : "–"}
         </td>
       ) : null}
@@ -32,7 +34,11 @@ function Cells({ totals, showOpen, muted }: { totals: CostTotals; showOpen: bool
 function GroupHeader({ label, count, colSpan }: { label: string; count: number; colSpan: number }) {
   return (
     <tr className="border-b border-line bg-mist/70">
-      <th scope="colgroup" colSpan={colSpan} className="px-5 py-2 text-left text-xs font-bold tracking-wide text-ink-muted uppercase">
+      <th
+        scope="colgroup"
+        colSpan={colSpan}
+        className="px-5 py-2 text-left text-xs font-bold tracking-wide text-ink-muted uppercase"
+      >
         {label} <span className="font-semibold normal-case">({count})</span>
       </th>
     </tr>
@@ -72,7 +78,10 @@ export function CostOverviewTable({
         </td>
         <Cells totals={row.totals} showOpen={showOpen} />
         <td className="w-10 px-2 py-3 pr-4 text-right">
-          <Link href={href} className="inline-grid size-8 place-items-center rounded-full text-ink-muted hover:bg-brand-100 hover:text-ink">
+          <Link
+            href={href}
+            className="inline-grid size-8 place-items-center rounded-full text-ink-muted hover:bg-brand-100 hover:text-ink"
+          >
             <ChevronRight className="size-4" aria-hidden />
             <span className="sr-only">Positionen von {row.label}</span>
           </Link>
@@ -149,8 +158,12 @@ export function CostOverviewTable({
               Gesamt
             </th>
             <td className={cn(num, "font-semibold text-ink")}>{totals.tickets}</td>
-            <td className={cn(num, "font-semibold text-ink")}>{totals.laborMinutes > 0 ? formatHours(totals.laborMinutes) : "–"}</td>
-            <td className={cn(num, "font-semibold text-ink")}>{totals.materialCents > 0 ? formatMoney(totals.materialCents) : "–"}</td>
+            <td className={cn(num, "font-semibold text-ink")}>
+              {totals.laborMinutes > 0 ? formatHours(totals.laborMinutes) : "–"}
+            </td>
+            <td className={cn(num, "font-semibold text-ink")}>
+              {totals.materialCents > 0 ? formatMoney(totals.materialCents) : "–"}
+            </td>
             <td className={cn(num, "font-bold text-ink")}>{formatMoney(totals.totalCents)}</td>
             {showOpen ? (
               <td className={cn(num, "font-bold", totals.openCents > 0 ? "text-amber-800" : "text-ink-muted")}>

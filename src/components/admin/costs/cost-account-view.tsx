@@ -63,7 +63,10 @@ export async function CostAccountView({ resolved, filter }: { resolved: Resolved
         <EmptyState
           title={filter.billing === "offen" ? "Nichts offen" : "Keine Positionen für diese Auswahl"}
           action={
-            <ButtonLink href={costAccountHref(resolved.account, { period: { kind: "all" }, billing: "alle" })} variant="secondary">
+            <ButtonLink
+              href={costAccountHref(resolved.account, { period: { kind: "all" }, billing: "alle" })}
+              variant="secondary"
+            >
               Alle Positionen dieses Kontos
             </ButtonLink>
           }
@@ -75,10 +78,14 @@ export async function CostAccountView({ resolved, filter }: { resolved: Resolved
       ) : (
         <>
           <CostSummary totals={detail.totals} billing={filter.billing} periodLabel={label} />
-          <CostEntriesForm tickets={tickets} account={costAccountParams(resolved.account)} total={formatMoney(detail.totals.totalCents)} />
+          <CostEntriesForm
+            tickets={tickets}
+            account={costAccountParams(resolved.account)}
+            total={formatMoney(detail.totals.totalCents)}
+          />
           <p className="text-sm text-ink-muted">
-            Positionen ändern oder löschen Sie im jeweiligen Ticket. „Abgerechnet“ markiert nur den Stand hier, eine Rechnung
-            wird dabei nicht erstellt.
+            Positionen ändern oder löschen Sie im jeweiligen Ticket. „Abgerechnet“ markiert nur den Stand hier, eine Rechnung wird
+            dabei nicht erstellt.
           </p>
         </>
       )}

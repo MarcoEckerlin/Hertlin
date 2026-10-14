@@ -124,10 +124,13 @@ export function CompanyUserCreate({
   rootId,
   companies,
   defaultCompanyId,
+  defaultRole,
 }: {
   rootId: string;
   companies: CompanyOption[];
   defaultCompanyId: string;
+  /** Vorschlag, z. B. Hauptansprechpartner, wenn die Firma noch keinen hat */
+  defaultRole: "CUSTOMER_ADMIN" | "CUSTOMER_USER";
 }) {
   const [round, setRound] = useState(0);
   return (
@@ -136,6 +139,7 @@ export function CompanyUserCreate({
       rootId={rootId}
       companies={companies}
       defaultCompanyId={defaultCompanyId}
+      defaultRole={round === 0 ? defaultRole : "CUSTOMER_USER"}
       onAgain={() => setRound((r) => r + 1)}
     />
   );
@@ -145,11 +149,13 @@ function CompanyUserCreateForm({
   rootId,
   companies,
   defaultCompanyId,
+  defaultRole,
   onAgain,
 }: {
   rootId: string;
   companies: CompanyOption[];
   defaultCompanyId: string;
+  defaultRole: "CUSTOMER_ADMIN" | "CUSTOMER_USER";
   onAgain: () => void;
 }) {
   const [state, formAction] = useActionState(createCompanyUserAction, initialFormState);
@@ -192,10 +198,10 @@ function CompanyUserCreateForm({
         ) : (
           <input type="hidden" name="companyId" value={initialCompanyId} />
         )}
-        <RoleChoice value={values.role ?? "CUSTOMER_USER"} company={company} error={errors.role} />
+        <RoleChoice value={values.role ?? defaultRole} company={company} error={errors.role} />
         <p className="text-sm text-ink-muted">
-          Die Person bekommt eine Einladung per E-Mail und legt ihr Passwort selbst fest. Den Link sehen Sie nach dem
-          Anlegen auch hier.
+          Die Person bekommt eine Einladung per E-Mail und legt ihr Passwort selbst fest. Den Link sehen Sie nach dem Anlegen auch
+          hier.
         </p>
       </FormSection>
 
@@ -213,9 +219,21 @@ function UserContactFields({ values, errors }: { values: Partial<Record<string, 
   return (
     <>
       <Field label="Name" htmlFor="user-name" error={errors.name}>
-        <Input {...fieldProps("user-name", errors.name)} name="name" required maxLength={120} autoComplete="off" defaultValue={values.name ?? ""} />
+        <Input
+          {...fieldProps("user-name", errors.name)}
+          name="name"
+          required
+          maxLength={120}
+          autoComplete="off"
+          defaultValue={values.name ?? ""}
+        />
       </Field>
-      <Field label="E-Mail-Adresse" htmlFor="user-email" error={errors.email} hint="Damit meldet sich die Person im Kundenportal an.">
+      <Field
+        label="E-Mail-Adresse"
+        htmlFor="user-email"
+        error={errors.email}
+        hint="Damit meldet sich die Person im Kundenportal an."
+      >
         <Input
           {...fieldProps("user-email", errors.email, true)}
           name="email"
@@ -228,7 +246,14 @@ function UserContactFields({ values, errors }: { values: Partial<Record<string, 
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Telefon" htmlFor="user-phone" error={errors.phone} optional>
-          <Input {...fieldProps("user-phone", errors.phone)} name="phone" type="tel" maxLength={40} autoComplete="off" defaultValue={values.phone ?? ""} />
+          <Input
+            {...fieldProps("user-phone", errors.phone)}
+            name="phone"
+            type="tel"
+            maxLength={40}
+            autoComplete="off"
+            defaultValue={values.phone ?? ""}
+          />
         </Field>
         <Field label="Position" htmlFor="user-position" error={errors.position} optional>
           <Input
@@ -294,8 +319,7 @@ export function CompanyUserEditForm({
         <UserContactFields values={values} errors={errors} />
         {invited ? (
           <p className="-mt-2 text-sm text-ink-muted">
-            Die Einladung ist noch offen. Ändern Sie die E-Mail-Adresse, geht automatisch eine neue Einladung an die neue
-            Adresse.
+            Die Einladung ist noch offen. Ändern Sie die E-Mail-Adresse, geht automatisch eine neue Einladung an die neue Adresse.
           </p>
         ) : null}
       </FormSection>
