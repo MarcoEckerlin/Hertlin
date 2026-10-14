@@ -1,87 +1,105 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState, type FormEvent } from "react";
 import { updateTicketMetaAction } from "@/lib/actions/admin-tickets";
 import { initialFormState } from "@/lib/forms";
 import {
   CATEGORY_LABELS,
   PRIORITY_LABELS,
-  STATUS_LABELS_STAFF,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
-  TICKET_STATUSES,
   TICKET_TYPES,
   TYPE_LABELS,
 } from "@/lib/constants";
-import { Checkbox, Field, Select } from "@/components/ui/field";
+import { Field, Select } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { showToast } from "@/components/ui/toaster";
 import { OPTION_INDENT, PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { fieldA11y, useStaffForm } from "@/components/admin/tickets/use-staff-form";
 import { LocationSelect } from "@/components/admin/location-select";
 
 export type MetaValues = {
-  status: string;
   priority: string;
   type: string;
   category: string;
-  assigneeId: string;
   /** Firmen-ID oder "privat" */
   customer: string;
   /** Standort-ID oder "" */
   locationId: string;
 };
 
+const KEYS: (keyof MetaValues)[] = ["priority", "type", "category", "customer", "locationId"];
+
 export type MetaCompanyGroup = { id: string; name: string; companies: { id: string; name: string; isRoot: boolean }[] };
 
+/** Zahl der Felder, die vom gespeicherten Stand abweichen */
+function countChanges(form: HTMLFormElement, current: MetaValues): number {
+  const data = new FormData(form);
+  return KEYS.filter((key) => data.has(key) && String(data.get(key)) !== current[key]).length;
+}
+
 /**
- * Seitenleiste „Bearbeitung“: Status, Priorität, Art, Bereich, Bearbeiter und Zuordnung.
+ * Seitenleiste „Details“: Priorität, Art, Bereich, Zuordnung und Standort.
+ * Status und Bearbeiter stehen in der Schnellleiste oben (TicketQuickBar).
+ * Speichern ist erst möglich, wenn sich etwas geändert hat; Erfolg erscheint als kurze Meldung.
  * Wird neu aufgebaut, wenn sich die gespeicherten Werte ändern (auch durch Kollegen, live).
  */
 export function TicketMetaForm({
   ticketId,
   current,
-  staff,
   companyGroups,
   allowPrivate,
   customerHint,
-  recipientEmail,
   locations,
 }: {
   ticketId: number;
   current: MetaValues;
-  staff: { id: string; name: string; active: boolean }[];
   companyGroups: MetaCompanyGroup[];
   /** „Privatkunde“ als Zuordnung anbieten (nur bei ursprünglich privaten Tickets) */
   allowPrivate: boolean;
   customerHint?: string;
-  /** Adresse für Status-Mails an den Kunden oder null */
-  recipientEmail: string | null;
   /** Standorte (aktive, dazu ein evtl. deaktivierter aktueller); leer = Feld ausblenden */
   locations: { value: string; label: string }[];
 }) {
   const [state, action] = useActionState(updateTicketMetaAction, initialFormState);
   const { formRef, formKey } = useStaffForm(state);
-  const version = Object.values(current).join("|");
+  const version = KEYS.map((key) => current[key]).join("|");
+  const key = `${formKey}-${version}`;
+  // Änderungen gehören zu genau diesem Aufbau des Formulars; ein neuer Aufbau beginnt wieder bei 0
+  const [changes, setChanges] = useState({ key: "", count: 0 });
+  const errorValues = state.status === "error" ? (state.values ?? null) : null;
+  const changed = changes.key === key ? changes.count : errorValues ? 1 : 0;
+
+  useEffect(() => {
+    if (state.status === "success" && state.message) showToast(state.message);
+  }, [state]);
+
+  function onChange(event: FormEvent<HTMLFormElement>) {
+    setChanges({ key, count: countChanges(event.currentTarget, current) });
+  }
 
   return (
-    <form key={`${formKey}-${version}`} ref={formRef} action={action} noValidate className="space-y-4">
+    <form key={key} ref={formRef} action={action} onChange={onChange} noValidate className="space-y-4">
       <input type="hidden" name="ticketId" value={ticketId} />
-      <FormMessage state={state} />
+      {state.status === "error" ? <FormMessage state={state} /> : null}
       <MetaFields
         current={current}
-        values={state.status === "error" ? (state.values ?? null) : null}
+        values={errorValues}
         errors={state.fieldErrors ?? {}}
-        staff={staff}
         companyGroups={companyGroups}
         allowPrivate={allowPrivate}
         customerHint={customerHint}
-        recipientEmail={recipientEmail}
         locations={locations}
       />
-      <SubmitButton size="md" className="w-full" pendingText="Wird gespeichert …">
-        Änderungen speichern
-      </SubmitButton>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <SubmitButton size="sm" pendingText="Wird gespeichert …" disabled={changed === 0}>
+          Änderungen speichern
+        </SubmitButton>
+        <span className="text-xs text-ink-muted" aria-live="polite">
+          {changed === 1 ? "1 Änderung" : changed > 1 ? `${changed} Änderungen` : ""}
+        </span>
+      </div>
     </form>
   );
 }
@@ -90,79 +108,42 @@ function MetaFields({
   current,
   values,
   errors,
-  staff,
   companyGroups,
   allowPrivate,
   customerHint,
-  recipientEmail,
   locations,
 }: {
   current: MetaValues;
   values: Record<string, string> | null;
   errors: Record<string, string>;
-  staff: { id: string; name: string; active: boolean }[];
   companyGroups: MetaCompanyGroup[];
   allowPrivate: boolean;
   customerHint?: string;
-  recipientEmail: string | null;
   locations: { value: string; label: string }[];
 }) {
   const initial = (key: keyof MetaValues) => (values ? (values[key] ?? current[key]) : current[key]);
-  const [status, setStatus] = useState(initial("status"));
   const [customer, setCustomer] = useState(initial("customer"));
 
-  const statusChangedToDone = status !== current.status && (status === "RESOLVED" || status === "CLOSED");
   const movingAwayFromPrivate = current.customer === PRIVATE_CUSTOMER && customer !== PRIVATE_CUSTOMER;
   const selectClass = "h-10 text-sm";
 
   return (
     <>
-      <Field label="Status" htmlFor="meta-status" error={errors.status}>
-        <Select
-          {...fieldA11y("meta-status", errors.status)}
-          name="status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className={selectClass}
-        >
-          {TICKET_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABELS_STAFF[s]}
-            </option>
-          ))}
-        </Select>
-      </Field>
-
-      {statusChangedToDone ? (
-        recipientEmail ? (
-          <Checkbox
-            name="notify"
-            defaultChecked={values ? values.notify === "on" : true}
-            label="Kunden per E-Mail informieren"
-            hint={`Kurze Nachricht an ${recipientEmail}, dass das Ticket „${STATUS_LABELS_STAFF[status as keyof typeof STATUS_LABELS_STAFF]}“ ist.`}
-            className="text-sm"
-          />
-        ) : (
-          <p className="text-xs text-ink-muted">Keine E-Mail-Adresse hinterlegt – der Kunde wird nicht benachrichtigt.</p>
-        )
-      ) : null}
-
-      <Field label="Priorität" htmlFor="meta-priority" error={errors.priority}>
-        <Select
-          {...fieldA11y("meta-priority", errors.priority)}
-          name="priority"
-          defaultValue={initial("priority")}
-          className={selectClass}
-        >
-          {TICKET_PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {PRIORITY_LABELS[p]}
-            </option>
-          ))}
-        </Select>
-      </Field>
-
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+        <Field label="Priorität" htmlFor="meta-priority" error={errors.priority}>
+          <Select
+            {...fieldA11y("meta-priority", errors.priority)}
+            name="priority"
+            defaultValue={initial("priority")}
+            className={selectClass}
+          >
+            {TICKET_PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {PRIORITY_LABELS[p]}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="Art" htmlFor="meta-type" error={errors.type}>
           <Select {...fieldA11y("meta-type", errors.type)} name="type" defaultValue={initial("type")} className={selectClass}>
             {TICKET_TYPES.map((t) => (
@@ -172,7 +153,7 @@ function MetaFields({
             ))}
           </Select>
         </Field>
-        <Field label="Bereich" htmlFor="meta-category" error={errors.category}>
+        <Field label="Bereich" htmlFor="meta-category" error={errors.category} className="col-span-2 lg:col-span-1">
           <Select
             {...fieldA11y("meta-category", errors.category)}
             name="category"
@@ -187,22 +168,6 @@ function MetaFields({
           </Select>
         </Field>
       </div>
-
-      <Field label="Bearbeiter" htmlFor="meta-assigneeId" error={errors.assigneeId}>
-        <Select
-          {...fieldA11y("meta-assigneeId", errors.assigneeId)}
-          name="assigneeId"
-          defaultValue={initial("assigneeId")}
-          className={selectClass}
-        >
-          <option value="">Noch niemand</option>
-          {staff.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.active ? s.name : `${s.name} (deaktiviert)`}
-            </option>
-          ))}
-        </Select>
-      </Field>
 
       <Field
         label="Zuordnung"

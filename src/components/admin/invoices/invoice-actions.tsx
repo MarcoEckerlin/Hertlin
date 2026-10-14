@@ -154,7 +154,7 @@ export function InvoiceCancelForm({ invoiceId, number, paid }: { invoiceId: stri
           }
         />
         {errors.confirm ? (
-          <p id="cancel-confirm-error" className="mt-1.5 text-sm font-medium text-red-700">
+          <p id="cancel-confirm-error" className="mt-1.5 text-sm font-medium text-danger-ink">
             {errors.confirm}
           </p>
         ) : null}

@@ -81,7 +81,7 @@ export function ContactCard({ ticket }: { ticket: StaffTicketDetail }) {
               <span className="font-semibold">Privatkunde</span>
             )}
             {company && (!company.active || company.parent?.active === false) ? (
-              <span className="mt-0.5 block text-xs text-amber-800">Kunde ist deaktiviert</span>
+              <span className="mt-0.5 block text-xs text-warning-ink">Kunde ist deaktiviert</span>
             ) : null}
           </Row>
 

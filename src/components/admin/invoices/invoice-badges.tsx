@@ -21,7 +21,7 @@ export function InvoiceStatusBadge({ invoice }: { invoice: InvoiceLike }) {
 export function OverdueNote({ invoice }: { invoice: InvoiceLike }) {
   const days = daysOverdue(invoice);
   if (days <= 0) return null;
-  return <span className="text-xs font-semibold text-red-700">{overdueLabel(days)}</span>;
+  return <span className="text-xs font-semibold text-danger-ink">{overdueLabel(days)}</span>;
 }
 
 /** Fehlende Pflichtangaben für Rechnungen mit Links zum Beheben */

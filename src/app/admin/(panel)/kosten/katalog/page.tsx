@@ -5,11 +5,11 @@ import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { cleanName } from "@/lib/cost-catalog";
-import { Alert } from "@/components/ui/alert";
 import { ButtonLink, buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/field";
 import { PageHeader } from "@/components/ui/page-header";
+import { FlashToast } from "@/components/ui/toaster";
 import { CatalogList, type CatalogRow } from "@/components/admin/costs/catalog-list";
 
 export const metadata: Metadata = { title: "Kostenkatalog" };
@@ -19,11 +19,14 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const STATUS_FILTERS = { alle: "Alle", aktiv: "Nur aktive", deaktiviert: "Nur deaktivierte" } as const;
 type StatusFilter = keyof typeof STATUS_FILTERS;
 
-const FLASH: Record<string, { tone: "success" | "warning"; text: string }> = {
-  angelegt: { tone: "success", text: "Der Eintrag steht jetzt im Katalog." },
-  gespeichert: { tone: "success", text: "Die Änderungen sind gespeichert." },
-  geloescht: { tone: "success", text: "Der Eintrag ist gelöscht." },
-  benutzt: { tone: "warning", text: "Dieser Eintrag wurde schon benutzt und lässt sich nicht löschen. Deaktivieren Sie ihn stattdessen." },
+/** Rückmeldungen nach einer Weiterleitung (?katalog=…) – erscheinen als kurze Meldung */
+const FLASH_OK: Record<string, string> = {
+  angelegt: "Der Eintrag steht jetzt im Katalog.",
+  gespeichert: "Die Änderungen sind gespeichert.",
+  geloescht: "Der Eintrag ist gelöscht.",
+};
+const FLASH_PROBLEM: Record<string, string> = {
+  benutzt: "Dieser Eintrag wurde schon benutzt und lässt sich nicht löschen. Deaktivieren Sie ihn stattdessen.",
 };
 
 function first(value: string | string[] | undefined): string {
@@ -37,7 +40,7 @@ export default async function CostCatalogPage({ searchParams }: { searchParams: 
   const search = cleanName(first(params.suche)).slice(0, 100);
   const statusParam = first(params.status);
   const status: StatusFilter = statusParam in STATUS_FILTERS ? (statusParam as StatusFilter) : "alle";
-  const flash = FLASH[first(params.katalog)];
+  const flash = first(params.katalog) || undefined;
 
   const where: Prisma.CostPresetWhereInput = {
     ...(status === "aktiv" ? { active: true } : status === "deaktiviert" ? { active: false } : {}),
@@ -86,7 +89,7 @@ export default async function CostCatalogPage({ searchParams }: { searchParams: 
     <div>
       <PageHeader
         title="Kostenkatalog"
-        description="Standardpositionen für Arbeitszeit, Anfahrt, Material und Pauschalen, aus denen Mitarbeiter im Ticket auswählen. Neue Positionen aus Tickets landen automatisch hier."
+        description="Standardpositionen, aus denen Mitarbeiter im Ticket auswählen. Neue Positionen aus Tickets landen automatisch hier."
         meta={
           total > 0 ? (
             <span className="text-sm text-ink-muted">
@@ -103,15 +106,17 @@ export default async function CostCatalogPage({ searchParams }: { searchParams: 
         }
       />
 
+      <FlashToast param="katalog" value={flash} messages={FLASH_OK} />
+      <FlashToast param="katalog" value={flash} messages={FLASH_PROBLEM} tone="error" />
+
       <div className="space-y-6">
-        {flash ? <Alert tone={flash.tone}>{flash.text}</Alert> : null}
 
         {total > 0 ? (
           <form
             role="search"
             aria-label="Katalog durchsuchen"
             action="/admin/kosten/katalog"
-            className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 shadow-card sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4 shadow-card sm:flex-row sm:items-end"
           >
             <div className="min-w-0 flex-1">
               <label htmlFor="katalog-suche" className="mb-1.5 block text-sm font-semibold text-ink">

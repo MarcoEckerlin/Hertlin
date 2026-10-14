@@ -1,17 +1,18 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Lock, Pencil, TriangleAlert } from "lucide-react";
 import { COST_KIND_LABELS, labelOf } from "@/lib/constants";
 import { formatDate, formatMoney, formatQuantity } from "@/lib/format";
 import { costEditBlock } from "@/lib/cost-catalog";
-import { deleteCostAction, markAllCostsBilledAction, toggleCostBilledAction } from "@/lib/actions/admin-costs";
+import { deleteCostAction, markAllCostsBilledAction } from "@/lib/actions/admin-costs";
 import { LABOR_BILLING_HINT } from "@/config/pricing";
-import { cn } from "@/lib/cn";
-import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { Table, THead, TR } from "@/components/ui/table";
+import { Table, TD, TH, THead, TR } from "@/components/ui/table";
+import { FlashToast } from "@/components/ui/toaster";
+import { CostBilledToggle } from "@/components/admin/tickets/cost-billed-toggle";
+import { CostCapture } from "@/components/admin/tickets/cost-capture";
 import { CostDeleteButton } from "@/components/admin/tickets/cost-delete-button";
-import { CostAddForm } from "@/components/admin/tickets/cost-add-form";
 import { CostPriceForm } from "@/components/admin/tickets/cost-price-form";
 import type { PresetOption, StaffChoice } from "@/components/admin/tickets/cost-values";
 import type { CostEntryRow, StaffCostEntryRow } from "@/components/admin/tickets/data";
@@ -29,8 +30,23 @@ type Common = {
   flash?: string;
 };
 
+/** Rückmeldungen nach einer Weiterleitung (?kosten=…) – erscheinen als kurze Meldung */
+const FLASH_OK: Record<string, string> = {
+  gespeichert: "Die Position ist gespeichert.",
+  geloescht: "Die Position ist gelöscht.",
+  preis: "Der Preis ist gespeichert.",
+  "preis-katalog": "Der Preis ist gespeichert und gilt jetzt auch im Katalog.",
+};
+
+const FLASH_PROBLEM: Record<string, string> = {
+  "preis-einheit": "Der Preis ist gespeichert. Im Katalog nicht, weil der Eintrag dort eine andere Einheit hat.",
+  gesperrt: "Diese Position lässt sich nicht mehr ändern.",
+  "preis-fehlt": "Ohne Preis kann die Position nicht als abgerechnet gelten. Tragen Sie zuerst den Preis ein.",
+};
+
 /**
  * „Leistungen und Material“ im Ticket – für alle Mitarbeiter.
+ * Kompakte Liste (eine Zeile je Position, Details darunter), darunter „Position erfassen“ mit Schnellwahl.
  * Mit amounts (nur Administratoren) Preise, Summen und Abrechnung; sonst ausschließlich Mengen.
  * Die Seite entscheidet über canSeeCostAmounts() und lädt für Techniker gar keine Beträge.
  */
@@ -39,14 +55,17 @@ export function CostSection(props: Common & ({ amounts: true; costs: CostEntryRo
   const isAdmin = props.amounts;
 
   return (
-    <section id="kosten" aria-labelledby="kosten-titel" className="scroll-mt-24 rounded-2xl border border-line bg-white shadow-card">
+    <section id="kosten" aria-labelledby="kosten-titel" className="scroll-mt-24 rounded-2xl border border-line bg-surface shadow-card">
+      <FlashToast param="kosten" value={flash} messages={FLASH_OK} />
+      <FlashToast param="kosten" value={flash} messages={FLASH_PROBLEM} tone="info" />
+
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
         <div className="min-w-0">
           <h2 id="kosten-titel" className="text-base font-bold text-ink">
             Leistungen und Material
           </h2>
-          <p className="mt-0.5 flex items-start gap-1.5 text-sm text-ink-muted">
-            <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          <p className="mt-0.5 flex items-start gap-1.5 text-xs text-ink-muted">
+            <Lock className="mt-px size-3.5 shrink-0" aria-hidden />
             {isAdmin
               ? "Intern – Kunden sehen diesen Abschnitt nicht. Preise und Summen sehen nur Administratoren."
               : "Intern – Kunden sehen diesen Abschnitt nicht. Tragen Sie ein, was Sie gebraucht haben; die Preise ergänzt die Verwaltung."}
@@ -55,26 +74,22 @@ export function CostSection(props: Common & ({ amounts: true; costs: CostEntryRo
         {props.amounts ? <MarkAllButton ticketId={ticketId} costs={props.costs} /> : null}
       </div>
 
-      <div className="space-y-5 px-5 py-5 sm:px-6">
-        <Flash flash={flash} />
-
+      <div className="space-y-4 px-4 py-4 sm:px-6 sm:py-5">
         {props.amounts ? <MissingPrices ticketId={ticketId} costs={props.costs} /> : null}
 
         {props.costs.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line-strong bg-mist px-4 py-5 text-sm text-ink-soft">
-            Noch nichts erfasst. Arbeitszeit, Anfahrt und Material tragen Sie unten ein
+          <p className="text-sm text-ink-muted">
+            Noch nichts erfasst.
             {isAdmin ? (
               <>
                 {" "}
-                – die Übersicht pro Kunde finden Sie unter{" "}
+                Die Übersicht pro Kunde steht unter{" "}
                 <Link href="/admin/kosten" className="font-semibold text-brand-700 hover:underline">
                   Kosten pro Konto
                 </Link>
                 .
               </>
-            ) : (
-              "."
-            )}
+            ) : null}
           </p>
         ) : props.amounts ? (
           <AdminTable ticketId={ticketId} viewer={viewer} costs={props.costs} />
@@ -82,70 +97,40 @@ export function CostSection(props: Common & ({ amounts: true; costs: CostEntryRo
           <StaffTable ticketId={ticketId} viewer={viewer} costs={props.costs} />
         )}
 
-        <div className="rounded-xl bg-mist p-4 ring-1 ring-line ring-inset sm:p-5">
-          <h3 className="mb-4 text-sm font-bold text-ink">Position erfassen</h3>
-          <CostAddForm
-            ticketId={ticketId}
-            presets={presets}
-            staff={staff}
-            currentUserId={viewer.id}
-            canSetPrice={isAdmin}
-            laborHint={LABOR_BILLING_HINT}
-            today={today}
-          />
-        </div>
+        <CostCapture
+          ticketId={ticketId}
+          presets={presets}
+          staff={staff}
+          currentUserId={viewer.id}
+          canSetPrice={isAdmin}
+          laborHint={LABOR_BILLING_HINT}
+          today={today}
+        />
       </div>
     </section>
   );
 }
 
-const FLASH: Record<string, { tone: "success" | "warning"; text: string }> = {
-  gespeichert: { tone: "success", text: "Die Position ist gespeichert." },
-  geloescht: { tone: "success", text: "Die Position ist gelöscht." },
-  preis: { tone: "success", text: "Der Preis ist gespeichert." },
-  "preis-katalog": { tone: "success", text: "Der Preis ist gespeichert und gilt jetzt auch im Katalog." },
-  "preis-einheit": {
-    tone: "warning",
-    text: "Der Preis ist gespeichert. Im Katalog nicht, weil der Eintrag dort eine andere Einheit hat.",
-  },
-  gesperrt: { tone: "warning", text: "Diese Position lässt sich nicht mehr ändern." },
-  "preis-fehlt": { tone: "warning", text: "Ohne Preis kann die Position nicht als abgerechnet gelten. Tragen Sie zuerst den Preis ein." },
-};
-
-function Flash({ flash }: { flash?: string }) {
-  const entry = flash ? FLASH[flash] : undefined;
-  if (!entry) return null;
-  return <Alert tone={entry.tone}>{entry.text}</Alert>;
-}
-
-/*
- * Kompakte Zellen: Der Abschnitt steht in der schmalen Hauptspalte des Tickets und soll dort ohne
- * seitliches Scrollen auskommen (auf dem Handy scrollt nur die Tabelle selbst).
- */
-const th = "px-3 py-3 font-semibold whitespace-nowrap first:pl-5 last:pr-4";
-const td = "px-3 py-3 align-middle text-ink-soft first:pl-5 last:pr-4";
-
-/** Beschreibung mit Art, „erbracht von …“ und – falls jemand anderes erfasst hat – „erfasst von …“ */
-function EntryCell({ cost }: { cost: StaffCostEntryRow }) {
+/** Zweite Zeile einer Position: Datum, Art, Menge (und Preis), wer sie erbracht bzw. erfasst hat */
+function metaLine(cost: StaffCostEntryRow, amount?: string): string {
   const performer = cost.performedBy?.name;
   const creator = cost.createdBy?.name;
-  const parts: string[] = [labelOf(COST_KIND_LABELS, cost.kind)];
+  const quantity = `${formatQuantity(cost.quantityHundredths)} ${cost.unit}`;
+  const parts: string[] = [formatDate(cost.performedAt), labelOf(COST_KIND_LABELS, cost.kind), amount ? `${quantity} × ${amount}` : quantity];
   if (performer) parts.push(`erbracht von ${performer}`);
   if (creator && cost.createdBy?.id !== cost.performedBy?.id) parts.push(`erfasst von ${creator}`);
-  return (
-    <>
-      <span className="block min-w-[10rem] break-words text-ink">{cost.description}</span>
-      <span className="block text-xs text-ink-muted">{parts.join(" · ")}</span>
-    </>
-  );
+  return parts.join(" · ");
 }
 
-function LockedBadge({ label }: { label: string }) {
+function EntryCell({ cost, amount, badge }: { cost: StaffCostEntryRow; amount?: string; badge?: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted">
-      <Lock className="size-3.5" aria-hidden />
-      {label}
-    </span>
+    <div className="min-w-0">
+      <span className="block font-medium break-words text-ink">{cost.description}</span>
+      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+        <span className="tabular-nums">{metaLine(cost, amount)}</span>
+        {badge}
+      </span>
+    </div>
   );
 }
 
@@ -175,30 +160,23 @@ function RowActions({
   );
 }
 
+const descCell = "w-full min-w-[12rem] py-2.5";
+const sideCell = "py-2.5 whitespace-nowrap";
+
 /* ------------------------------------------------------------------ */
 /* Techniker: Positionen ohne Beträge                                  */
 /* ------------------------------------------------------------------ */
 
 function StaffTable({ ticketId, viewer, costs }: { ticketId: number; viewer: Viewer; costs: StaffCostEntryRow[] }) {
   return (
-    <Table aria-label="Erfasste Leistungen und Material">
+    <Table stack aria-label="Erfasste Leistungen und Material" className="min-w-0">
       <THead>
         <tr>
-          <th scope="col" className={th}>
-            Datum
-          </th>
-          <th scope="col" className={th}>
-            Leistung
-          </th>
-          <th scope="col" className={cn(th, "text-right")}>
-            Menge
-          </th>
-          <th scope="col" className={th}>
-            Stand
-          </th>
-          <th scope="col" className={th}>
+          <TH>Leistung</TH>
+          <TH>Stand</TH>
+          <TH>
             <span className="sr-only">Aktionen</span>
-          </th>
+          </TH>
         </tr>
       </THead>
       <tbody>
@@ -207,21 +185,24 @@ function StaffTable({ ticketId, viewer, costs }: { ticketId: number; viewer: Vie
           const editable = costEditBlock(viewer, cost) === null;
           return (
             <TR key={cost.id}>
-              <td className={cn(td, "whitespace-nowrap tabular-nums")}>{formatDate(cost.performedAt)}</td>
-              <td className={td}>
+              <TD className={descCell}>
                 <EntryCell cost={cost} />
-              </td>
-              <td className={cn(td, "text-right whitespace-nowrap tabular-nums")}>
-                {formatQuantity(cost.quantityHundredths)} {cost.unit}
-              </td>
-              <td className={cn(td, "whitespace-nowrap")}>
-                {locked ? <LockedBadge label="abgerechnet" /> : <span className="text-xs">erfasst</span>}
-              </td>
-              <td className={cn(td, "whitespace-nowrap")}>
+              </TD>
+              <TD label="Stand" className={sideCell}>
+                {locked ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-ink-muted">
+                    <Lock className="size-3.5" aria-hidden />
+                    abgerechnet
+                  </span>
+                ) : (
+                  <span className="text-xs">erfasst</span>
+                )}
+              </TD>
+              <TD className={sideCell}>
                 {editable ? (
                   <RowActions ticketId={ticketId} cost={cost} confirmText={`Position „${cost.description}“ wirklich löschen?`} />
                 ) : null}
-              </td>
+              </TD>
             </TR>
           );
         })}
@@ -250,18 +231,22 @@ function MissingPrices({ ticketId, costs }: { ticketId: number; costs: CostEntry
   const missing = costs.filter((c) => c.needsPrice && !c.invoiceId);
   if (missing.length === 0) return null;
   return (
-    <div role="region" aria-labelledby="preis-fehlt-titel" className="rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200 ring-inset sm:p-5">
-      <h3 id="preis-fehlt-titel" className="flex items-center gap-2 text-sm font-bold text-amber-900">
+    <div
+      role="region"
+      aria-labelledby="preis-fehlt-titel"
+      className="rounded-xl bg-warning-soft p-4 ring-1 ring-warning-line ring-inset sm:p-5"
+    >
+      <h3 id="preis-fehlt-titel" className="flex items-center gap-2 text-sm font-bold text-warning-ink">
         <TriangleAlert className="size-4 shrink-0" aria-hidden />
         {missing.length === 1 ? "Preis fehlt bei 1 Position" : `Preis fehlt bei ${missing.length} Positionen`}
       </h3>
-      <p className="mt-1 text-sm text-amber-900">
+      <p className="mt-1 text-sm text-warning-ink">
         Ohne Katalogpreis erfasst. Bis der Preis eingetragen ist, zählt die Position in keiner Summe und kann nicht abgerechnet
         werden.
       </p>
       <ul className="mt-3 space-y-3">
         {missing.map((cost) => (
-          <li key={cost.id} className="rounded-lg bg-white p-3 ring-1 ring-amber-200 ring-inset sm:p-4">
+          <li key={cost.id} className="rounded-lg bg-surface p-3 ring-1 ring-warning-line ring-inset sm:p-4">
             <p className="text-sm font-semibold break-words text-ink">{cost.description}</p>
             <p className="mb-2.5 text-xs text-ink-muted">
               {formatQuantity(cost.quantityHundredths)} {cost.unit} · {formatDate(cost.performedAt)}
@@ -289,55 +274,36 @@ function AdminTable({ ticketId, viewer, costs }: { ticketId: number; viewer: Vie
   const missing = costs.length - priced.length;
 
   return (
-    <Table aria-label="Erfasste Leistungen und Material">
+    <Table stack aria-label="Erfasste Leistungen und Material" className="min-w-0">
       <THead>
         <tr>
-          <th scope="col" className={th}>
-            Datum
-          </th>
-          <th scope="col" className={th}>
-            Leistung
-          </th>
-          <th scope="col" className={cn(th, "text-right")}>
-            Menge
-          </th>
-          <th scope="col" className={cn(th, "text-right")}>
-            Gesamt
-          </th>
-          <th scope="col" className={th}>
-            Abgerechnet
-          </th>
-          <th scope="col" className={th}>
+          <TH>Leistung</TH>
+          <TH className="text-right">Gesamt</TH>
+          <TH>Abgerechnet</TH>
+          <TH>
             <span className="sr-only">Aktionen</span>
-          </th>
+          </TH>
         </tr>
       </THead>
       <tbody>
         {costs.map((cost) => {
           const block = costEditBlock(viewer, cost);
           return (
-            <TR key={cost.id} className={cost.needsPrice ? "bg-amber-50/40" : undefined}>
-              <td className={cn(td, "whitespace-nowrap tabular-nums")}>{formatDate(cost.performedAt)}</td>
-              <td className={td}>
-                <EntryCell cost={cost} />
-              </td>
-              <td className={cn(td, "text-right whitespace-nowrap tabular-nums")}>
-                <span className="block">
-                  {formatQuantity(cost.quantityHundredths)} {cost.unit}
-                </span>
-                {cost.needsPrice ? (
-                  <Badge tone="amber">Preis fehlt</Badge>
-                ) : (
-                  <span className="block text-xs text-ink-muted">je {formatMoney(cost.unitPriceCents)}</span>
-                )}
-              </td>
-              <td className={cn(td, "text-right font-semibold whitespace-nowrap text-ink tabular-nums")}>
+            <TR key={cost.id} className={cost.needsPrice ? "bg-warning-soft/50" : undefined}>
+              <TD className={descCell}>
+                <EntryCell
+                  cost={cost}
+                  amount={cost.needsPrice ? undefined : formatMoney(cost.unitPriceCents)}
+                  badge={cost.needsPrice ? <Badge tone="amber">Preis fehlt</Badge> : null}
+                />
+              </TD>
+              <TD label="Gesamt" className={`${sideCell} text-right font-semibold text-ink tabular-nums`}>
                 {cost.needsPrice ? <span className="font-normal text-ink-muted">–</span> : formatMoney(cost.totalCents)}
-              </td>
-              <td className={cn(td, "whitespace-nowrap")}>
+              </TD>
+              <TD label="Abgerechnet" className={sideCell}>
                 <BilledCell ticketId={ticketId} cost={cost} />
-              </td>
-              <td className={cn(td, "whitespace-nowrap")}>
+              </TD>
+              <TD className={sideCell}>
                 {block === null ? (
                   <RowActions
                     ticketId={ticketId}
@@ -349,30 +315,31 @@ function AdminTable({ ticketId, viewer, costs }: { ticketId: number; viewer: Vie
                     }
                   />
                 ) : null}
-              </td>
+              </TD>
             </TR>
           );
         })}
       </tbody>
-      <tfoot className="border-t border-line-strong bg-mist text-sm">
-        <tr>
-          <td colSpan={3} className="px-3 py-2.5 pl-5 text-right font-semibold text-ink">
-            Summe
-          </td>
-          <td className="px-3 py-2.5 text-right font-bold whitespace-nowrap text-ink tabular-nums">{formatMoney(total)}</td>
-          <td colSpan={2} className="px-3 py-2.5 pr-4 text-xs text-ink-muted">
-            <span className="block whitespace-nowrap">
-              {open > 0 ? (
-                <span className="font-semibold text-amber-800">davon offen {formatMoney(open)}</span>
-              ) : (
-                "alles abgerechnet"
-              )}
-            </span>
-            {missing > 0 ? (
-              <span className="block text-amber-800">
-                {missing === 1 ? "1 Position ohne Preis nicht enthalten" : `${missing} Positionen ohne Preis nicht enthalten`}
+      <tfoot className="border-t border-line-strong bg-mist text-sm max-sm:block">
+        <tr className="max-sm:block">
+          <td colSpan={4} className="px-4 py-2.5 first:pl-5 last:pr-5 max-sm:block">
+            <div className="flex w-full flex-wrap items-baseline justify-end gap-x-4 gap-y-1 text-right">
+              <span className="font-semibold text-ink">
+                Summe <span className="ml-2 font-bold tabular-nums">{formatMoney(total)}</span>
               </span>
-            ) : null}
+              <span className="text-xs text-ink-muted">
+                {open > 0 ? (
+                  <span className="font-semibold text-warning-ink">davon offen {formatMoney(open)}</span>
+                ) : (
+                  "alles abgerechnet"
+                )}
+                {missing > 0 ? (
+                  <span className="block text-warning-ink">
+                    {missing === 1 ? "1 Position ohne Preis nicht enthalten" : `${missing} Positionen ohne Preis nicht enthalten`}
+                  </span>
+                ) : null}
+              </span>
+            </div>
           </td>
         </tr>
       </tfoot>
@@ -397,27 +364,12 @@ function BilledCell({ ticketId, cost }: { ticketId: number; cost: CostEntryRow }
     return <span className="text-xs text-ink-muted">offen</span>;
   }
   return (
-    <form action={toggleCostBilledAction.bind(null, ticketId, cost.id)}>
-      <button
-        type="submit"
-        title={
-          cost.billed
-            ? `Abgerechnet${cost.billedAt ? ` am ${formatDate(cost.billedAt)}` : ""} – klicken, um auf „offen“ zurückzusetzen`
-            : "Als abgerechnet markieren"
-        }
-        aria-label={
-          cost.billed ? `Abgerechnet. Auf „offen“ zurücksetzen: ${cost.description}` : `Offen. Als abgerechnet markieren: ${cost.description}`
-        }
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset transition-colors",
-          cost.billed
-            ? "bg-emerald-50 text-emerald-800 ring-emerald-200 hover:bg-emerald-100"
-            : "bg-amber-50 text-amber-800 ring-amber-200 hover:bg-amber-100",
-        )}
-      >
-        <span className="size-1.5 rounded-full bg-current opacity-70" aria-hidden />
-        {cost.billed ? "ja" : "offen"}
-      </button>
-    </form>
+    <CostBilledToggle
+      ticketId={ticketId}
+      costId={cost.id}
+      billed={cost.billed}
+      billedAtLabel={cost.billedAt ? formatDate(cost.billedAt) : null}
+      description={cost.description}
+    />
   );
 }

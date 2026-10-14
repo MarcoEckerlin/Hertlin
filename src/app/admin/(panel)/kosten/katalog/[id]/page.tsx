@@ -107,7 +107,7 @@ export default async function CatalogEntryPage({ params }: { params: Params }) {
               Häkchen bei „Aktiv“ heraus.
             </p>
           ) : (
-            <div className="rounded-2xl border border-red-200 bg-white px-5 py-4">
+            <div className="rounded-2xl border border-danger-line bg-surface px-5 py-4">
               <p className="mb-3 text-sm text-ink-soft">Noch nie benutzt – der Eintrag lässt sich vollständig löschen.</p>
               <form action={deletePresetAction.bind(null, preset.id)}>
                 <ConfirmSubmitButton

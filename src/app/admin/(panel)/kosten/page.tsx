@@ -41,7 +41,7 @@ export default async function CostsPage({
     <div>
       <PageHeader
         title="Kosten pro Konto"
-        description="Alle in Tickets erfassten Kosten, zusammengefasst je Firmenkunde (inklusive Unterkunden) und Privatkunde. Öffnen Sie ein Konto, um aus offenen Positionen eine Rechnung zu erstellen."
+        description="Erfasste Kosten je Kunde. Öffnen Sie ein Konto, um aus offenen Positionen eine Rechnung zu erstellen."
         actions={
           <>
             <ButtonLink href="/admin/rechnungen" variant="ghost">

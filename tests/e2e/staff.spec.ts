@@ -58,9 +58,11 @@ test.describe("Verwaltung: Tickets bearbeiten", () => {
     const raw = await fetchInPage(customer, `/tickets/${ticketId}`);
     expect(Buffer.from(raw.base64, "base64").toString("utf8")).not.toContain(note);
 
-    // Statuswechsel in der Verwaltung
+    // Statuswechsel in der Verwaltung (Schnellleiste; vor „Gelöst“ kommt die Frage nach der E-Mail an den Kunden)
     await page.getByLabel("Status", { exact: true }).selectOption({ label: "Gelöst" });
-    await page.getByRole("button", { name: "Änderungen speichern" }).click();
+    await expect(page.getByLabel("Kunden per E-Mail informieren")).toBeChecked();
+    await page.getByRole("button", { name: "Status speichern" }).click();
+    await expect(page.getByText(/^Gespeichert: Status\./)).toBeVisible();
     await expect(page.getByText("Gelöst", { exact: true }).first()).toBeVisible();
     await customer.reload();
     await expect(customer.getByText("Gelöst", { exact: true }).first()).toBeVisible();
@@ -86,7 +88,9 @@ test.describe("Verwaltung: Tickets bearbeiten", () => {
     await page.locator("#neu-body").fill("Kunde hat angerufen: Seit dem Gewitter blinkt der Router rot, kein Internet.");
     await page.getByRole("button", { name: "Ticket anlegen" }).click();
 
-    await expect(page).toHaveURL(/\/admin\/tickets\/\d+\?neu=1/);
+    // Die Rückmeldung „?neu=1“ verschwindet nach dem Anzeigen aus der Adresse
+    await expect(page).toHaveURL(/\/admin\/tickets\/\d+(\?neu=1.*)?$/);
+    await expect(page.getByText(/^Ticket T-\d+ ist angelegt\./)).toBeVisible();
     const ticketId = Number(new URL(page.url()).pathname.split("/").pop());
     await expect(page.getByRole("heading", { level: 1, name: subject })).toBeVisible();
     await expect(page.getByText("Status-Link des Kunden")).toBeVisible();
