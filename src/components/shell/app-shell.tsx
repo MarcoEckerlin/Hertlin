@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
@@ -14,6 +14,7 @@ import {
   LogOut,
   MapPin,
   Menu,
+  MoreHorizontal,
   Network,
   Phone,
   Plus,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LogoMark } from "@/components/ui/logo";
+import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/cn";
 import { initials } from "@/lib/format";
 
@@ -99,6 +101,20 @@ function ResponsiveSlot({ desktop, children }: { desktop: boolean; children: Rea
   );
   if (isDesktop === null || isDesktop !== desktop) return null;
   return <>{children}</>;
+}
+
+/** Kleiner Punkt am Menüeintrag, solange die angeklickte Seite lädt */
+function NavPending() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "size-1.5 shrink-0 rounded-full bg-brand-500 transition-opacity duration-150",
+        pending ? "animate-pulse opacity-100 motion-reduce:animate-none" : "opacity-0",
+      )}
+    />
+  );
 }
 
 function isActive(pathname: string, item: ShellNavItem) {
@@ -192,6 +208,9 @@ export function AppShell({
     .filter((i) => isActive(pathname, i))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
+  // Die ersten vier Einträge der ersten Gruppe als Schnellzugriff (Handy)
+  const quickItems = (groups[0]?.items ?? []).slice(0, 4);
+
   // Im mobilen Menü liegt oben rechts der Schließen-Knopf, daher dort mehr Abstand rechts
   const renderSidebar = (inDrawer: boolean) => (
     <div className="flex h-full flex-col">
@@ -227,6 +246,7 @@ export function AppShell({
                     >
                       <Icon className={cn("size-[1.05rem]", active ? "text-brand-700" : "text-ink-muted")} aria-hidden />
                       <span className="flex-1">{item.label}</span>
+                      <NavPending />
                       {item.count ? (
                         <span className="rounded-full bg-primary px-2 py-0.5 text-[0.7rem] font-bold text-on-primary">{item.count}</span>
                       ) : null}
@@ -329,8 +349,17 @@ export function AppShell({
       {open ? (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menü">
           {/* Klick auf den abgedunkelten Hintergrund schließt; per Tastatur gibt es den Knopf im Menü */}
-          <button type="button" className="absolute inset-0 bg-navy/50" onClick={closeMenu} tabIndex={-1} aria-hidden />
-          <div ref={drawerRef} className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-surface-raised shadow-lift">
+          <button
+            type="button"
+            className="absolute inset-0 bg-navy/50 transition-opacity duration-200 starting:opacity-0"
+            onClick={closeMenu}
+            tabIndex={-1}
+            aria-hidden
+          />
+          <div
+            ref={drawerRef}
+            className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overscroll-contain bg-surface-raised shadow-lift transition-transform duration-200 ease-out starting:-translate-x-full"
+          >
             <button
               ref={closeButtonRef}
               type="button"
@@ -345,9 +374,56 @@ export function AppShell({
         </div>
       ) : null}
 
-      <main id="inhalt" inert={open} className="lg:pl-64">
+      <main id="inhalt" inert={open} className="pb-20 lg:pb-0 lg:pl-64">
         <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">{children}</div>
       </main>
+
+      {/* Schnellzugriff unten auf dem Handy: die wichtigsten Bereiche mit einem Tipp, „Mehr“ öffnet das Menü */}
+      <nav
+        aria-label="Schnellzugriff"
+        inert={open}
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      >
+        <ul className="mx-auto grid max-w-lg grid-cols-5">
+          {quickItems.map((item) => {
+            const Icon = icons[item.icon];
+            const active = item.href === activeHref;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative flex h-14 flex-col items-center justify-center gap-0.5 text-[0.68rem] font-semibold",
+                    active ? "text-brand-700" : "text-ink-muted hover:text-ink",
+                  )}
+                >
+                  <Icon className="size-5" aria-hidden />
+                  <span className="max-w-full truncate px-1">{item.label}</span>
+                  {item.count ? (
+                    <span className="absolute top-1.5 left-1/2 ml-2 rounded-full bg-primary px-1.5 text-[0.62rem] leading-4 font-bold text-on-primary">
+                      {item.count}
+                    </span>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+          <li>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="flex h-14 w-full flex-col items-center justify-center gap-0.5 text-[0.68rem] font-semibold text-ink-muted hover:text-ink"
+              aria-expanded={open}
+            >
+              <MoreHorizontal className="size-5" aria-hidden />
+              Mehr
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <Toaster />
     </div>
   );
 }

@@ -349,3 +349,62 @@
     text-underline-offset: 2px;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Tabellen (src/components/ui/table.tsx) – bewusst ohne @layer, damit  */
+/* die Regeln die Abstands-Utilities der Zellen überschreiben          */
+/* ------------------------------------------------------------------ */
+
+/* Schatten am Rand, solange sich seitlich noch etwas scrollen lässt */
+.scroll-shadow-x {
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) left / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) right / 2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--shadow-c), transparent) left / 0.875rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--shadow-c), transparent) right / 0.875rem 100% no-repeat scroll,
+    var(--surface);
+}
+
+/* Zeilen als Karten auf dem Handy (<Table stack>) */
+@media (max-width: 39.99rem) {
+  .table-stack table,
+  .table-stack tbody,
+  .table-stack tr {
+    display: block;
+    min-width: 0;
+  }
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack tr {
+    padding: 0.75rem 1rem;
+  }
+  .table-stack td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    text-align: right;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-align: left;
+  }
+  .table-stack td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .table-stack td:empty {
+    display: none;
+  }
+}
