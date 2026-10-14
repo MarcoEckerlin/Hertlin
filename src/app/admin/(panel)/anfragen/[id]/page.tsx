@@ -153,7 +153,6 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
           <Card>
             <CardHeader
               title="Kontakt"
-              description={`Gewünschte Rückmeldung: ${labelOf(CONTACT_PREFERENCE_LABELS, inquiry.preferredContact).toLowerCase()}`}
               actions={
                 <>
                   {inquiry.phone ? (
@@ -197,7 +196,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
                   </Detail>
                 ) : null}
                 <Detail label="Thema">{labelOf(INQUIRY_TOPIC_LABELS, inquiry.topic)}</Detail>
-                <Detail label="Rückmeldung">{labelOf(CONTACT_PREFERENCE_LABELS, inquiry.preferredContact)}</Detail>
+                <Detail label="Rückmeldung gewünscht">{labelOf(CONTACT_PREFERENCE_LABELS, inquiry.preferredContact)}</Detail>
               </DetailList>
             </CardBody>
           </Card>
