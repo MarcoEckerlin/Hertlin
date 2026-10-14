@@ -13,12 +13,14 @@ import { Detail, DetailList, Missing } from "@/components/admin/companies/detail
 import { cleanId, firstParam } from "@/components/admin/companies/list-tools";
 import { AccessBadge, CompanyActiveBadge } from "@/components/admin/companies/status-badges";
 import { RecentCallsCard, recentCallSelect } from "@/components/admin/companies/recent-calls-card";
+import { InvoiceStatusBadge } from "@/components/admin/invoices/invoice-badges";
 import { getStaffUser, requireStaff } from "@/lib/auth";
 import { CUSTOMER_ROLES, OPEN_STATUSES } from "@/lib/constants";
 import { getCompanyCostSummary } from "@/lib/costs";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime, formatInquiryNumber, formatMoney, formatRelative, formatTicketNumber } from "@/lib/format";
 import { portalHost, portalUrl } from "@/lib/hosts";
+import { billingAddressLines } from "@/lib/invoices/recipients";
 
 /** Titel mit Firmennamen, damit mehrere offene Kunden-Tabs unterscheidbar sind */
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
@@ -66,7 +68,24 @@ export default async function CompanyPage({
       internalNote: true,
       active: true,
       createdAt: true,
-      parent: { select: { id: true, name: true, slug: true, active: true } },
+      billingEmail: true,
+      billingName: true,
+      billingStreet: true,
+      billingZip: true,
+      billingCity: true,
+      vatId: true,
+      invoiceSeparately: true,
+      location: { select: { id: true, name: true, city: true, active: true } },
+      parent: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          active: true,
+          vatId: true,
+          location: { select: { id: true, name: true, city: true, active: true } },
+        },
+      },
       children: {
         orderBy: { name: "asc" },
         select: { id: true, name: true, city: true, customerNumber: true, active: true },
@@ -95,6 +114,8 @@ export default async function CompanyPage({
     costs,
     recentCalls,
     callTotal,
+    invoices,
+    invoiceTotal,
   ] = await Promise.all([
     db.user.findMany({
       where: { companyId: { in: treeIds }, role: { in: [...CUSTOMER_ROLES] } },
@@ -159,6 +180,16 @@ export default async function CompanyPage({
     // Anrufe des Kunden (bei Firmenkunden inklusive Unterkunden)
     db.phoneCall.findMany({ where: callWhere, orderBy: { startedAt: "desc" }, take: 5, select: recentCallSelect }),
     db.phoneCall.count({ where: callWhere }),
+    // Rechnungen nur für Administratoren laden
+    isAdmin
+      ? db.invoice.findMany({
+          where: { companyId: { in: treeIds } },
+          orderBy: [{ year: "desc" }, { sequence: "desc" }],
+          take: 5,
+          select: { id: true, number: true, kind: true, status: true, issueDate: true, dueDate: true, grossCents: true },
+        })
+      : Promise.resolve([]),
+    isAdmin ? db.invoice.count({ where: { companyId: { in: treeIds } } }) : Promise.resolve(0),
   ]);
 
   const invited = new Set(invitedIds.map((u) => u.id));
@@ -172,6 +203,12 @@ export default async function CompanyPage({
   const newUserHref = `/admin/kunden/${rootId}/benutzer/neu${isSub ? `?firma=${company.id}` : ""}`;
   const allTicketsHref = `/admin/tickets?kunde=${company.id}&ansicht=alle`;
   const address = [company.street, [company.zip, company.city].filter(Boolean).join(" ")].filter(Boolean);
+  const billingAddress = billingAddressLines(company);
+  const hasOwnBillingAddress = [company.billingStreet, company.billingZip, company.billingCity].some(Boolean);
+  // Unterkunde ohne eigenen Standort: der des Firmenkunden gilt
+  const location = company.location ?? company.parent?.location ?? null;
+  const locationInherited = !company.location && Boolean(company.parent?.location);
+  const billsSeparately = !isSub || company.invoiceSeparately;
 
   return (
     <div>
@@ -596,6 +633,19 @@ export default async function CompanyPage({
                     <Missing />
                   )}
                 </Detail>
+                <Detail label="Standort">
+                  {location ? (
+                    <>
+                      {location.name}
+                      {!location.active ? <span className="font-normal text-ink-muted"> (deaktiviert)</span> : null}
+                      {locationInherited ? (
+                        <span className="block text-xs font-normal text-ink-muted">vom Firmenkunden übernommen</span>
+                      ) : null}
+                    </>
+                  ) : (
+                    <Missing>kein bestimmter</Missing>
+                  )}
+                </Detail>
                 <Detail label={isSub ? "Angelegt am" : "Kunde seit"}>{formatDate(company.createdAt)}</Detail>
                 {company.inquiries.length > 0 ? (
                   <Detail label="Anfrage">
@@ -670,6 +720,98 @@ export default async function CompanyPage({
                   Kosten im Detail
                 </ButtonLink>
               </CardBody>
+            </Card>
+          ) : null}
+
+          {isAdmin ? (
+            <Card id="rechnungsdaten" className="scroll-mt-24">
+              <CardHeader
+                title="Rechnungsdaten"
+                actions={
+                  <Link
+                    href={`/admin/kunden/${company.id}/bearbeiten#rechnungsdaten`}
+                    className="text-sm font-semibold text-brand-700 hover:underline"
+                  >
+                    Ändern
+                  </Link>
+                }
+              />
+              <CardBody>
+                <DetailList>
+                  {isSub ? (
+                    <Detail label="Abrechnung">
+                      {company.invoiceSeparately ? "Eigene Rechnung" : `Über ${company.parent?.name ?? "den Firmenkunden"}`}
+                    </Detail>
+                  ) : null}
+                  {billsSeparately ? (
+                    <>
+                      <Detail label="Rechnungs-E-Mail">
+                        {company.billingEmail ? (
+                          <span className="break-all">{company.billingEmail}</span>
+                        ) : company.email ? (
+                          <>
+                            <span className="break-all">{company.email}</span>
+                            <span className="block text-xs font-normal text-ink-muted">E-Mail der Firma</span>
+                          </>
+                        ) : (
+                          <Missing>keine – Rechnungen nur als PDF</Missing>
+                        )}
+                      </Detail>
+                      <Detail label="Empfänger">
+                        {company.billingName ??
+                          (isSub && company.parent ? `${company.parent.name}, ${company.name}` : company.name)}
+                        {billingAddress.length > 0 ? (
+                          billingAddress.map((line) => (
+                            <span key={line} className="block font-normal">
+                              {line}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="block text-xs font-normal text-red-700">Anschrift fehlt</span>
+                        )}
+                        {hasOwnBillingAddress ? (
+                          <span className="block text-xs font-normal text-ink-muted">abweichende Rechnungsanschrift</span>
+                        ) : null}
+                      </Detail>
+                      <Detail label="USt-IdNr.">
+                        {company.vatId ?? (isSub && company.parent?.vatId ? company.parent.vatId : <Missing />)}
+                      </Detail>
+                    </>
+                  ) : null}
+                </DetailList>
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {isAdmin && invoiceTotal > 0 ? (
+            <Card>
+              <CardHeader
+                title="Rechnungen"
+                description={isSub ? "Nur diese Unterkunde" : hasChildren ? "Inkl. Unterkunden mit eigener Rechnung" : undefined}
+                actions={
+                  invoiceTotal > invoices.length ? (
+                    <Link href={`/admin/rechnungen?kunde=${company.id}`} className="text-sm font-semibold text-brand-700 hover:underline">
+                      Alle {invoiceTotal}
+                    </Link>
+                  ) : null
+                }
+              />
+              <ul className="divide-y divide-line">
+                {invoices.map((inv) => (
+                  <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm sm:px-6">
+                    <span className="min-w-0">
+                      <Link href={`/admin/rechnungen/${inv.id}`} className="font-semibold text-brand-700 hover:underline">
+                        {inv.number}
+                      </Link>
+                      <span className="block text-xs text-ink-muted">{formatDate(inv.issueDate)}</span>
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-semibold text-ink tabular-nums">{formatMoney(inv.grossCents)}</span>
+                      <InvoiceStatusBadge invoice={inv} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </Card>
           ) : null}
         </aside>

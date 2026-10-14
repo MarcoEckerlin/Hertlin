@@ -10,6 +10,7 @@ import { CUSTOMER_ROLES } from "@/lib/constants";
 import { db } from "@/lib/db";
 import { emptyToUndefined, errorState, fromZodError, successState, type FormState } from "@/lib/forms";
 import { isValidSlug, portalHost, portalUrl, RESERVED_SLUGS } from "@/lib/hosts";
+import { parseLocationId } from "@/lib/locations";
 import { sendInviteMail, sendPasswordResetMail } from "@/lib/notifications";
 import { checkbox, email as emailSchema, optionalText, phone as phoneSchema, requiredText, slugField } from "@/lib/validation";
 import { publish } from "@/realtime/bus";
@@ -70,6 +71,20 @@ const customerNumberSchema = z
   .optional()
   .transform((v) => (v ? v : undefined));
 
+/** USt-IdNr.: Länderkürzel + 2–13 Zeichen, Leerzeichen werden entfernt (z. B. „DE 123 456 789“ → „DE123456789“). */
+const vatIdSchema = z
+  .string()
+  .trim()
+  .transform((v) => v.replace(/[\s.-]+/g, "").toUpperCase())
+  .pipe(
+    z
+      .string()
+      .max(15, "Die USt-IdNr. ist zu lang.")
+      .regex(/^([A-Z]{2}[0-9A-Z+*]{2,13})?$/, "Bitte eine gültige USt-IdNr. angeben, z. B. DE123456789."),
+  )
+  .optional()
+  .transform((v) => (v ? v : undefined));
+
 const companySchema = z.object({
   name: requiredText("den Namen", 160).transform(tidy),
   customerNumber: customerNumberSchema,
@@ -79,6 +94,13 @@ const companySchema = z.object({
   phone: phoneSchema,
   email: optionalEmail,
   internalNote: optionalText(4000),
+  billingEmail: optionalEmail,
+  billingName: optionalText(160),
+  billingStreet: optionalText(160),
+  billingZip: zipSchema,
+  billingCity: optionalText(120),
+  vatId: vatIdSchema,
+  invoiceSeparately: checkbox,
 });
 
 function readCompany(formData: FormData) {
@@ -91,12 +113,20 @@ function readCompany(formData: FormData) {
     phone: str(formData, "phone"),
     email: str(formData, "email"),
     internalNote: str(formData, "internalNote"),
+    billingEmail: str(formData, "billingEmail"),
+    billingName: str(formData, "billingName"),
+    billingStreet: str(formData, "billingStreet"),
+    billingZip: str(formData, "billingZip"),
+    billingCity: str(formData, "billingCity"),
+    vatId: str(formData, "vatId"),
+    invoiceSeparately: formData.get("invoiceSeparately"),
   };
 }
 
 type CompanyData = z.infer<typeof companySchema>;
 
-function companyData(data: CompanyData) {
+/** Felder für die Datenbank. invoiceSeparately gilt nur für Unterkunden. */
+function companyData(data: CompanyData, isSub: boolean) {
   return {
     name: data.name,
     customerNumber: data.customerNumber ?? null,
@@ -106,7 +136,42 @@ function companyData(data: CompanyData) {
     phone: data.phone ?? null,
     email: data.email ?? null,
     internalNote: data.internalNote ?? null,
+    billingEmail: data.billingEmail ?? null,
+    billingName: data.billingName ? tidy(data.billingName) : null,
+    billingStreet: data.billingStreet ?? null,
+    billingZip: data.billingZip ?? null,
+    billingCity: data.billingCity ?? null,
+    vatId: data.vatId ?? null,
+    invoiceSeparately: isSub ? data.invoiceSeparately : false,
   };
+}
+
+/**
+ * Standort aus dem Formular. Fehlt das Feld (z. B. weil es noch keine Standorte gibt), bleibt der bisherige Wert
+ * (undefined = nicht ändern). Der bisher zugeordnete Standort darf bleiben, auch wenn er inzwischen deaktiviert ist.
+ */
+async function readLocation(
+  formData: FormData,
+  current: string | null = null,
+): Promise<{ ok: true; value: string | null | undefined } | { ok: false; error: string }> {
+  if (!formData.has("locationId")) return { ok: true, value: undefined };
+  const raw = formData.get("locationId");
+  if (current && raw === current) return { ok: true, value: current };
+  const parsed = await parseLocationId(raw);
+  if (parsed === undefined) return { ok: false, error: "Bitte einen Standort aus der Liste wählen." };
+  return { ok: true, value: parsed };
+}
+
+/** Abweichende Rechnungsanschrift nur vollständig (Straße, PLZ und Ort) oder gar nicht. */
+function billingAddressErrors(data: CompanyData): Record<string, string> {
+  const parts = { billingStreet: data.billingStreet, billingZip: data.billingZip, billingCity: data.billingCity };
+  const given = Object.values(parts).filter(Boolean).length;
+  if (given === 0 || given === 3) return {};
+  const errors: Record<string, string> = {};
+  if (!parts.billingStreet) errors.billingStreet = "Bitte auch Straße und Hausnummer angeben – oder die Rechnungsanschrift leeren.";
+  if (!parts.billingZip) errors.billingZip = "Bitte die PLZ angeben.";
+  if (!parts.billingCity) errors.billingCity = "Bitte den Ort angeben.";
+  return errors;
 }
 
 /** Fehlermeldung, wenn die Kundennummer schon an eine andere Firma vergeben ist. */
@@ -211,12 +276,16 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
   const fieldErrors: Record<string, string> = {};
   if (!parsed.success) Object.assign(fieldErrors, fromZodError(parsed.error).fieldErrors);
   if (contact && !contact.success) Object.assign(fieldErrors, fromZodError(contact.error).fieldErrors);
-  if (!parsed.success || (contact && !contact.success)) {
+  const location = await readLocation(formData);
+  if (!location.ok) fieldErrors.locationId = location.error;
+  if (parsed.success) Object.assign(fieldErrors, billingAddressErrors(parsed.data));
+  if (!parsed.success || (contact && !contact.success) || Object.keys(fieldErrors).length > 0) {
     return errorState("Bitte prüfen Sie die markierten Felder.", formData, fieldErrors);
   }
 
   const data = parsed.data;
   const contactData = contact?.success ? contact.data : null;
+  const locationId = location.ok ? (location.value ?? null) : null;
 
   const [slugError, numberError, mailError] = await Promise.all([
     slugProblem(data.slug),
@@ -240,7 +309,7 @@ export async function createCompanyAction(_prev: FormState, formData: FormData):
   try {
     created = await db.$transaction(async (tx) => {
       const company = await tx.company.create({
-        data: { ...companyData(data), slug: data.slug },
+        data: { ...companyData(data, false), slug: data.slug, locationId },
         select: { id: true, name: true, slug: true },
       });
       const user = contactData
@@ -303,13 +372,21 @@ export async function updateCompanyAction(_prev: FormState, formData: FormData):
   await requireAdmin();
 
   const id = idFrom(formData);
-  const company = id ? await db.company.findUnique({ where: { id }, select: { id: true, parentId: true } }) : null;
+  const company = id
+    ? await db.company.findUnique({ where: { id }, select: { id: true, parentId: true, locationId: true } })
+    : null;
   if (!company) return errorState(COMPANY_GONE);
 
   const parsed = companySchema.safeParse(readCompany(formData));
-  if (!parsed.success) return fromZodError(parsed.error, formData);
+  const location = await readLocation(formData, company.locationId);
+  if (!parsed.success) {
+    const state = fromZodError(parsed.error, formData);
+    if (!location.ok) state.fieldErrors = { ...state.fieldErrors, locationId: location.error };
+    return state;
+  }
 
-  const fieldErrors: Record<string, string> = {};
+  const fieldErrors: Record<string, string> = billingAddressErrors(parsed.data);
+  if (!location.ok) fieldErrors.locationId = location.error;
   const [numberError, nameError] = await Promise.all([
     customerNumberConflict(parsed.data.customerNumber, company.id),
     company.parentId ? subNameConflict(company.parentId, parsed.data.name, company.id) : Promise.resolve(null),
@@ -318,8 +395,12 @@ export async function updateCompanyAction(_prev: FormState, formData: FormData):
   if (nameError) fieldErrors.name = nameError;
   if (Object.keys(fieldErrors).length > 0) return errorState("Bitte prüfen Sie die markierten Felder.", formData, fieldErrors);
 
+  const locationData = location.ok && location.value !== undefined ? { locationId: location.value } : {};
   try {
-    await db.company.update({ where: { id: company.id }, data: companyData(parsed.data) });
+    await db.company.update({
+      where: { id: company.id },
+      data: { ...companyData(parsed.data, company.parentId !== null), ...locationData },
+    });
   } catch (error) {
     if (isUniqueViolation(error)) {
       return errorState("Bitte prüfen Sie die Kundennummer.", formData, {
@@ -443,9 +524,15 @@ export async function createSubCustomerAction(_prev: FormState, formData: FormDa
   if (!root) return errorState("Den Firmenkunden gibt es nicht mehr. Bitte laden Sie die Seite neu.");
 
   const parsed = companySchema.safeParse(readCompany(formData));
-  if (!parsed.success) return fromZodError(parsed.error, formData);
+  const location = await readLocation(formData);
+  if (!parsed.success) {
+    const state = fromZodError(parsed.error, formData);
+    if (!location.ok) state.fieldErrors = { ...state.fieldErrors, locationId: location.error };
+    return state;
+  }
 
-  const fieldErrors: Record<string, string> = {};
+  const fieldErrors: Record<string, string> = billingAddressErrors(parsed.data);
+  if (!location.ok) fieldErrors.locationId = location.error;
   const [numberError, nameError] = await Promise.all([
     customerNumberConflict(parsed.data.customerNumber),
     subNameConflict(root.id, parsed.data.name),
@@ -458,7 +545,12 @@ export async function createSubCustomerAction(_prev: FormState, formData: FormDa
   try {
     const created = await db.company.create({
       // Unterkunden haben keine eigene Subdomain
-      data: { ...companyData(parsed.data), parentId: root.id, slug: null },
+      data: {
+        ...companyData(parsed.data, true),
+        parentId: root.id,
+        slug: null,
+        locationId: location.ok ? (location.value ?? null) : null,
+      },
       select: { id: true },
     });
     createdId = created.id;

@@ -6,17 +6,28 @@ import { Field, Input } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
+  BillingFields,
   CompanyAddressFields,
+  CompanyLocationField,
   CustomerNumberField,
   FormSection,
   InternalNoteField,
+  type LocationOption,
 } from "@/components/admin/companies/company-fields";
 import { fieldProps, useFormFocus } from "@/components/admin/companies/form-helpers";
 import { createSubCustomerAction } from "@/lib/actions/admin-companies";
 import { initialFormState } from "@/lib/forms";
 
 /** Neue Unterkunde unter einem Firmenkunden. */
-export function SubCustomerCreateForm({ parentId }: { parentId: string }) {
+export function SubCustomerCreateForm({
+  parentId,
+  parentName,
+  locationOptions,
+}: {
+  parentId: string;
+  parentName: string;
+  locationOptions: LocationOption[];
+}) {
   const [state, formAction] = useActionState(createSubCustomerAction, initialFormState);
   const formRef = useFormFocus(state);
   const errors = state.fieldErrors ?? {};
@@ -45,6 +56,19 @@ export function SubCustomerCreateForm({ parentId }: { parentId: string }) {
         </Field>
         <CustomerNumberField prefix="sub" value={values.customerNumber} error={errors.customerNumber} />
         <CompanyAddressFields prefix="sub" values={values} errors={errors} />
+        <CompanyLocationField
+          options={locationOptions}
+          value={values.locationId}
+          error={errors.locationId}
+          parentName={parentName}
+        />
+      </FormSection>
+
+      <FormSection
+        title="Rechnungsdaten"
+        description={`Ohne eigene Rechnung laufen die Kosten dieser Unterkunde auf der Rechnung an ${parentName}.`}
+      >
+        <BillingFields prefix="sub" values={values} errors={errors} parentName={parentName} />
       </FormSection>
 
       <FormSection title="Intern">

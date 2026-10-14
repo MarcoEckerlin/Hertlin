@@ -27,9 +27,13 @@ export function CostSummary({
 }) {
   const sumLabel = billing === "offen" ? "Noch nicht abgerechnet" : billing === "abgerechnet" ? "Abgerechnet" : "Summe";
   const hours = formatHours(totals.laborMinutes);
+  const unpriced =
+    totals.unpricedEntries > 0
+      ? ` · ohne ${totals.unpricedEntries === 1 ? "1 Position" : `${totals.unpricedEntries} Positionen`} ohne Preis`
+      : "";
   return (
     <dl className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <Tile label={sumLabel} value={formatMoney(totals.totalCents)} note={periodLabel} />
+      <Tile label={sumLabel} value={formatMoney(totals.totalCents)} note={`${periodLabel}${unpriced}`} />
       {billing === "alle" ? (
         <Tile label="davon offen" value={formatMoney(totals.openCents)} note={`${formatMoney(totals.billedCents)} abgerechnet`} />
       ) : (

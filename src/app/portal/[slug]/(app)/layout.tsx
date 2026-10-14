@@ -20,6 +20,8 @@ export default async function PortalAppLayout({ children }: { children: React.Re
   if (ctx.isAdmin) {
     const items: ShellNavGroup["items"] = [{ href: "/benutzer", label: "Benutzer", icon: "users" }];
     if (ctx.isRootAdmin) items.unshift({ href: "/unterkunden", label: "Unterkunden", icon: "subCustomers" });
+    // Rechnungen sehen nur Hauptansprechpartner (Firmenkunde: inkl. Unterkunden, Unterkunde: nur eigene)
+    items.push({ href: "/rechnungen", label: "Rechnungen", icon: "invoices" });
     groups.push({ label: "Verwaltung", items });
   }
 
