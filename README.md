@@ -53,17 +53,24 @@ Kosten werden ausschließlich in Verwaltungsseiten für Administratoren geladen.
 
 ## Lokale Entwicklung
 
-Voraussetzung: Node.js 22.
+Voraussetzung: [Node.js 22](https://nodejs.org) (LTS) und Git. Funktioniert unter Windows, macOS und Linux.
 
 ```bash
+git clone https://github.com/MarcoEckerlin/Hertlin.git
+cd Hertlin
+git checkout claude/hertlin-website-ticketsystem   # solange der Stand noch nicht in main ist
 npm install
-cp .env.example .env
-npx prisma migrate dev     # legt prisma/dev.db an und spielt die Beispieldaten ein
+npm run setup     # legt .env an, richtet die Datenbank ein und lädt Beispieldaten
 npm run dev
 ```
 
-- Website und Verwaltung: http://localhost:3000 bzw. http://localhost:3000/admin
-- Kundenportal der Beispielfirma: http://muster.localhost:3000 (Browser lösen `*.localhost` automatisch auf)
+Danach im Browser (Chrome, Edge oder Firefox):
+
+- Website: http://localhost:3000
+- Verwaltung: http://localhost:3000/admin
+- Kundenportal der Beispielfirma: http://muster.localhost:3000 – Browser lösen `*.localhost` automatisch auf, eine Änderung an der hosts-Datei ist nicht nötig
+
+Der erste Seitenaufruf dauert im Entwicklungsmodus ein paar Sekunden, weil die Seite dann erst übersetzt wird. Beenden mit Strg + C.
 
 Beispielzugänge (Passwort `demo-passwort-2026`):
 
@@ -78,7 +85,7 @@ Beispielzugänge (Passwort `demo-passwort-2026`):
 
 Ohne SMTP-Zugang werden E-Mails nicht verschickt, sondern in `storage/mails.log` geschrieben. Dort finden Sie auch Einladungs- und Passwort-Links.
 
-Datenbank neu aufsetzen: `npm run db:reset`
+Datenbank neu aufsetzen (löscht alle lokalen Daten): `npm run db:reset`
 
 ## Vor dem Livegang anpassen
 
