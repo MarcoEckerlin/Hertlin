@@ -7,11 +7,13 @@ import {
   Building2,
   ClipboardList,
   Euro,
+  Globe,
   Inbox,
   LayoutDashboard,
   LogOut,
   Menu,
   Network,
+  Phone,
   Plus,
   Ticket,
   UserRound,
@@ -33,6 +35,8 @@ const icons = {
   costs: Euro,
   team: ClipboardList,
   profile: UserRound,
+  calls: Phone,
+  website: Globe,
 } as const;
 
 export type ShellIcon = keyof typeof icons;

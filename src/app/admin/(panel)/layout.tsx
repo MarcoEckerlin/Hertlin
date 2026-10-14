@@ -13,9 +13,11 @@ export const metadata: Metadata = {
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const user = await requireStaff();
-  const [newInquiries, newTickets] = await Promise.all([
+  const [newInquiries, newTickets, missedCalls] = await Promise.all([
     db.inquiry.count({ where: { status: "NEW" } }),
     db.ticket.count({ where: { status: "NEW" } }),
+    // Verpasste Anrufe ohne Rückruf/Erledigt-Vermerk
+    db.phoneCall.count({ where: { status: "MISSED", handledAt: null } }),
   ]);
 
   const groups: ShellNavGroup[] = [
@@ -25,6 +27,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
         { href: "/admin/tickets", label: "Tickets", icon: "tickets", count: newTickets },
         { href: "/admin/anfragen", label: "Anfragen", icon: "inquiries", count: newInquiries },
         { href: "/admin/kunden", label: "Kunden", icon: "companies" },
+        { href: "/admin/anrufe", label: "Anrufe", icon: "calls", count: missedCalls },
       ],
     },
   ];
@@ -33,6 +36,7 @@ export default async function AdminPanelLayout({ children }: { children: React.R
       label: "Nur Administratoren",
       items: [
         { href: "/admin/kosten", label: "Kosten pro Konto", icon: "costs" },
+        { href: "/admin/website", label: "Website", icon: "website" },
         { href: "/admin/team", label: "Team", icon: "team" },
       ],
     });

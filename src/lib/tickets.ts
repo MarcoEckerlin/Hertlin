@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { removeStoredFiles, storeFiles } from "@/lib/uploads";
 import { mainUrl, portalUrl } from "@/lib/hosts";
 import type { TicketStatus } from "@/lib/constants";
+import { publish } from "@/realtime/bus";
 
 /**
  * Gemeinsame Ticket-Logik für Kundenportal, Privatkunden-Status und Verwaltung.
@@ -33,7 +34,23 @@ export async function createTicketMessage(opts: {
       },
       select: { id: true },
     });
-    await db.ticket.update({ where: { id: opts.ticketId }, data: { updatedAt: new Date() } });
+    const ticket = await db.ticket.update({
+      where: { id: opts.ticketId },
+      data: { updatedAt: new Date() },
+      select: { subject: true },
+    });
+    // Live: alle offenen Ansichten des Tickets laden den Verlauf neu (interne Notizen nur bei Mitarbeitern)
+    publish({ type: "ticket.message", ticketId: opts.ticketId, internal: opts.internal ?? false, fromStaff: opts.fromStaff ?? false });
+    if (!opts.fromStaff) {
+      let author = opts.authorName ?? null;
+      if (!author && opts.authorId) {
+        author = (await db.user.findUnique({ where: { id: opts.authorId }, select: { name: true } }))?.name ?? null;
+      }
+      publish({
+        type: "staff.notice",
+        notice: { kind: "ticket.message", ticketId: opts.ticketId, subject: ticket.subject, author: author ?? "Kunde" },
+      });
+    }
     return message;
   } catch (error) {
     await removeStoredFiles(stored.map((s) => s.storedName));
@@ -49,6 +66,29 @@ export async function recordTicketEvent(
   toValue?: string | null,
 ): Promise<void> {
   await db.ticketEvent.create({ data: { ticketId, type, actorId, fromValue: fromValue ?? null, toValue: toValue ?? null } });
+
+  if (type === "CREATED") {
+    const ticket = await db.ticket.findUnique({
+      where: { id: ticketId },
+      select: {
+        subject: true,
+        priority: true,
+        contactName: true,
+        company: { select: { name: true, parent: { select: { name: true } } } },
+      },
+    });
+    if (ticket) {
+      const customer = ticket.company
+        ? [ticket.company.parent?.name, ticket.company.name].filter(Boolean).join(" › ")
+        : `Privat: ${ticket.contactName ?? "unbekannt"}`;
+      publish({
+        type: "staff.notice",
+        notice: { kind: "ticket.created", ticketId, subject: ticket.subject, priority: ticket.priority, customer },
+      });
+    }
+  } else {
+    publish({ type: "ticket.updated", ticketId });
+  }
 }
 
 /** Setzt den Status inkl. Zeitstempel und Protokolleintrag. Gibt false zurück, wenn sich nichts geändert hat. */

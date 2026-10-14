@@ -1,5 +1,6 @@
 import "server-only";
 import { getSiteSettings } from "@/lib/settings";
+import { isCustomerWatchingTicket, isStaffWatchingTicket } from "@/realtime/bus";
 import { sendMail, staffNotificationAddress } from "@/lib/mail";
 import { formatInquiryNumber, formatTicketNumber } from "@/lib/format";
 import { mainUrl, portalUrl } from "@/lib/hosts";
@@ -54,6 +55,8 @@ export async function notifyStaffNewTicket(ticket: TicketInfo & { body: string; 
 }
 
 export async function notifyStaffCustomerReply(ticket: TicketInfo & { body: string; authorName: string }) {
+  // Hat gerade jemand aus dem Team das Ticket offen, sieht er die Antwort live – keine zusätzliche Mail
+  if (isStaffWatchingTicket(ticket.id)) return;
   await sendMail({
     to: await staffNotificationAddress(),
     subject: `[${formatTicketNumber(ticket.id)}] Antwort von ${ticket.authorName}: ${ticket.subject}`,
@@ -157,6 +160,8 @@ export async function notifyCustomerStaffReply(opts: {
   link: string;
   waitingForCustomer?: boolean;
 }) {
+  // Kunde ist gerade im Ticket (Live-Chat) – die Nachricht erscheint dort sofort
+  if (isCustomerWatchingTicket(opts.ticketId)) return;
   await sendMail({
     to: opts.to,
     subject: `${opts.waitingForCustomer ? "Rückfrage" : "Neue Antwort"} zu ${formatTicketNumber(opts.ticketId)}: ${opts.subject}`,
