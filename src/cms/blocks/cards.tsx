@@ -54,6 +54,9 @@ export const ICON_COMPONENTS: Record<(typeof ICONS)[number], LucideIcon> = {
   map: MapIcon,
 };
 
+/** Links im Text einer klickbaren Kachel liegen über der Klickfläche des Kachel-Links. */
+const linksAbove = "[&_a]:relative [&_a]:z-10";
+
 const gridColumns = {
   2: "sm:grid-cols-2",
   3: "sm:grid-cols-2 lg:grid-cols-3",
@@ -66,6 +69,7 @@ const gridColumns = {
  * - columns: Spalten ohne Kasten, jede mit feiner Linie und hellblauer Markierung darüber
  * - rows:    Zeilen untereinander, Überschrift links und Text rechts (wie eine Übersicht mit Konditionen)
  * Die Abschnittsüberschrift steht immer über den Kacheln.
+ * Hat eine Kachel einen Link, ist die ganze Kachel klickbar (Links im Text bleiben eigene Ziele).
  */
 export function CardsBlock({ block, ctx, layout }: BlockProps<"cards">) {
   const titleId = headingId(block, layout);
@@ -86,11 +90,19 @@ export function CardsBlock({ block, ctx, layout }: BlockProps<"cards">) {
               className={cn(
                 "grid gap-x-12 gap-y-2 border-t py-6 sm:grid-cols-[minmax(0,4fr)_minmax(0,7fr)] sm:py-7",
                 onBlue ? "border-line-strong" : "border-line",
+                item.link && "group relative",
               )}
             >
               <div className="flex items-start gap-3">
                 {Icon ? <Icon className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden /> : null}
-                <ItemTag className="text-lg leading-snug font-bold text-ink">{plain(item.title, ctx)}</ItemTag>
+                <ItemTag
+                  className={cn(
+                    "text-lg leading-snug font-bold text-ink",
+                    item.link && "transition-colors group-hover:text-brand-700",
+                  )}
+                >
+                  {plain(item.title, ctx)}
+                </ItemTag>
               </div>
               <div>
                 <Markdown
@@ -98,11 +110,11 @@ export function CardsBlock({ block, ctx, layout }: BlockProps<"cards">) {
                   ctx={ctx.text}
                   variant="compact"
                   headingBase={itemHeadingBase}
-                  className="max-w-prose sm:text-base"
+                  className={cn("max-w-prose sm:text-base", item.link && linksAbove)}
                 />
                 {item.link ? (
                   <div className="mt-3">
-                    <TextLink cta={item.link} ctx={ctx} />
+                    <TextLink cta={item.link} ctx={ctx} stretched />
                   </div>
                 ) : null}
               </div>
@@ -123,21 +135,28 @@ export function CardsBlock({ block, ctx, layout }: BlockProps<"cards">) {
         {block.items.map((item, i) => {
           const Icon = item.icon ? ICON_COMPONENTS[item.icon] : null;
           return (
-            <li key={i} className={cn("flex flex-col pt-6", markedRule(onBlue))}>
+            <li key={i} className={cn("group flex flex-col pt-6", markedRule(onBlue))}>
               <div className="flex items-start gap-3">
                 {Icon ? <Icon className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden /> : null}
-                <ItemTag className="text-lg leading-snug font-bold text-ink">{plain(item.title, ctx)}</ItemTag>
+                <ItemTag
+                  className={cn(
+                    "text-lg leading-snug font-bold text-ink",
+                    item.link && "transition-colors group-hover:text-brand-700",
+                  )}
+                >
+                  {plain(item.title, ctx)}
+                </ItemTag>
               </div>
               <Markdown
                 text={item.text}
                 ctx={ctx.text}
                 variant="compact"
                 headingBase={itemHeadingBase}
-                className="mt-2 max-w-prose"
+                className={cn("mt-2 max-w-prose", item.link && linksAbove)}
               />
               {item.link ? (
                 <div className="mt-auto pt-4">
-                  <TextLink cta={item.link} ctx={ctx} />
+                  <TextLink cta={item.link} ctx={ctx} stretched />
                 </div>
               ) : null}
             </li>
@@ -151,7 +170,14 @@ export function CardsBlock({ block, ctx, layout }: BlockProps<"cards">) {
         {block.items.map((item, i) => {
           const Icon = item.icon ? ICON_COMPONENTS[item.icon] : null;
           return (
-            <li key={i} className={cn("flex flex-col rounded-2xl p-6 sm:p-7", panelClasses(layout.bg))}>
+            <li
+              key={i}
+              className={cn(
+                "flex flex-col rounded-2xl p-6 sm:p-7",
+                panelClasses(layout.bg),
+                item.link && "relative transition-shadow duration-200 hover:shadow-lift",
+              )}
+            >
               {Icon ? <Icon className="size-6 text-brand-700" aria-hidden /> : null}
               <ItemTag className={cn("text-lg font-bold text-ink", Icon && "mt-4")}>{plain(item.title, ctx)}</ItemTag>
               <Markdown
@@ -159,11 +185,11 @@ export function CardsBlock({ block, ctx, layout }: BlockProps<"cards">) {
                 ctx={ctx.text}
                 variant="compact"
                 headingBase={itemHeadingBase}
-                className="mt-2"
+                className={cn("mt-2", item.link && linksAbove)}
               />
               {item.link ? (
                 <div className="mt-auto pt-5">
-                  <TextLink cta={item.link} ctx={ctx} />
+                  <TextLink cta={item.link} ctx={ctx} stretched />
                 </div>
               ) : null}
             </li>

@@ -47,6 +47,60 @@ test.describe("Website", () => {
     await expect(page).toHaveURL(main("/"));
   });
 
+  test("Hell/Dunkel: Umschalter in der Kopfzeile, die Wahl gilt auch auf der nächsten Seite", async ({ page }) => {
+    await page.goto(main("/"));
+    const toggle = page.getByRole("radiogroup", { name: "Farbschema" });
+    await expect(toggle.getByRole("radio", { name: "Wie Gerät" })).toHaveAttribute("aria-checked", "true");
+    await toggle.getByRole("radio", { name: "Dunkel" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+    // Neu geladene Seite kommt gleich dunkel an (Cookie), der Umschalter zeigt die Wahl
+    await page.goto(main("/leistungen"));
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(toggle.getByRole("radio", { name: "Dunkel" })).toHaveAttribute("aria-checked", "true");
+    // Die hellblaue Handlungsaufforderung bleibt in beiden Modi hell
+    await expect(page.locator('[data-theme="light"]').filter({ hasText: "Nicht sicher, ob wir das machen?" })).toBeVisible();
+
+    await toggle.getByRole("radio", { name: "Wie Gerät" }).click();
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme", /./);
+    await page.reload();
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme", /./);
+  });
+
+  test("Handy: Menü mit Abdunklung, Scroll-Sperre und Umschalter Hell/Dunkel", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(main("/"));
+    await expect(page.getByRole("navigation", { name: "Hauptnavigation", exact: true })).toBeHidden();
+
+    await page.getByRole("button", { name: "Menü öffnen" }).click();
+    const menu = page.locator("#mobile-nav");
+    await expect(menu.getByRole("link", { name: "Leistungen", exact: true })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe("hidden");
+    await menu.getByRole("radio", { name: "Dunkel" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+    // Escape schließt das Menü und gibt das Scrollen wieder frei
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.style.overflow)).toBe("");
+
+    // Seitenwechsel aus dem Menü schließt es ebenfalls
+    await page.getByRole("button", { name: "Menü öffnen" }).click();
+    await menu.getByRole("link", { name: "Kontakt", exact: true }).click();
+    await expect(page).toHaveURL(main("/kontakt"));
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    await expect(menu).toHaveCount(0);
+  });
+
+  test("Leistungen: Sprungleiste führt zum Abschnitt und markiert ihn", async ({ page }) => {
+    await page.goto(main("/leistungen"));
+    const bar = page.getByRole("navigation", { name: "Auf dieser Seite" });
+    await bar.getByRole("link", { name: "Telefonie" }).click();
+    await expect(page).toHaveURL(main("/leistungen#telefonie"));
+    await expect(page.getByRole("heading", { level: 2, name: "Telefonie" })).toBeInViewport();
+    await expect(bar.getByRole("link", { name: "Telefonie" })).toHaveAttribute("aria-current", "true");
+  });
+
   test("unbekannte Seite liefert 404 mit Weg zurück", async ({ page }) => {
     const response = await page.goto(main("/gibt-es-nicht-xyz"));
     expect(response?.status()).toBe(404);

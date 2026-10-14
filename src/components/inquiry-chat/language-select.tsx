@@ -95,7 +95,7 @@ export function ChatLanguageSelect({
       <p
         id={`${id}-status`}
         aria-live="polite"
-        className={cn("text-xs", state.status === "error" ? "font-medium text-red-700" : "text-ink-muted")}
+        className={cn("text-xs", state.status === "error" ? "font-medium text-danger-ink" : "text-ink-muted")}
       >
         {pending ? "Wird gespeichert …" : state.status !== "idle" ? state.message : null}
       </p>
@@ -122,7 +122,7 @@ export function SuggestLanguageButton({
         {pending ? "Wird umgestellt …" : `Auf ${languageLabel(language)} umstellen`}
       </button>
       {state.status === "error" ? (
-        <span role="alert" className="text-sm font-medium text-red-700">
+        <span role="alert" className="text-sm font-medium text-danger-ink">
           {state.message}
         </span>
       ) : null}

@@ -41,7 +41,7 @@ const RESPONSE_NOTE = md(
   "Reaktionszeit heißt: In dieser Zeit meldet sich ein Techniker bei Ihnen und fängt mit der Arbeit an. Wie lange die Behebung dauert, hängt von der Ursache ab – ein defektes Netzteil ist schneller getauscht als ein Server neu aufgesetzt.",
 );
 
-const CTA_DEFAULT_PRIMARY = { label: "Anfrage stellen", href: "/kontakt" };
+const CTA_DEFAULT_PRIMARY = { label: "Anfrage stellen", href: "/kontakt#anfrage" };
 const CTA_DEFAULT_SECONDARY = { label: "Zum Kundenportal", href: "/login" };
 
 /* ------------------------------------------------------------------ */
@@ -69,7 +69,6 @@ const SERVICES: Service[] = [
     short: "PCs und Notebooks auswählen, einrichten und austauschen – samt Daten vom alten Gerät.",
     text: [
       "Ein neuer Arbeitsplatz ist erst fertig, wenn man morgens damit anfangen kann: mit den eigenen Programmen, dem Drucker, den Netzlaufwerken und dem Postfach. Wir beraten bei der Auswahl, bestellen auf Wunsch, richten die Geräte vor und stellen sie bei Ihnen auf.",
-      "Alte Geräte löschen wir so, dass sich keine Daten mehr wiederherstellen lassen. Das gilt auch für Festplatten aus Druckern und Kopierern.",
     ],
     tasks: [
       "Notebooks und PCs vorbereiten und vor Ort aufstellen",
@@ -88,7 +87,6 @@ const SERVICES: Service[] = [
     short: "WLAN, das in allen Räumen reicht, ein getrenntes Gästenetz und ein Plan, was wo angeschlossen ist.",
     text: [
       "Hinter der Meldung „Das Internet ist langsam“ steckt oft das eigene Netzwerk: ein überlasteter Router, ein Access Point an der falschen Stelle oder ein beschädigtes Kabel. Wir messen nach, statt zu raten, und richten Router, Firewall, Switches und Access Points so ein, dass sie zusammenpassen.",
-      "Am Ende bekommen Sie einen Netzwerkplan. Darauf steht, welches Gerät wo hängt und wie man es erreicht.",
     ],
     tasks: [
       "WLAN-Abdeckung messen und Access Points setzen",
@@ -106,8 +104,7 @@ const SERVICES: Service[] = [
     audience: "Für Unternehmen",
     short: "Postfächer, Teams, OneDrive und SharePoint einrichten und den Umzug vom alten Anbieter übernehmen.",
     text: [
-      "Wir richten Microsoft 365 so ein, dass neue Mitarbeiter am ersten Tag arbeiten können und die Zugänge ausgeschiedener Mitarbeiter am letzten Tag gesperrt werden. Gemeinsame Postfächer, Verteiler und Kalender gehören genauso dazu wie die Anmeldung mit einem zweiten Faktor.",
-      "Wechseln Sie von einem anderen E-Mail-Anbieter, ziehen wir Postfächer, Kontakte und Dateien mit um und stellen die Domain so um, dass keine Mail verloren geht.",
+      "Wir richten Microsoft 365 so ein, dass neue Mitarbeiter am ersten Tag arbeiten können und die Zugänge ausgeschiedener Mitarbeiter am letzten Tag gesperrt werden. Beim Wechsel von einem anderen Anbieter ziehen wir Postfächer, Kontakte und Dateien mit um, ohne dass eine Mail verloren geht.",
     ],
     tasks: [
       "Benutzer anlegen, Lizenzen zuweisen, Konten sperren",
@@ -126,7 +123,6 @@ const SERVICES: Service[] = [
     short: "Server, NAS und Datensicherungen, die überwacht und regelmäßig zur Probe zurückgespielt werden.",
     text: [
       "Eine Datensicherung ist nur so gut wie die letzte erfolgreiche Wiederherstellung. Wir richten Sicherungen nach der 3-2-1-Regel ein: drei Kopien Ihrer Daten, auf zwei verschiedenen Speichern, eine davon außer Haus. Schlägt eine Sicherung fehl, bekommen wir eine Meldung und kümmern uns darum.",
-      "Ihre Server und NAS-Systeme halten wir aktuell, ordnen Freigaben und Berechtigungen und tauschen Festplatten, sobald sie Fehler melden.",
     ],
     tasks: [
       "Sicherungskonzept mit Kopie außer Haus",
@@ -145,7 +141,7 @@ const SERVICES: Service[] = [
     short: "Virenschutz, Firewall, Updates und klare Regeln, wer worauf zugreifen darf.",
     text: [
       "Sicherheit besteht aus vielen kleinen Dingen, die zuverlässig erledigt werden müssen: Updates, ein zentral überwachter Virenschutz, eine sauber eingestellte Firewall und Benutzerkonten ohne unnötige Administratorrechte.",
-      "Wenn trotzdem etwas passiert ist – eine verdächtige Rechnung wurde geöffnet, ein Passwort ist in falsche Hände geraten –, rufen Sie bitte gleich an. Wir trennen betroffene Geräte vom Netz und sagen Ihnen, was als Nächstes zu tun ist.",
+      "**Ist schon etwas passiert?** Rufen Sie bitte gleich an. Wir trennen betroffene Geräte vom Netz und sagen Ihnen, was zu tun ist.",
     ],
     tasks: [
       "Virenschutz mit zentraler Übersicht",
@@ -163,8 +159,7 @@ const SERVICES: Service[] = [
     audience: "Für Unternehmen",
     short: "Telefonanlage aus der Cloud, Tischtelefone, Ansagen und Weiterleitung aufs Handy.",
     text: [
-      "Wenn die alte Telefonanlage ersetzt werden muss oder ein Umzug ansteht, stellen wir auf eine Telefonanlage aus der Cloud um. Ihre Rufnummern nehmen Sie dabei mit.",
-      "Wir richten Ansagen, Warteschleife und Zeitsteuerung ein und sorgen dafür, dass Anrufe auch im Homeoffice oder auf dem Handy ankommen.",
+      "Wenn die alte Telefonanlage ersetzt werden muss oder ein Umzug ansteht, stellen wir auf eine Telefonanlage aus der Cloud um. Ihre Rufnummern nehmen Sie dabei mit, Anrufe kommen auch im Homeoffice oder auf dem Handy an.",
     ],
     tasks: [
       "Cloud-Telefonanlage einrichten, Rufnummern mitnehmen",
@@ -196,10 +191,9 @@ const HOME: DefaultPageSource = {
       title: "IT-Service, bei dem Sie wissen, woran Sie sind",
       text: md(
         "Wir betreuen die IT kleiner und mittlerer Unternehmen – vom Arbeitsplatz über das Netzwerk bis zu Microsoft 365. Privatkunden helfen wir, wenn zu Hause der Laptop, das WLAN oder der Drucker nicht mitspielt.",
-        "Jede Störung bekommt ein Ticket. Darin sehen Sie, wer sich darum kümmert und was gemacht wurde.",
-        "**Steht bei Ihnen der Betrieb still?** Rufen Sie an: {telefon}. Andere Störungen melden Firmenkunden im Kundenportal.",
+        "**Steht bei Ihnen der Betrieb still?** Rufen Sie an: {telefon}.",
       ),
-      primary: { label: "Anfrage stellen", href: "/kontakt" },
+      primary: { label: "Anfrage stellen", href: "/kontakt#anfrage" },
       secondary: { label: "Zum Kundenportal", href: "/login" },
     },
     {
@@ -258,8 +252,10 @@ const HOME: DefaultPageSource = {
       tone: "blue",
       layout: "cards",
       title: "So läuft eine Störungsmeldung ab",
-      intro:
+      intro: md(
         "Vom Drucker, der nicht mehr druckt, bis zum ausgefallenen Server: Jede Störung läuft bei uns gleich ab. So weiß jeder, was als Nächstes passiert.",
+        "Wie schnell wir uns melden, hängt von der Dringlichkeit ab: [Reaktionszeiten](/unternehmen#reaktionszeiten) · [Mehr zum Kundenportal](/unternehmen#kundenportal)",
+      ),
       items: [
         {
           title: "Sie melden die Störung",
@@ -280,44 +276,6 @@ const HOME: DefaultPageSource = {
       ],
     },
     {
-      id: "kundenportal",
-      type: "cards",
-      tone: "white",
-      layout: "rows",
-      columns: 2,
-      title: "Ein Portal für Ihre Firma – mit allen Standorten",
-      intro: md(
-        "Firmenkunden bekommen ein eigenes Kundenportal. Darin melden Ihre Mitarbeiter Störungen, stellen Anfragen und sehen, wie weit wir sind.",
-        "[Mehr zum Kundenportal](/unternehmen#kundenportal) · [Zur Anmeldung](/login)",
-      ),
-      items: [
-        {
-          title: "Eine eigene Adresse für Ihre Firma",
-          text: "Ihr Kundenportal erreichen Sie unter einer eigenen Subdomain, z. B. **{portal_beispiel}**. Dort melden sich nur Ihre Leute an, andere Kunden sehen davon nichts.",
-        },
-        {
-          title: "Unterkunden – so viele Sie brauchen",
-          text: "Filialen, Standorte, Abteilungen oder die Homeoffice-Gruppe legen Sie als Unterkunden an. Eine Obergrenze gibt es nicht.",
-        },
-        {
-          title: "Jeder Mitarbeiter mit eigenem Zugang",
-          text: "Kein gemeinsames Passwort für alle. Mitarbeiter sehen ihre eigenen Tickets, der Hauptansprechpartner sieht alle.",
-        },
-        {
-          title: "Alles zu einem Problem an einem Ort",
-          text: "Beschreibung, Screenshots, Rückfragen und Antworten stehen im Ticket. Niemand muss mehr alte E-Mails durchsuchen.",
-        },
-      ],
-    },
-    {
-      id: "reaktionszeiten",
-      type: "responseTimes",
-      tone: "white",
-      title: "Wie schnell wir uns melden",
-      intro: "Je dringender das Problem, desto schneller sind wir dran. Die Dringlichkeit legen Sie beim Melden fest.",
-      note: RESPONSE_NOTE,
-    },
-    {
       id: "abschluss",
       type: "cta",
       tone: "blue",
@@ -325,7 +283,7 @@ const HOME: DefaultPageSource = {
       text: "Schreiben Sie uns kurz, was los ist, oder rufen Sie während der Servicezeiten an. Sie sprechen dann direkt mit jemandem, der sich auskennt.",
       primary: CTA_DEFAULT_PRIMARY,
       secondary: CTA_DEFAULT_SECONDARY,
-      showPhone: true,
+      showPhone: false,
     },
   ],
 };
@@ -350,11 +308,8 @@ const LEISTUNGEN: DefaultPageSource = {
       tone: "blue",
       eyebrow: "Leistungen",
       title: "Was wir für Sie übernehmen",
-      text: md(
-        "Wir kümmern uns um Computer, Netzwerk und Telefon – im Büro und zu Hause. Manche Kunden rufen uns nur, wenn etwas kaputt ist. Andere geben uns die komplette Betreuung ihrer IT.",
-        "Hier steht, was wir in den einzelnen Bereichen konkret tun – von [Arbeitsplätzen](#arbeitsplaetze) über [Netzwerk](#netzwerk), [Microsoft 365](#microsoft-365), [Server und Datensicherung](#server-backup) und [IT-Sicherheit](#sicherheit) bis zur [Telefonie](#telefonie).",
-      ),
-      primary: { label: "Anfrage stellen", href: "/kontakt" },
+      text: "Wir kümmern uns um Computer, Netzwerk und Telefon – im Büro und zu Hause. Manche Kunden rufen uns nur, wenn etwas kaputt ist. Andere geben uns die komplette Betreuung ihrer IT.",
+      primary: { label: "Anfrage stellen", href: "/kontakt#anfrage" },
       secondary: { label: "Wie wir abrechnen", href: "#abrechnung" },
     },
     ...SERVICES.map(
@@ -434,7 +389,7 @@ const UNTERNEHMEN: DefaultPageSource = {
       eyebrow: "Für Unternehmen",
       title: "IT-Betreuung für Firmen ohne eigene IT-Abteilung",
       text: "Wir betreuen Firmen mit fünf bis fünfzig Arbeitsplätzen, gern auch mit mehreren Standorten. Wir kümmern uns laufend um Ihre IT, kennen Ihre Umgebung und sind erreichbar, wenn etwas nicht funktioniert.",
-      primary: { label: "Erstgespräch anfragen", href: "/kontakt" },
+      primary: { label: "Erstgespräch anfragen", href: "/kontakt#anfrage" },
       secondary: { label: "Zum Kundenportal", href: "/login" },
     },
     {
@@ -487,25 +442,17 @@ const UNTERNEHMEN: DefaultPageSource = {
       ],
     },
     {
-      id: "kundenportal",
-      type: "text",
-      tone: "blue",
-      width: "narrow",
-      anchor: "kundenportal",
-      title: "Ihr eigenes Portal unter eigener Adresse",
-      body: md(
-        "Jeder Firmenkunde bekommt ein Kundenportal mit eigener Subdomain, zum Beispiel **{portal_beispiel}**. Dort melden Ihre Mitarbeiter Störungen, stellen Anfragen, laden Screenshots hoch und lesen unsere Antworten.",
-        "Für Filialen, Standorte, Abteilungen oder eine Homeoffice-Gruppe legen Sie Unterkunden an – so viele, wie Sie brauchen. Jede Unterkunde hat eigene Benutzer und eigene Tickets, gemeldet wird über dieselbe Adresse.",
-      ),
-    },
-    {
       id: "rollen",
       type: "cards",
       tone: "blue",
       layout: "columns",
       columns: 3,
-      title: "Wer im Portal was sieht",
-      intro: "Jeder bekommt einen eigenen Zugang. Was jemand sehen und tun darf, hängt von seiner Rolle ab.",
+      anchor: "kundenportal",
+      title: "Ihr eigenes Portal unter eigener Adresse",
+      intro: md(
+        "Jeder Firmenkunde bekommt ein Kundenportal mit eigener Subdomain, zum Beispiel **{portal_beispiel}**. Dort melden Ihre Mitarbeiter Störungen, stellen Anfragen, laden Screenshots hoch und lesen unsere Antworten.",
+        "Für Filialen, Standorte oder das Homeoffice legen Sie Unterkunden an – so viele, wie Sie brauchen. Jeder bekommt einen eigenen Zugang; was jemand sieht, hängt von seiner Rolle ab:",
+      ),
       items: [
         {
           title: "Hauptansprechpartner der Firma",
@@ -632,7 +579,8 @@ const UNTERNEHMEN: DefaultPageSource = {
       text: "Schreiben Sie uns kurz, wie viele Arbeitsplätze Sie haben und was Sie gerade beschäftigt. Wir melden uns und vereinbaren ein erstes Gespräch – am Telefon oder bei Ihnen vor Ort.",
       primary: CTA_DEFAULT_PRIMARY,
       secondary: CTA_DEFAULT_SECONDARY,
-      showPhone: true,
+      // Telefon und Servicezeiten stehen schon bei den Reaktionszeiten
+      showPhone: false,
     },
   ],
 };
@@ -789,7 +737,7 @@ const UEBER_UNS: DefaultPageSource = {
       eyebrow: "Über uns",
       title: "IT für Leute, die eigentlich etwas anderes zu tun haben",
       text: "{firma} ist ein IT-Dienstleister für kleine und mittlere Unternehmen und für Privatkunden. Wir arbeiten für Firmen ohne eigene IT-Abteilung – etwa Büros, Praxen, Kanzleien und Handwerksbetriebe – und für Menschen, die zu Hause einfach wollen, dass der Computer funktioniert.",
-      primary: { label: "Anfrage stellen", href: "/kontakt" },
+      primary: { label: "Anfrage stellen", href: "/kontakt#anfrage" },
       secondary: { label: "Unsere Leistungen", href: "/leistungen" },
     },
     {
@@ -850,8 +798,8 @@ const SUPPORT: DefaultPageSource = {
       eyebrow: "Support",
       title: "Hilfe für Bestandskunden",
       text: md(
-        "Hier finden Sie den schnellsten Weg zu uns – je nachdem, ob Sie als Firma unser Kundenportal nutzen oder als Privatkunde eine Anfrage gestellt haben.",
-        "Noch kein Kunde? Dann schreiben Sie uns über das [Kontaktformular](/kontakt).",
+        "Der schnellste Weg zu uns – ob Ihre Firma unser Kundenportal nutzt oder Sie als Privatkunde eine Anfrage gestellt haben.",
+        "**Steht der Betrieb still?** Rufen Sie bitte an: {telefon}. Für alles, was nicht eilt: {support_email}",
       ),
     },
     {
@@ -888,11 +836,13 @@ const SUPPORT: DefaultPageSource = {
       title: "So funktioniert die Fernwartung",
       intro:
         "Bei einer Fernwartung sehen wir Ihren Bildschirm und können Maus und Tastatur bedienen. So lassen sich viele Probleme lösen, ohne dass jemand vorbeikommen muss.",
+      cta: { label: "Fernwartung herunterladen", href: "{fernwartung}" },
+      note: "**Nur nach Absprache am Telefon.** Wir fordern Sie nie unangekündigt dazu auf. Ruft jemand unaufgefordert an, gibt sich als {firma}, Microsoft oder Ihre Bank aus und will auf Ihren Rechner: auflegen und uns Bescheid geben.",
       items: [
         { title: "Anrufen", text: "Rufen Sie uns an, oder wir rufen Sie zum vereinbarten Termin an." },
         {
           title: "Programm starten",
-          text: "Klicken Sie unten auf „Fernwartung herunterladen“ und öffnen Sie die Datei. Installieren müssen Sie in der Regel nichts.",
+          text: "Klicken Sie oben auf „Fernwartung herunterladen“ und öffnen Sie die Datei. Installieren müssen Sie in der Regel nichts.",
         },
         { title: "ID durchgeben", text: "Das Programm zeigt eine ID und ein Kennwort. Lesen Sie uns beides am Telefon vor." },
         {
@@ -900,29 +850,6 @@ const SUPPORT: DefaultPageSource = {
           text: "Sie sehen alles, was wir tun, und können die Verbindung jederzeit beenden. Schließen Sie danach das Programm – ohne es kommen wir nicht auf Ihren Rechner.",
         },
       ],
-    },
-    {
-      id: "fernwartung-start",
-      type: "cta",
-      tone: "dark",
-      title: "Nur nach Absprache am Telefon",
-      text: "Starten Sie eine Fernwartung nur, wenn Sie gerade mit uns telefonieren oder einen Termin vereinbart haben. Wir fordern Sie nie unangekündigt dazu auf. Ruft jemand unaufgefordert an, gibt sich als {firma}, Microsoft oder Ihre Bank aus und will auf Ihren Rechner: auflegen und uns Bescheid geben.",
-      primary: { label: "Fernwartung herunterladen", href: "{fernwartung}" },
-      showPhone: false,
-    },
-    {
-      id: "erreichbarkeit",
-      type: "contact",
-      tone: "blue",
-      title: "Telefon und Servicezeiten",
-      intro: md(
-        "**Wenn nichts mehr geht:** Steht der Betrieb still, rufen Sie bitte an, statt nur ein Ticket zu schreiben.",
-        "**Per E-Mail** an {support_email} erreichen Sie uns für alles, was nicht eilt. Störungen melden Firmenkunden bitte im Kundenportal, Privatkunden über das Formular.",
-        "Tickets und Formulare können Sie jederzeit abschicken. Was außerhalb der Servicezeiten eingeht, bearbeiten wir ab Beginn der nächsten.",
-        "Wie schnell wir uns bei Firmenkunden mit Betreuungsvertrag melden, steht in der Übersicht der [Reaktionszeiten](/unternehmen#reaktionszeiten).",
-      ),
-      showAddress: false,
-      showHours: true,
     },
   ],
 };
@@ -947,59 +874,27 @@ const KONTAKT: DefaultPageSource = {
       tone: "blue",
       eyebrow: "Kontakt",
       title: "Schreiben Sie uns, was ansteht",
-      text: md(
-        "Sie suchen jemanden, der sich dauerhaft um die IT Ihrer Firma kümmert? Oder Sie brauchen Hilfe mit einem neuen Notebook? Schildern Sie kurz Ihr Anliegen.",
-        "Wir melden uns in der Regel innerhalb eines Werktags – bei Firmen meist mit einem Terminvorschlag für ein erstes Kennenlernen.",
-      ),
-    },
-    {
-      id: "bestandskunden",
-      type: "cards",
-      tone: "blue",
-      layout: "columns",
-      columns: 2,
-      items: [
-        {
-          icon: "building",
-          title: "Schon Firmenkunde bei uns?",
-          text: "Störungen und Anfragen melden Sie im Kundenportal Ihrer Firma. Dort sehen Sie auch den Stand aller Tickets. Steht der Betrieb still, rufen Sie bitte an.",
-          link: { label: "Zum Kundenportal", href: "/login" },
-        },
-        {
-          icon: "home",
-          title: "Privat und es klemmt gerade?",
-          text: "Wenn PC, Drucker oder WLAN streiken, nutzen Sie bitte das Hilfe-Formular für Privatkunden. Sie bekommen sofort eine Ticketnummer und einen Link, über den Sie den Stand sehen.",
-          link: { label: "Zum Hilfe-Formular", href: "/privatkunden#hilfe-anfordern" },
-        },
-      ],
+      text: "IT-Betreuung für Ihre Firma oder Hilfe mit einem neuen Notebook – schildern Sie kurz Ihr Anliegen.",
     },
     {
       id: "anfrage",
       type: "inquiryForm",
-      tone: "white",
+      // Gleicher Hintergrund wie der Seitenkopf: Das Formular schließt direkt an
+      tone: "blue",
       anchor: "anfrage",
       title: "Ihre Anfrage",
       defaultType: "BUSINESS",
       intro: md(
-        "Felder ohne den Zusatz „optional“ brauchen wir, um Ihnen antworten zu können.",
+        "**Schon Firmenkunde?** Störungen melden Sie im [Kundenportal](/login). Steht der Betrieb still, rufen Sie bitte an.",
+        "**Privat und es klemmt gerade?** Im [Hilfe-Formular für Privatkunden](/privatkunden#hilfe-anfordern) bekommen Sie sofort eine Ticketnummer.",
         "## So geht es weiter",
         numbered(
-          "Sie bekommen direkt eine Bestätigung per E-Mail mit Ihrer Anfragenummer und einem persönlichen Link, über den Sie uns schreiben können.",
+          "Sie bekommen per E-Mail eine Bestätigung mit Ihrer Anfragenummer und einem persönlichen Link, über den Sie uns schreiben können.",
           "Wir melden uns in der Regel innerhalb eines Werktags – so, wie Sie es im Formular wählen.",
-          "Firmen bekommen meist einen Terminvorschlag für ein erstes Gespräch. Bei Privatkunden klären wir, ob wir per Fernwartung helfen können oder vorbeikommen.",
+          "Firmen bekommen meist einen Terminvorschlag für ein erstes Gespräch. Bei Privatkunden klären wir, ob wir per Fernwartung helfen oder vorbeikommen.",
         ),
-        "Link zu Ihrer Anfrage verloren? Rufen Sie uns kurz an unter {telefon}, dann schicken wir ihn noch einmal. Den Status-Link zu einem Ticket aus dem Hilfe-Formular für Privatkunden können Sie [selbst neu anfordern](/status).",
+        "Link zu Ihrer Anfrage verloren? Rufen Sie kurz an, dann schicken wir ihn noch einmal.",
       ),
-    },
-    {
-      id: "direkt",
-      type: "contact",
-      tone: "blue",
-      title: "Lieber direkt?",
-      intro:
-        "Rufen Sie uns an oder schreiben Sie eine E-Mail. Während der Servicezeiten sprechen Sie direkt mit jemandem, der sich auskennt.",
-      showAddress: true,
-      showHours: true,
     },
     {
       // Erscheint nur, wenn unter Verwaltung › Standorte Standorte für die Website eingetragen sind

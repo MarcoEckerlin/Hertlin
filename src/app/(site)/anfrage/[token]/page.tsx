@@ -17,6 +17,9 @@ import { LiveConversation } from "@/components/realtime/live-conversation";
 import { ChatThread, type ChatTranslations } from "@/components/inquiry-chat/chat-thread";
 import { ChatComposer } from "@/components/inquiry-chat/chat-composer";
 import { ChatLanguageSelect } from "@/components/inquiry-chat/language-select";
+import { PhoneLink } from "@/components/site/sections/contact";
+import { Eyebrow } from "@/components/site/sections/layout";
+import { telHref } from "@/components/site/nav-types";
 
 export const metadata: Metadata = {
   title: "Ihre Anfrage",
@@ -55,13 +58,13 @@ export default async function InquiryChatPage({ params }: { params: Promise<{ to
     <>
       <section className="border-b border-line bg-brand-50">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12">
-          <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">Ihre Anfrage {number}</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight break-words text-ink sm:text-4xl">{topic}</h1>
+          <Eyebrow>Ihre Anfrage {number}</Eyebrow>
+          <h1 className="mt-3 text-3xl font-bold tracking-tight break-words text-ink sm:text-4xl">{topic}</h1>
           <p className="mt-3 max-w-2xl text-ink-soft">
             Hier schreiben Sie direkt mit unserem Team. Solange diese Seite offen ist, sehen Sie unsere Antworten sofort.
           </p>
 
-          <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-line bg-white p-5 shadow-card sm:grid-cols-3 sm:p-6">
+          <dl className="mt-7 grid grid-cols-2 gap-x-6 gap-y-5 rounded-2xl border border-line bg-surface p-5 shadow-card sm:grid-cols-3 sm:p-6">
             <div>
               <dt className="text-xs font-semibold text-ink-muted">Status</dt>
               <dd className="mt-1.5">
@@ -96,7 +99,7 @@ export default async function InquiryChatPage({ params }: { params: Promise<{ to
         ) : null}
 
         {enabled ? (
-          <div className="rounded-2xl border border-line bg-white px-4 py-4 shadow-card sm:px-6">
+          <div className="rounded-2xl border border-line bg-surface px-4 py-4 shadow-card sm:px-6">
             <ChatLanguageSelect
               action={guestInquiryLanguageAction}
               hidden={{ token }}
@@ -114,7 +117,7 @@ export default async function InquiryChatPage({ params }: { params: Promise<{ to
           </div>
         ) : null}
 
-        <section aria-labelledby="chat-titel" className="overflow-hidden rounded-3xl border border-line bg-white shadow-card">
+        <section aria-labelledby="chat-titel" className="overflow-hidden rounded-3xl border border-line bg-surface shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-b border-line px-4 py-3 sm:px-6">
             <h2 id="chat-titel" className="text-base font-bold text-ink">
               Chat mit {site.name}
@@ -156,9 +159,7 @@ export default async function InquiryChatPage({ params }: { params: Promise<{ to
           <p>
             Die Seite ist nur über Ihren persönlichen Link erreichbar. Bitte geben Sie ihn nicht weiter – wer ihn kennt, kann
             den Chat lesen. Lieber telefonisch? Sie erreichen uns unter{" "}
-            <a href={`tel:${site.phoneHref}`} className="font-semibold whitespace-nowrap text-brand-700 hover:underline">
-              {site.phone}
-            </a>
+            <PhoneLink phone={site.phone} phoneHref={site.phoneHref} className="font-semibold whitespace-nowrap text-brand-700" />
             . Nennen Sie dabei bitte die Nummer {number}.
           </p>
         </div>
@@ -168,18 +169,19 @@ export default async function InquiryChatPage({ params }: { params: Promise<{ to
 }
 
 function InvalidLink({ site }: { site: SiteSettings }) {
+  const tel = telHref(site.phoneHref);
   return (
     <section className="bg-brand-50">
       <div className="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6 sm:py-28">
-        <p className="text-sm font-bold tracking-wider text-brand-700 uppercase">Chat zu Ihrer Anfrage</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Dieser Link funktioniert leider nicht</h1>
+        <Eyebrow className="justify-center">Chat zu Ihrer Anfrage</Eyebrow>
+        <h1 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Dieser Link funktioniert leider nicht</h1>
         <p className="mt-4 text-lg leading-relaxed text-ink-soft">
           Vielleicht wurde er beim Kopieren abgeschnitten. Am sichersten öffnen Sie ihn direkt aus unserer E-Mail. Finden Sie
           die E-Mail nicht mehr, rufen Sie uns kurz an – wir schicken Ihnen den Link gern noch einmal.
         </p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <ButtonLink href={`tel:${site.phoneHref}`}>{site.phone} anrufen</ButtonLink>
-          <ButtonLink href="/kontakt" variant="secondary">
+          {tel ? <ButtonLink href={tel}>{site.phone} anrufen</ButtonLink> : null}
+          <ButtonLink href="/kontakt#anfrage" variant={tel ? "secondary" : "primary"}>
             Neue Anfrage stellen
           </ButtonLink>
         </div>

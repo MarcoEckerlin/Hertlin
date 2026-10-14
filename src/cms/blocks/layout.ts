@@ -25,9 +25,21 @@ function isNote(block: Block): boolean {
   return block.type === "text" && block.width === "note";
 }
 
+/**
+ * Endet das Modul schon mit einer feinen Linie? (Zeilen-Kacheln, nummerierte Liste, Fragen, Reaktionszeiten)
+ * Dann bekommt der nächste Abschnitt keine zweite Linie darüber.
+ */
+export function endsWithRule(block: Block): boolean {
+  if (block.type === "cards") return block.layout === "rows" && block.items.length > 0;
+  if (block.type === "steps") return block.layout === "list" && block.items.length > 0;
+  if (block.type === "faq") return block.items.length > 0;
+  return block.type === "responseTimes";
+}
+
 /** Trennlinie zwischen zwei Abschnitten mit gleichem Hintergrund? */
 function wantsSeparator(block: Block, prev: Block): boolean {
   if (prev.type === "hero" || prev.type === "cta" || block.type === "cta" || block.type === "hero") return false;
+  if (endsWithRule(prev)) return false;
   if (isWideText(block) && isWideText(prev)) return true;
   if (isNote(block)) return false;
   return "title" in block && hasText(block.title);

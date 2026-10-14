@@ -102,7 +102,7 @@ export function ChatComposer({
         <input key={name} type="hidden" name={name} value={value} />
       ))}
       {error ? (
-        <p id={errorId} role="alert" className="rounded-xl bg-red-50 px-3.5 py-2 text-sm font-medium text-red-800 ring-1 ring-red-200 ring-inset">
+        <p id={errorId} role="alert" className="rounded-xl bg-danger-soft px-3.5 py-2 text-sm font-medium text-danger-ink ring-1 ring-danger-line ring-inset">
           {error}
         </p>
       ) : null}
@@ -147,7 +147,7 @@ export function ChatComposer({
           ) : null}
         </span>
         {text.length > maxLength - 300 ? (
-          <span className={cn("tabular-nums", tooLong ? "font-semibold text-red-700" : "")}>
+          <span className={cn("tabular-nums", tooLong ? "font-semibold text-danger-ink" : "")}>
             {text.length.toLocaleString("de-DE")} / {maxLength.toLocaleString("de-DE")} Zeichen
           </span>
         ) : null}

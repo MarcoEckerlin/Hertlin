@@ -9,7 +9,7 @@ import { Markdown, type MarkdownColors } from "@/cms/markdown";
 import { replacePlaceholders, resolveHref, type PlaceholderContext } from "@/cms/placeholders";
 import type { BlockOf, BlockType } from "@/cms/schema";
 
-/** Hintergrund eines Abschnitts: weiß oder hellblau (brand-50) */
+/** Hintergrund eines Abschnitts: Grundfläche (surface, hell weiß) oder hellblau (brand-50) */
 export type Tone = "white" | "blue";
 
 /** Alles, was ein Modul zum Darstellen braucht (pro Anfrage einmal erzeugt). */
@@ -62,12 +62,12 @@ export function sectionPadding(layout: Pick<BlockLayout, "joinTop" | "joinBottom
 }
 
 export function toneBg(tone: Tone): string {
-  return tone === "blue" ? "bg-brand-50" : "bg-white";
+  return tone === "blue" ? "bg-brand-50" : "bg-surface";
 }
 
 /** Fläche für Kästen innerhalb eines Abschnitts: auf Weiß hellblau, auf Hellblau weiß mit feinem Rahmen. */
 export function panelClasses(bg: Tone): string {
-  return bg === "blue" ? "bg-white ring-1 ring-line" : "bg-brand-50";
+  return bg === "blue" ? "bg-surface ring-1 ring-line" : "bg-brand-50";
 }
 
 /** Abschnitt eines Moduls mit Hintergrund, Abständen, Sprunganker und Seitenbreite. */
@@ -223,15 +223,36 @@ export function CtaButton({
   );
 }
 
-/** Schlichter Textlink mit Pfeil (z. B. unter einer Kachel). */
-export function TextLink({ cta, ctx, className }: { cta: Cta | undefined; ctx: BlockContext; className?: string }) {
+/**
+ * Schlichter Textlink mit Pfeil (z. B. unter einer Kachel).
+ * stretched: Die Klickfläche reicht über das ganze umgebende Element mit „relative“ (ganze Kachel klickbar).
+ * Weitere Links darin brauchen dann „relative z-10“.
+ */
+export function TextLink({
+  cta,
+  ctx,
+  stretched = false,
+  className,
+}: {
+  cta: Cta | undefined;
+  ctx: BlockContext;
+  stretched?: boolean;
+  className?: string;
+}) {
   if (!cta) return null;
   const target = resolveHref(cta.href, ctx.text);
   const label = plain(cta.label, ctx);
   if (!target || !label) return null;
   const classes = cn(
-    "inline-flex items-center gap-1.5 text-[0.9375rem] font-semibold text-brand-700 hover:text-brand-800 hover:underline hover:underline-offset-4",
+    "group/link inline-flex items-center gap-1.5 text-[0.9375rem] font-semibold text-brand-700 hover:text-brand-800 hover:underline hover:underline-offset-4",
+    stretched && "after:absolute after:inset-0",
     className,
+  );
+  const arrow = (
+    <ArrowRight
+      className="size-4 transition-transform duration-150 group-hover/link:translate-x-0.5 motion-reduce:transition-none"
+      aria-hidden
+    />
   );
   if (target.external) {
     return (
@@ -246,14 +267,14 @@ export function TextLink({ cta, ctx, className }: { cta: Cta | undefined; ctx: B
     return (
       <Link href={target.href} className={classes}>
         {label}
-        <ArrowRight className="size-4" aria-hidden />
+        {arrow}
       </Link>
     );
   }
   return (
     <a href={target.href} className={classes}>
       {label}
-      <ArrowRight className="size-4" aria-hidden />
+      {arrow}
     </a>
   );
 }

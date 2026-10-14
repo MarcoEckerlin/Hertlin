@@ -13,7 +13,7 @@ export function PrivateSupportFormBlock({ block, ctx, layout }: BlockProps<"priv
   const anchored = { ...block, anchor: block.anchor ?? PRIVATE_SUPPORT_ANCHOR };
   const { openingHours } = ctx.settings;
   const form = (
-    <div className="rounded-3xl border border-line bg-white p-5 shadow-lift sm:p-8">
+    <div className="rounded-3xl border border-line bg-surface p-5 shadow-card sm:p-8">
       <PrivateSupportForm />
     </div>
   );

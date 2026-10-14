@@ -208,7 +208,10 @@ export function parseInline(source: string, inLink = false): MdInline[] {
  * compact – Texte in Kacheln, Schritten, Antworten
  */
 export type MarkdownVariant = "prose" | "lead" | "compact";
-/** Farben je nach Hintergrund: hell (Standard), Hellblau-Fläche (brand-400) oder Dunkelblau */
+/**
+ * Farben je nach Hintergrund: Standard, Hellblau-Fläche (primary) oder Dunkelblau (navy).
+ * onBrand und onDark stehen in „Inseln“ (data-theme), siehe src/cms/blocks/cta.tsx.
+ */
 export type MarkdownColors = "default" | "onBrand" | "onDark";
 
 type RenderOptions = {
@@ -451,7 +454,7 @@ export function Markdown({
                 <li key={i} className="flex gap-3">
                   <span
                     aria-hidden="true"
-                    className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-white text-xs font-bold text-brand-700 ring-1 ring-brand-200"
+                    className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-surface text-xs font-bold text-brand-700 ring-1 ring-brand-200"
                   >
                     {i + 1}
                   </span>
