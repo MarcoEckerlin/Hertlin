@@ -23,6 +23,7 @@ import {
   UsersRound,
   X,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LogoMark } from "@/components/ui/logo";
 import { cn } from "@/lib/cn";
 import { initials } from "@/lib/format";
@@ -227,7 +228,7 @@ export function AppShell({
                       <Icon className={cn("size-[1.05rem]", active ? "text-brand-700" : "text-ink-muted")} aria-hidden />
                       <span className="flex-1">{item.label}</span>
                       {item.count ? (
-                        <span className="rounded-full bg-brand-400 px-2 py-0.5 text-[0.7rem] font-bold text-ink">{item.count}</span>
+                        <span className="rounded-full bg-primary px-2 py-0.5 text-[0.7rem] font-bold text-on-primary">{item.count}</span>
                       ) : null}
                     </Link>
                   </li>
@@ -252,6 +253,10 @@ export function AppShell({
             <span className="block truncate text-xs text-ink-muted">{user.roleLabel}</span>
           </span>
         </Link>
+        <div className="mt-1 flex items-center justify-between gap-2 px-3 py-1.5">
+          <span className="text-xs font-semibold text-ink-muted">Darstellung</span>
+          <ThemeToggle compact />
+        </div>
         <form action={logoutAction}>
           <button
             type="submit"
@@ -282,12 +287,12 @@ export function AppShell({
     <div className="min-h-dvh bg-mist">
       <a
         href="#inhalt"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-white"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-on-ink"
       >
         Zum Inhalt springen
       </a>
       {/* Desktop-Seitenleiste */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-white lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-line bg-surface lg:block">
         {renderSidebar(false)}
         {toolbar ? (
           <div className="absolute top-5 right-3">
@@ -303,7 +308,7 @@ export function AppShell({
         inert={open}
         className={cn(
           "sticky top-0 z-30 flex h-14 items-center justify-between border-b border-line px-4 lg:hidden",
-          toolbar ? "bg-white" : "bg-white/95 backdrop-blur",
+          toolbar ? "bg-surface" : "bg-surface/95 backdrop-blur",
         )}
       >
         <Link href={homeHref} className="flex min-w-0 items-center gap-2">
@@ -324,8 +329,8 @@ export function AppShell({
       {open ? (
         <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label="Menü">
           {/* Klick auf den abgedunkelten Hintergrund schließt; per Tastatur gibt es den Knopf im Menü */}
-          <button type="button" className="absolute inset-0 bg-ink/30" onClick={closeMenu} tabIndex={-1} aria-hidden />
-          <div ref={drawerRef} className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-lift">
+          <button type="button" className="absolute inset-0 bg-navy/50" onClick={closeMenu} tabIndex={-1} aria-hidden />
+          <div ref={drawerRef} className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-surface-raised shadow-lift">
             <button
               ref={closeButtonRef}
               type="button"

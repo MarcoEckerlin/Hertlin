@@ -13,12 +13,12 @@ export type BadgeTone = "blue" | "gray" | "green" | "amber" | "orange" | "red" |
 
 const tones: Record<BadgeTone, string> = {
   blue: "bg-brand-100 text-brand-800 ring-brand-200",
-  gray: "bg-slate-100 text-slate-700 ring-slate-200",
-  green: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  amber: "bg-amber-50 text-amber-800 ring-amber-200",
-  orange: "bg-orange-50 text-orange-800 ring-orange-200",
-  red: "bg-red-50 text-red-800 ring-red-200",
-  ink: "bg-ink text-white ring-ink",
+  gray: "bg-neutral-soft text-neutral-ink ring-neutral-line",
+  green: "bg-success-soft text-success-ink ring-success-line",
+  amber: "bg-warning-soft text-warning-ink ring-warning-line",
+  orange: "bg-caution-soft text-caution-ink ring-caution-line",
+  red: "bg-danger-soft text-danger-ink ring-danger-line",
+  ink: "bg-ink text-on-ink ring-ink",
 };
 
 export function Badge({ tone = "gray", children, className }: { tone?: BadgeTone; children: ReactNode; className?: string }) {
