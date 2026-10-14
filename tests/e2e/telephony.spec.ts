@@ -1,3 +1,4 @@
+import { PORT } from "./env";
 import type { APIRequestContext, Page } from "@playwright/test";
 import { E2E_TELEPHONY_TOKEN } from "./env";
 import { test, expect, loginStaff, main, nextClientIp, unique, waitForSubscription, ACCOUNTS } from "./fixtures";
@@ -142,7 +143,7 @@ test.describe("Telefonanlage", () => {
     expect(invalid.status()).toBe(400);
 
     // Kundenportale kennen den Webhook nicht
-    const viaPortal = await sendCallEvent(request, body, { headers: { "X-Forwarded-Host": "muster.localhost:3200" } });
+    const viaPortal = await sendCallEvent(request, body, { headers: { "X-Forwarded-Host": `muster.localhost:${PORT}` } });
     expect(viaPortal.status()).toBe(404);
 
     // GET ist nicht vorgesehen

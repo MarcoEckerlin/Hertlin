@@ -442,6 +442,15 @@ async function main() {
     },
   });
 
+  // Katalog: die in den Beispieldaten benutzten Standardpositionen als „benutzt“ zählen
+  for (const [id, usageCount, days] of [
+    ["preset_arbeitszeit", 1, 2],
+    ["preset_anfahrt", 1, 2],
+    ["preset_fernwartung", 1, 4],
+  ] as const) {
+    await db.costPreset.update({ where: { id }, data: { usageCount, lastUsedAt: daysAgo(days) } });
+  }
+
   console.log("Beispieldaten angelegt.");
   console.log(`  Passwort für alle Demo-Konten: ${PASSWORD}`);
   console.log("  Verwaltung:      admin@hertlin.de (Admin), technik@hertlin.de (Techniker)");

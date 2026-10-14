@@ -41,14 +41,19 @@ export default async function CostsPage({
     <div>
       <PageHeader
         title="Kosten pro Konto"
-        description="Alle in Tickets erfassten Kosten, zusammengefasst je Firmenkunde (inklusive Unterkunden) und Privatkunde. Nur Administratoren sehen diese Seite."
+        description="Alle in Tickets erfassten Kosten, zusammengefasst je Firmenkunde (inklusive Unterkunden) und Privatkunde. Öffnen Sie ein Konto, um aus offenen Positionen eine Rechnung zu erstellen."
         actions={
-          accounts > 0 ? (
-            <a href={exportHref} className={buttonClasses("secondary")} download>
-              <Download className="size-4" aria-hidden />
-              CSV exportieren
-            </a>
-          ) : null
+          <>
+            <ButtonLink href="/admin/rechnungen" variant="ghost">
+              Rechnungen
+            </ButtonLink>
+            {accounts > 0 ? (
+              <a href={exportHref} className={buttonClasses("secondary")} download>
+                <Download className="size-4" aria-hidden />
+                CSV exportieren
+              </a>
+            ) : null}
+          </>
         }
       />
 

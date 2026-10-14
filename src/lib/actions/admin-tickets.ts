@@ -36,6 +36,7 @@ import {
   sendStaffCreatedTicketMail,
 } from "@/lib/notifications";
 import { isRecipientWatchingTicket } from "@/realtime/bus";
+import { parseLocationId, defaultTicketLocationId } from "@/lib/locations";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { parseTicketIdParam } from "@/components/admin/tickets/data";
 
@@ -214,9 +215,14 @@ export async function createStaffTicketAction(_prev: FormState, formData: FormDa
     if (!assignee) extra.assigneeId = "Diesen Mitarbeiter gibt es nicht mehr. Bitte wählen Sie neu aus.";
   }
 
+  // Standort: Auswahl, sonst der des Kunden (Unterkunde ohne eigenen: der des Firmenkunden), bei Privatkunden der Hauptsitz
+  const chosenLocation = await parseLocationId(formData.get("locationId"));
+  if (chosenLocation === undefined) extra.locationId = "Diesen Standort gibt es nicht mehr. Bitte wählen Sie neu aus.";
+
   if (Object.keys(extra).length > 0) {
     return invalidState(formData, null, extra, `Bitte prüfen Sie die markierten Felder.${filesNote(files)}`);
   }
+  const locationId = chosenLocation ?? (await defaultTicketLocationId(company?.id ?? null));
 
   const guestToken = isPrivate ? generateToken(24) : null;
   const contactName = contactUser ? contactUser.name : (input.contactName ?? null);
@@ -238,6 +244,7 @@ export async function createStaffTicketAction(_prev: FormState, formData: FormDa
         // Mit Ansprechpartner sieht diese Person das Ticket im Kundenportal und bekommt die E-Mails dazu
         createdById: contactUser?.id ?? null,
         assigneeId: assignee?.id ?? null,
+        locationId,
         contactName,
         contactEmail,
         contactPhone,
@@ -326,6 +333,7 @@ const metaTicketSelect = {
   category: true,
   assigneeId: true,
   assignee: { select: { name: true } },
+  locationId: true,
   companyId: true,
   guestToken: true,
   company: { select: { name: true, parent: { select: { name: true } } } },
@@ -392,16 +400,30 @@ export async function updateTicketMetaAction(_prev: FormState, formData: FormDat
     }
   }
 
+  // Standort: nur aktive; ein bereits eingetragener (inzwischen deaktivierter) darf bleiben.
+  // Fehlt das Feld (keine Standorte angelegt), bleibt der Standort unverändert.
+  let newLocationId = ticket.locationId;
+  if (formData.has("locationId")) {
+    const raw = text(formData, "locationId");
+    if (raw && raw === ticket.locationId) newLocationId = raw;
+    else {
+      const parsedLocation = await parseLocationId(raw);
+      if (parsedLocation === undefined) extra.locationId = "Diesen Standort gibt es nicht mehr. Bitte wählen Sie neu aus.";
+      else newLocationId = parsedLocation;
+    }
+  }
+
   if (Object.keys(extra).length > 0) return errorState("Bitte prüfen Sie die markierten Felder.", formData, extra);
 
   const changes: string[] = [];
-  const events: { type: "PRIORITY" | "TYPE" | "CATEGORY" | "ASSIGNEE" | "COMPANY"; from: string | null; to: string | null }[] = [];
+  const events: { type: "PRIORITY" | "TYPE" | "CATEGORY" | "ASSIGNEE" | "COMPANY" | "LOCATION"; from: string | null; to: string | null }[] = [];
   const data: {
     priority?: string;
     type?: string;
     category?: string;
     assigneeId?: string | null;
     companyId?: string | null;
+    locationId?: string | null;
   } = {};
 
   if (input.priority !== ticket.priority) {
@@ -428,6 +450,14 @@ export async function updateTicketMetaAction(_prev: FormState, formData: FormDat
     data.companyId = targetCompanyId;
     events.push({ type: "COMPANY", from: companyLabel(ticket.company), to: companyLabel(targetCompany) });
     changes.push("Zuordnung");
+  }
+  if (newLocationId !== ticket.locationId) {
+    data.locationId = newLocationId;
+    const ids = [ticket.locationId, newLocationId].filter((id): id is string => Boolean(id));
+    const names = await db.location.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
+    const nameOf = (id: string | null) => (id ? (names.find((l) => l.id === id)?.name ?? null) : null);
+    events.push({ type: "LOCATION", from: nameOf(ticket.locationId), to: nameOf(newLocationId) });
+    changes.push("Standort");
   }
 
   const statusChanged = input.status !== ticket.status;

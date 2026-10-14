@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cache, type ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
-import { UserCheck } from "lucide-react";
+import { MapPin, UserCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import { getStaffUser, requireStaff } from "@/lib/auth";
 import { CATEGORY_LABELS, SOURCE_LABELS, TYPE_LABELS, labelOf } from "@/lib/constants";
-import { formatDateTime, formatMoney, formatRelative, formatTicketNumber } from "@/lib/format";
+import { formatDateTime, formatMoney, formatRelative, formatTicketNumber, toDateInput } from "@/lib/format";
+import { canRecordCosts, canSeeCostAmounts } from "@/lib/permissions";
+import { locationOptions } from "@/lib/locations";
 import { customerRecipient } from "@/lib/tickets";
 import { ACCEPT_ATTRIBUTE, ALLOWED_EXTENSIONS_LABEL, MAX_FILES, MAX_FILE_SIZE } from "@/lib/uploads";
 import { isLangCode, languageLabel } from "@/lib/languages";
@@ -23,12 +25,15 @@ import { LiveConversation } from "@/components/realtime/live-conversation";
 import {
   customerLabel,
   loadCustomerGroups,
+  loadPresetOptions,
   loadStaffOptions,
   loadTicketCosts,
+  loadTicketCostsForStaff,
   parseTicketIdParam,
   staffTicketDetailSelect,
   type StaffTicketDetail,
 } from "@/components/admin/tickets/data";
+import { CostSection } from "@/components/admin/tickets/cost-section";
 import { PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { ContactCard } from "@/components/admin/tickets/contact-card";
 import { LinkedCallsCard } from "@/components/admin/tickets/linked-calls-card";
@@ -74,18 +79,21 @@ export default async function AdminTicketPage({ params, searchParams }: { params
   const ticket = await loadTicket(ticketId);
   if (!ticket) notFound();
 
-  // Kosten ausschließlich für Administratoren laden – die Kostenkomponente wird für Techniker gar nicht erst importiert
-  const showCosts = user.role === "ADMIN";
+  // Leistungen und Material erfassen alle Mitarbeiter; Beträge werden nur für Administratoren geladen
+  const recordCosts = canRecordCosts(user.role);
+  const showAmounts = canSeeCostAmounts(user.role);
   const translate = translationEnabled();
   const viewerLang = isLangCode(user.language) ? user.language : "de";
   const customerItems = ticket.messages.filter((m) => !m.fromStaff && !m.internal).map((m) => ({ id: m.id, body: m.body }));
 
-  const [staff, customerGroups, recipient, costs, costModule, translations] = await Promise.all([
+  const [staff, customerGroups, recipient, adminCosts, staffCosts, presets, locations, translations] = await Promise.all([
     loadStaffOptions({ includeId: ticket.assigneeId }),
     loadCustomerGroups({ activeOnly: true, withUsers: false }),
     customerRecipient(ticket.id),
-    showCosts ? loadTicketCosts(ticket.id) : Promise.resolve(null),
-    showCosts ? import("@/components/admin/tickets/cost-section") : Promise.resolve(null),
+    showAmounts ? loadTicketCosts(ticket.id) : Promise.resolve(null),
+    recordCosts && !showAmounts ? loadTicketCostsForStaff(ticket.id) : Promise.resolve(null),
+    recordCosts ? loadPresetOptions({ withPrices: showAmounts }) : Promise.resolve([]),
+    locationOptions(),
     // Kundennachrichten in die Sprache des Mitarbeiters; ohne Dienst oder bei Fehlern bleibt es beim Original
     translate && customerItems.length > 0
       ? translateForViewer(customerItems, viewerLang).catch((error: unknown): TimelineTranslations => {
@@ -94,7 +102,11 @@ export default async function AdminTicketPage({ params, searchParams }: { params
         })
       : Promise.resolve<TimelineTranslations>({}),
   ]);
-  const CostSection = costModule?.CostSection ?? null;
+  // Aktuellen (inzwischen deaktivierten) Standort weiter anzeigen, damit Speichern ihn nicht stillschweigend entfernt
+  const locationChoices =
+    ticket.location && !locations.some((l) => l.value === ticket.location?.id)
+      ? [...locations, { value: ticket.location.id, label: `${ticket.location.name} (deaktiviert)` }]
+      : locations;
 
   const number = formatTicketNumber(ticket.id);
   const company = ticket.company;
@@ -145,7 +157,10 @@ export default async function AdminTicketPage({ params, searchParams }: { params
 
   const isNew = first(query.neu) === "1";
   const mail = first(query.mail);
-  const costTotal = costs ? costs.reduce((sum, c) => sum + c.totalCents, 0) : 0;
+  const costTotal = adminCosts ? adminCosts.filter((c) => !c.needsPrice).reduce((sum, c) => sum + c.totalCents, 0) : 0;
+  const costMissingPrice = adminCosts ? adminCosts.filter((c) => c.needsPrice && !c.invoiceId).length : 0;
+  const costCount = adminCosts?.length ?? staffCosts?.length ?? 0;
+  const staffChoices = staff.filter((s) => s.active).map((s) => ({ id: s.id, name: s.name, active: s.active }));
   const assignedToMe = ticket.assigneeId === user.id;
 
   return (
@@ -168,9 +183,14 @@ export default async function AdminTicketPage({ params, searchParams }: { params
         }
         actions={
           <>
-            {costs ? (
+            {adminCosts ? (
               <a href="#kosten" className={buttonClasses("ghost", "sm")}>
                 Kosten: {formatMoney(costTotal)}
+                {costMissingPrice > 0 ? <span className="text-amber-800">· Preis fehlt</span> : null}
+              </a>
+            ) : recordCosts ? (
+              <a href="#kosten" className={buttonClasses("ghost", "sm")}>
+                Leistungen{costCount > 0 ? ` (${costCount})` : ""}
               </a>
             ) : null}
             {!assignedToMe ? (
@@ -194,6 +214,19 @@ export default async function AdminTicketPage({ params, searchParams }: { params
                 <span className="font-semibold text-ink">{customerLabel(ticket)}</span>
               )}
             </span>
+            {ticket.location ? (
+              <>
+                <span aria-hidden>·</span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="size-3.5 shrink-0" aria-hidden />
+                  <span>
+                    <span className="sr-only">Standort: </span>
+                    {ticket.location.name}
+                    {ticket.location.active ? "" : " (deaktiviert)"}
+                  </span>
+                </span>
+              </>
+            ) : null}
             <span aria-hidden>·</span>
             <span>{labelOf(SOURCE_LABELS, ticket.source)}</span>
             <span aria-hidden>·</span>
@@ -257,7 +290,29 @@ export default async function AdminTicketPage({ params, searchParams }: { params
             }}
           />
 
-          {costs && CostSection ? <CostSection ticketId={ticket.id} costs={costs} flash={first(query.kosten)} /> : null}
+          {adminCosts ? (
+            <CostSection
+              amounts
+              costs={adminCosts}
+              ticketId={ticket.id}
+              viewer={{ id: user.id, role: user.role }}
+              presets={presets}
+              staff={staffChoices}
+              today={toDateInput()}
+              flash={first(query.kosten)}
+            />
+          ) : staffCosts ? (
+            <CostSection
+              amounts={false}
+              costs={staffCosts}
+              ticketId={ticket.id}
+              viewer={{ id: user.id, role: user.role }}
+              presets={presets}
+              staff={staffChoices}
+              today={toDateInput()}
+              flash={first(query.kosten)}
+            />
+          ) : null}
         </div>
 
         <aside aria-label="Bearbeitung und Kontakt" className="min-w-0 space-y-6">
@@ -273,7 +328,9 @@ export default async function AdminTicketPage({ params, searchParams }: { params
                   category: ticket.category,
                   assigneeId: ticket.assigneeId ?? "",
                   customer: ticket.companyId ?? PRIVATE_CUSTOMER,
+                  locationId: ticket.locationId ?? "",
                 }}
+                locations={locationChoices}
                 staff={staff.map((s) => ({ id: s.id, name: s.name, active: s.active }))}
                 companyGroups={companyGroups}
                 allowPrivate={ticket.companyId === null || Boolean(ticket.guestToken)}

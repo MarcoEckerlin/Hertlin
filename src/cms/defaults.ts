@@ -1001,6 +1001,16 @@ const KONTAKT: DefaultPageSource = {
       showAddress: true,
       showHours: true,
     },
+    {
+      // Erscheint nur, wenn unter Verwaltung › Standorte Standorte für die Website eingetragen sind
+      id: "standorte",
+      type: "locations",
+      tone: "white",
+      anchor: "standorte",
+      title: "Unsere Standorte",
+      intro:
+        "Sie möchten ein Gerät vorbeibringen oder abholen? Rufen Sie bitte vorher kurz am jeweiligen Standort an, damit jemand für Sie da ist.",
+    },
   ],
 };
 

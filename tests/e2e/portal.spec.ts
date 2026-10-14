@@ -1,3 +1,4 @@
+import { PORT } from "./env";
 import {
   test,
   expect,
@@ -102,7 +103,7 @@ test.describe("Kundenportal: Unterkunden und Benutzer", () => {
 
     // Einladung aus der Mail einlösen
     await expect.poll(async () => (await lastMailTo(email))?.body ?? "").toContain("/passwort/");
-    const link = linkIn((await lastMailTo(email))!.body, /http:\/\/muster\.localhost:3200\/passwort\/[A-Za-z0-9_-]+/);
+    const link = linkIn((await lastMailTo(email))!.body, new RegExp(`http://muster\\.localhost:${PORT}/passwort/[A-Za-z0-9_-]+`));
     expect(link).toBeTruthy();
 
     const inviteeContext = await newContext(browser);

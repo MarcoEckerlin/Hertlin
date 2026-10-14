@@ -17,6 +17,9 @@ const CONTENT_SECURITY_POLICY = [
   "frame-ancestors 'self'",
 ].join("; ");
 
+/** Für PDF-Antworten: keine Skripte, nur der eingebaute Betrachter des Browsers (object-src). */
+const PDF_CONTENT_SECURITY_POLICY = "default-src 'none'; object-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'";
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   turbopack: {
@@ -50,6 +53,16 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
+      // Rechnungs-PDF in der Verwaltung ansehen: Der PDF-Betrachter des Browsers braucht object-src.
+      // Spätere Regeln überschreiben frühere mit demselben Header.
+      ...(process.env.NODE_ENV === "production"
+        ? [
+            {
+              source: "/admin/rechnungen/:id/pdf",
+              headers: [{ key: "Content-Security-Policy", value: PDF_CONTENT_SECURITY_POLICY }],
+            },
+          ]
+        : []),
     ];
   },
 };

@@ -21,6 +21,7 @@ import { AttachmentInput, type UploadRules } from "@/components/forms/attachment
 import { FormSection } from "@/components/forms/controls";
 import { OPTION_INDENT, PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { fieldA11y, useStaffForm } from "@/components/admin/tickets/use-staff-form";
+import { LocationSelect } from "@/components/admin/location-select";
 
 export type NewTicketContact = { id: string; name: string; email: string; phone: string | null; role: string };
 export type NewTicketCompany = {
@@ -32,8 +33,13 @@ export type NewTicketCompany = {
   users: NewTicketContact[];
   /** Bei Unterkunden: Hauptansprechpartner des Firmenkunden (sehen im Portal alle Unterkunden) */
   rootAdmins: NewTicketContact[];
+  /** Standort, den das Ticket ohne Auswahl bekommt (eigener oder der des Firmenkunden), oder null */
+  locationLabel: string | null;
 };
 export type NewTicketCustomerGroup = { id: string; name: string; companies: NewTicketCompany[] };
+/** Standorte für die Auswahl; mainLabel = Hauptsitz (Vorgabe bei Privatkunden) */
+export type NewTicketLocations = { options: { value: string; label: string }[]; mainLabel: string | null };
+
 export type NewTicketDefaults = {
   customer: string;
   contactUserId: string;
@@ -51,12 +57,14 @@ export function NewTicketForm({
   currentUserId,
   defaults,
   uploadRules,
+  locations,
 }: {
   groups: NewTicketCustomerGroup[];
   staff: { id: string; name: string }[];
   currentUserId: string;
   defaults: NewTicketDefaults;
   uploadRules: UploadRules;
+  locations: NewTicketLocations;
 }) {
   const [state, action] = useActionState(createStaffTicketAction, initialFormState);
   const { formRef, formKey } = useStaffForm(state);
@@ -73,6 +81,7 @@ export function NewTicketForm({
         values={values}
         errors={state.fieldErrors ?? {}}
         uploadRules={uploadRules}
+        locations={locations}
       />
     </form>
   );
@@ -86,6 +95,7 @@ function FormBody({
   values,
   errors,
   uploadRules,
+  locations,
 }: {
   groups: NewTicketCustomerGroup[];
   staff: { id: string; name: string }[];
@@ -95,6 +105,7 @@ function FormBody({
   values: Record<string, string> | null;
   errors: Record<string, string>;
   uploadRules: UploadRules;
+  locations: NewTicketLocations;
 }) {
   const [customer, setCustomer] = useState(values ? (values.customer ?? "") : defaults.customer);
   const [contactUserId, setContactUserId] = useState(values ? (values.contactUserId ?? "") : defaults.contactUserId);
@@ -107,6 +118,14 @@ function FormBody({
   const contactUser = contacts.find((u) => u.id === contactUserId) ?? null;
   const showContactFields = isPrivate || (company !== null && !contactUser);
   const notifyDefault = values ? values.notify === "on" : true;
+  // Ohne Auswahl: Standort des Kunden, bei Privatkunden der Hauptsitz
+  const fallbackLocation = isPrivate ? locations.mainLabel : company ? company.locationLabel : null;
+  const locationEmptyLabel =
+    isPrivate || company
+      ? fallbackLocation
+        ? `Wie beim Kunden: ${fallbackLocation}`
+        : "Kein bestimmter Standort"
+      : "Wie beim Kunden hinterlegt";
 
   return (
     <>
@@ -292,26 +311,35 @@ function FormBody({
           </Field>
         </div>
 
-        <Field
-          label="Bearbeiter"
-          htmlFor="neu-assigneeId"
-          error={errors.assigneeId}
-          hint="Mit Bearbeiter steht das Ticket gleich auf „In Bearbeitung“."
-          className="sm:max-w-sm"
-        >
-          <Select
-            {...fieldA11y("neu-assigneeId", errors.assigneeId, true)}
-            name="assigneeId"
-            defaultValue={values ? (values.assigneeId ?? "") : currentUserId}
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
+            label="Bearbeiter"
+            htmlFor="neu-assigneeId"
+            error={errors.assigneeId}
+            hint="Mit Bearbeiter steht das Ticket gleich auf „In Bearbeitung“."
           >
-            <option value="">Noch niemand</option>
-            {staff.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.id === currentUserId ? `${s.name} (ich)` : s.name}
-              </option>
-            ))}
-          </Select>
-        </Field>
+            <Select
+              {...fieldA11y("neu-assigneeId", errors.assigneeId, true)}
+              name="assigneeId"
+              defaultValue={values ? (values.assigneeId ?? "") : currentUserId}
+            >
+              <option value="">Noch niemand</option>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.id === currentUserId ? `${s.name} (ich)` : s.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <LocationSelect
+            label="Standort"
+            options={locations.options}
+            defaultValue={values?.locationId ?? ""}
+            error={errors.locationId}
+            emptyLabel={locationEmptyLabel}
+            hint="Leer lassen: Standort des Kunden, bei Privatkunden der Hauptsitz."
+          />
+        </div>
 
         <Field
           label="Beschreibung"

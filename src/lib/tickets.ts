@@ -62,7 +62,7 @@ export async function createTicketMessage(opts: {
 
 export async function recordTicketEvent(
   ticketId: number,
-  type: "CREATED" | "STATUS" | "PRIORITY" | "ASSIGNEE" | "COMPANY" | "TYPE" | "CATEGORY",
+  type: "CREATED" | "STATUS" | "PRIORITY" | "ASSIGNEE" | "COMPANY" | "TYPE" | "CATEGORY" | "LOCATION",
   actorId: string | null,
   fromValue?: string | null,
   toValue?: string | null,

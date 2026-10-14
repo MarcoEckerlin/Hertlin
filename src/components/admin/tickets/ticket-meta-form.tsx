@@ -18,6 +18,7 @@ import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { OPTION_INDENT, PRIVATE_CUSTOMER } from "@/components/admin/tickets/filters";
 import { fieldA11y, useStaffForm } from "@/components/admin/tickets/use-staff-form";
+import { LocationSelect } from "@/components/admin/location-select";
 
 export type MetaValues = {
   status: string;
@@ -27,6 +28,8 @@ export type MetaValues = {
   assigneeId: string;
   /** Firmen-ID oder "privat" */
   customer: string;
+  /** Standort-ID oder "" */
+  locationId: string;
 };
 
 export type MetaCompanyGroup = { id: string; name: string; companies: { id: string; name: string; isRoot: boolean }[] };
@@ -43,6 +46,7 @@ export function TicketMetaForm({
   allowPrivate,
   customerHint,
   recipientEmail,
+  locations,
 }: {
   ticketId: number;
   current: MetaValues;
@@ -53,6 +57,8 @@ export function TicketMetaForm({
   customerHint?: string;
   /** Adresse für Status-Mails an den Kunden oder null */
   recipientEmail: string | null;
+  /** Standorte (aktive, dazu ein evtl. deaktivierter aktueller); leer = Feld ausblenden */
+  locations: { value: string; label: string }[];
 }) {
   const [state, action] = useActionState(updateTicketMetaAction, initialFormState);
   const { formRef, formKey } = useStaffForm(state);
@@ -71,6 +77,7 @@ export function TicketMetaForm({
         allowPrivate={allowPrivate}
         customerHint={customerHint}
         recipientEmail={recipientEmail}
+        locations={locations}
       />
       <SubmitButton size="md" className="w-full" pendingText="Wird gespeichert …">
         Änderungen speichern
@@ -88,6 +95,7 @@ function MetaFields({
   allowPrivate,
   customerHint,
   recipientEmail,
+  locations,
 }: {
   current: MetaValues;
   values: Record<string, string> | null;
@@ -97,6 +105,7 @@ function MetaFields({
   allowPrivate: boolean;
   customerHint?: string;
   recipientEmail: string | null;
+  locations: { value: string; label: string }[];
 }) {
   const initial = (key: keyof MetaValues) => (values ? (values[key] ?? current[key]) : current[key]);
   const [status, setStatus] = useState(initial("status"));
@@ -224,6 +233,17 @@ function MetaFields({
           ))}
         </Select>
       </Field>
+
+      {/* Gleiche Höhe wie die übrigen Felder der Seitenleiste */}
+      <div className="[&_select]:h-10 [&_select]:text-sm">
+        <LocationSelect
+          label="Standort"
+          options={locations}
+          defaultValue={initial("locationId")}
+          error={errors.locationId}
+          emptyLabel="Kein bestimmter Standort"
+        />
+      </div>
     </>
   );
 }

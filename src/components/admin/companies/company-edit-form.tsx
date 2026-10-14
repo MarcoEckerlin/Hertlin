@@ -5,23 +5,31 @@ import { Field, Input } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
+  BillingFields,
   CompanyAddressFields,
+  CompanyLocationField,
   CustomerNumberField,
   FormSection,
   InternalNoteField,
   type CompanyFieldValues,
+  type LocationOption,
 } from "@/components/admin/companies/company-fields";
 import { fieldProps, useFormFocus } from "@/components/admin/companies/form-helpers";
 import { updateCompanyAction } from "@/lib/actions/admin-companies";
 import { initialFormState } from "@/lib/forms";
 
-/** Stammdaten eines Firmenkunden oder einer Unterkunde bearbeiten. */
+/** Stammdaten, Standort und Rechnungsdaten eines Firmenkunden oder einer Unterkunde bearbeiten. */
 export function CompanyEditForm({
   company,
   isSub,
+  parentName,
+  locationOptions,
 }: {
   company: CompanyFieldValues & { id: string; name: string };
   isSub: boolean;
+  /** Nur bei Unterkunden */
+  parentName?: string | null;
+  locationOptions: LocationOption[];
 }) {
   const [state, formAction] = useActionState(updateCompanyAction, initialFormState);
   const formRef = useFormFocus(state);
@@ -51,6 +59,20 @@ export function CompanyEditForm({
         </Field>
         <CustomerNumberField prefix="edit" value={values.customerNumber} error={errors.customerNumber} />
         <CompanyAddressFields prefix="edit" values={values} errors={errors} />
+        <CompanyLocationField
+          options={locationOptions}
+          value={values.locationId}
+          error={errors.locationId}
+          parentName={isSub ? parentName : null}
+        />
+      </FormSection>
+
+      <FormSection
+        title="Rechnungsdaten"
+        id="rechnungsdaten"
+        description="Für Rechnungen aus der Verwaltung: wohin sie gehen und was als Empfänger darauf steht."
+      >
+        <BillingFields prefix="edit" values={values} errors={errors} parentName={isSub ? parentName : null} />
       </FormSection>
 
       <FormSection title="Intern" id="notiz">

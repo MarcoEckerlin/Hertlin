@@ -163,7 +163,7 @@ Datenbank-Änderungen werden beim Start automatisch übernommen.
 
 ### Sicherung
 
-Alles Wichtige liegt in `/data` im Volume `hertlin-data`. Die Sicherung landet im Ordner `~/hertlin-backups`, also außerhalb des Projektordners, damit sie nicht beim nächsten Build ins Image gerät:
+Alles Wichtige liegt in `/data` im Volume `hertlin-data`: Datenbank, Anhänge, Website-Bilder und die Rechnungs-PDFs (`/data/uploads/invoices`). Rechnungen sind Buchungsbelege und müssen 8 Jahre aufbewahrt werden – regelmäßig sichern und die Sicherungen auch außerhalb des Servers ablegen. Die Sicherung landet im Ordner `~/hertlin-backups`, also außerhalb des Projektordners, damit sie nicht beim nächsten Build ins Image gerät:
 
 ```bash
 mkdir -p ~/hertlin-backups

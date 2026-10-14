@@ -10,6 +10,7 @@ import { INQUIRY_TOPIC_LABELS, WORKPLACE_LABELS, labelOf } from "@/lib/constants
 import { db } from "@/lib/db";
 import { formatDate, formatInquiryNumber } from "@/lib/format";
 import { rootDomain } from "@/lib/hosts";
+import { locationOptions } from "@/lib/locations";
 
 export const metadata: Metadata = { title: "Firmenkunde anlegen" };
 
@@ -97,6 +98,7 @@ export default async function NewCompanyPage({
               key={inquiryParam || "neu"}
               rootDomain={rootDomain()}
               defaults={defaults}
+              locationOptions={await locationOptions()}
               notice={
                 inquiry?.company ? (
                   <Alert tone="warning" title={`Anfrage ${formatInquiryNumber(inquiry.id)} ist bereits zugeordnet`}>

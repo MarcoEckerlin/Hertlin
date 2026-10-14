@@ -8,10 +8,13 @@ import { Field, Input } from "@/components/ui/field";
 import { FormMessage } from "@/components/ui/form-message";
 import { SubmitButton } from "@/components/ui/submit-button";
 import {
+  BillingFields,
   CompanyAddressFields,
+  CompanyLocationField,
   CustomerNumberField,
   FormSection,
   InternalNoteField,
+  type LocationOption,
 } from "@/components/admin/companies/company-fields";
 import { fieldProps, useFormFocus } from "@/components/admin/companies/form-helpers";
 import { InviteLinkBox } from "@/components/admin/companies/invite-link-box";
@@ -41,10 +44,13 @@ export function CompanyCreate({
   rootDomain,
   defaults,
   notice,
+  locationOptions = [],
 }: {
   rootDomain: string;
   defaults: CompanyCreateDefaults;
   notice?: ReactNode;
+  /** Standorte zur Auswahl (locationOptions() aus @/lib/locations); ohne Standorte keine Auswahl */
+  locationOptions?: LocationOption[];
 }) {
   // Nach „Weiteren Firmenkunden anlegen“ startet das Formular leer neu
   const [round, setRound] = useState(0);
@@ -55,6 +61,7 @@ export function CompanyCreate({
       defaults={round === 0 ? defaults : {}}
       notice={round === 0 ? notice : null}
       onAgain={() => setRound((r) => r + 1)}
+      locationOptions={locationOptions}
     />
   );
 }
@@ -64,11 +71,13 @@ function CompanyCreateForm({
   defaults,
   notice,
   onAgain,
+  locationOptions,
 }: {
   rootDomain: string;
   defaults: CompanyCreateDefaults;
   notice?: ReactNode;
   onAgain: () => void;
+  locationOptions: LocationOption[];
 }) {
   const [state, formAction] = useActionState(createCompanyAction, initialFormState);
   // Stand beim Öffnen merken: Nach dem Anlegen ist die Anfrage zugeordnet und die Seite liefert keine Vorgaben mehr
@@ -139,6 +148,11 @@ function CompanyCreateForm({
           }}
           errors={errors}
         />
+        <CompanyLocationField options={locationOptions} value={values.locationId} error={errors.locationId} />
+      </FormSection>
+
+      <FormSection title="Rechnungsdaten" description="Optional. Lässt sich jederzeit beim Kunden unter „Bearbeiten“ nachtragen.">
+        <BillingFields prefix="company" values={values} errors={errors} />
       </FormSection>
 
       <FormSection

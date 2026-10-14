@@ -231,6 +231,8 @@ export function describeEvent(event: Pick<StaffTicketEvent, "type" | "fromValue"
       return change("Bearbeiter", from ?? "niemand", to ?? "niemand");
     case "COMPANY":
       return change("Zuordnung", from ?? "–", to ?? "–");
+    case "LOCATION":
+      return change("Standort", from ?? "keiner", to ?? "keiner");
     default:
       return to ? `${event.type}: ${to}` : event.type;
   }

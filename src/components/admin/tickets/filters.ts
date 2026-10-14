@@ -16,6 +16,9 @@ import {
 /** Auswahlwert „Privatkunde“ in Kundenauswahl und Filter */
 export const PRIVATE_CUSTOMER = "privat";
 
+/** Filterwert „Tickets ohne Standort“ (Query-Parameter standort) */
+export const NO_LOCATION = "ohne";
+
 /** Einrückung für Unterkunden in Auswahllisten (geschützte Leerzeichen) */
 export const OPTION_INDENT = "\u00A0\u00A0\u00A0\u00A0";
 
@@ -52,6 +55,8 @@ export type TicketListFilters = {
   /** "privat" oder die ID eines Firmenkunden bzw. einer Unterkunde */
   kunde?: string;
   art?: TicketType;
+  /** "ohne" (kein Standort) oder die ID eines Standorts; nicht gesetzt = alle */
+  standort?: string;
   suche: string;
   sortierung: TicketSort;
   seite: number;
@@ -90,6 +95,11 @@ export function parseTicketListFilters(params: RawParams): TicketListFilters {
   const kundeRaw = first(params.kunde);
   const kunde = kundeRaw === PRIVATE_CUSTOMER || (kundeRaw && ID_PATTERN.test(kundeRaw)) ? kundeRaw : undefined;
 
+  // „alle“ ist der Standard und erscheint nicht in der Adresse
+  const standortRaw = first(params.standort);
+  const standort =
+    standortRaw === NO_LOCATION || (standortRaw && standortRaw !== "alle" && ID_PATTERN.test(standortRaw)) ? standortRaw : undefined;
+
   const seiteRaw = Number(first(params.seite));
 
   return {
@@ -99,6 +109,7 @@ export function parseTicketListFilters(params: RawParams): TicketListFilters {
     bearbeiter,
     kunde,
     art: oneOf(TICKET_TYPES, first(params.art)),
+    standort,
     suche: (first(params.suche) ?? "").slice(0, 100),
     sortierung: oneOf(TICKET_SORTS, first(params.sortierung)) ?? defaultSort(ansicht),
     seite: Number.isInteger(seiteRaw) && seiteRaw > 0 ? seiteRaw : 1,
@@ -115,6 +126,7 @@ export function ticketListQuery(filters: Partial<TicketListFilters>): Record<str
     bearbeiter: filters.bearbeiter,
     kunde: filters.kunde,
     art: filters.art,
+    standort: filters.standort,
     suche: filters.suche ? filters.suche : undefined,
     sortierung: filters.sortierung && filters.sortierung !== defaultSort(ansicht) ? filters.sortierung : undefined,
   };
@@ -130,5 +142,7 @@ export function ticketListHref(filters: Partial<TicketListFilters>): string {
 
 /** Sind außer der Ansicht weitere Filter aktiv? */
 export function hasActiveFilters(filters: TicketListFilters): boolean {
-  return Boolean(filters.status || filters.prioritaet || filters.bearbeiter || filters.kunde || filters.art || filters.suche);
+  return Boolean(
+    filters.status || filters.prioritaet || filters.bearbeiter || filters.kunde || filters.art || filters.standort || filters.suche,
+  );
 }

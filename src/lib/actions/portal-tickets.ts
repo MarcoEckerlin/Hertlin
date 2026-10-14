@@ -37,6 +37,7 @@ import {
   revalidatePortal,
   staffCompanyLabel,
 } from "@/components/portal/portal-data";
+import { defaultTicketLocationId } from "@/lib/locations";
 
 /**
  * Tickets im Kundenportal: anlegen, antworten, als gelöst markieren, wieder öffnen.
@@ -149,6 +150,8 @@ export async function createPortalTicketAction(_prev: FormState, formData: FormD
 
   const data = parsed.data;
   const user = ctx.user;
+  // Zuständiger Hertlin-Standort: der der Firma, bei Unterkunden ohne eigenen der des Firmenkunden
+  const locationId = await defaultTicketLocationId(company.id);
 
   let ticketId: number;
   try {
@@ -161,6 +164,7 @@ export async function createPortalTicketAction(_prev: FormState, formData: FormD
         status: "NEW",
         source: "PORTAL",
         companyId: company.id,
+        locationId,
         createdById: user.id,
         contactName: user.name,
         contactEmail: user.email,

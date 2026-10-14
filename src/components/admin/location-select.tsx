@@ -26,7 +26,13 @@ export function LocationSelect({
   const id = `field-${name}`;
   return (
     <Field label={label} htmlFor={id} error={error} hint={hint} optional>
-      <Select id={id} name={name} defaultValue={defaultValue ?? ""} aria-invalid={error ? true : undefined}>
+      <Select
+        id={id}
+        name={name}
+        defaultValue={defaultValue ?? ""}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+      >
         <option value="">{emptyLabel}</option>
         {options.map((o) => (
           <option key={o.value} value={o.value}>

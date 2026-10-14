@@ -6,6 +6,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Label, Select } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
 import {
   PRIORITY_LABELS,
   STATUS_LABELS_STAFF,
@@ -14,6 +15,7 @@ import {
   type TicketType,
 } from "@/lib/constants";
 import {
+  NO_LOCATION,
   OPTION_INDENT,
   PRIVATE_CUSTOMER,
   SORT_LABELS,
@@ -32,6 +34,7 @@ export type FilterCustomerOption = {
   active: boolean;
   children: { id: string; name: string; active: boolean }[];
 };
+export type FilterLocationOption = { id: string; name: string; active: boolean };
 
 const TYPE_FILTER_LABELS: Record<TicketType, string> = { STOERUNG: "Nur Störungen", ANFRAGE: "Nur Anfragen" };
 
@@ -43,10 +46,13 @@ export function TicketFilterForm({
   filters,
   staff,
   customers,
+  locations = [],
 }: {
   filters: TicketListFilters;
   staff: FilterStaffOption[];
   customers: FilterCustomerOption[];
+  /** Alle Standorte (auch deaktivierte, für ältere Tickets). Leer = kein Standortfilter. */
+  locations?: FilterLocationOption[];
 }) {
   const router = useRouter();
 
@@ -68,6 +74,7 @@ export function TicketFilterForm({
   }
 
   const selectClass = "h-10 text-sm";
+  const showLocations = locations.length > 0;
 
   return (
     <form
@@ -103,7 +110,12 @@ export function TicketFilterForm({
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 min-[26rem]:grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-2 min-[26rem]:grid-cols-2 sm:grid-cols-3",
+          showLocations ? "lg:grid-cols-4 2xl:grid-cols-7" : "xl:grid-cols-6",
+        )}
+      >
         <div>
           <Label htmlFor="filter-status" className="sr-only">
             Status
@@ -199,6 +211,29 @@ export function TicketFilterForm({
             ) : null}
           </Select>
         </div>
+
+        {showLocations ? (
+          <div>
+            <Label htmlFor="filter-standort" className="sr-only">
+              Standort
+            </Label>
+            <Select
+              id="filter-standort"
+              name="standort"
+              defaultValue={filters.standort ?? ""}
+              onChange={onSelect}
+              className={selectClass}
+            >
+              <option value="">Alle Standorte</option>
+              {locations.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.active ? l.name : `${l.name} (deaktiviert)`}
+                </option>
+              ))}
+              <option value={NO_LOCATION}>Ohne Standort</option>
+            </Select>
+          </div>
+        ) : null}
 
         <div>
           <Label htmlFor="filter-sortierung" className="sr-only">
