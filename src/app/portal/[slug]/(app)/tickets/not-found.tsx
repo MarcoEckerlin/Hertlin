@@ -13,7 +13,7 @@ export default function PortalTicketNotFound() {
         ]}
         title="Dieses Ticket finden wir nicht"
       />
-      <div className="max-w-2xl rounded-2xl border border-line bg-white p-6 shadow-card sm:p-8">
+      <div className="max-w-2xl rounded-2xl border border-line bg-surface p-6 shadow-card sm:p-8">
         <p className="text-[0.9375rem] leading-relaxed text-ink-soft">
           Entweder gibt es die Nummer nicht, oder das Ticket gehört zu einem Bereich, den Ihr Zugang nicht sieht. Mitarbeiter
           sehen nur die Tickets, die sie selbst gemeldet haben – alle Tickets der Firma sieht der Hauptansprechpartner.

@@ -38,9 +38,9 @@ const SUBJECT_PLACEHOLDER: Record<TicketType, string> = {
 
 const DESCRIPTION_HINT: Record<TicketType, string> = {
   STOERUNG:
-    "Was genau passiert? Seit wann? Wer ist betroffen – nur Sie oder mehrere? Gibt es eine Fehlermeldung? Am besten wörtlich abschreiben oder als Screenshot anhängen.",
+    "Fehlermeldungen am besten wörtlich abschreiben oder unten als Screenshot anhängen.",
   ANFRAGE:
-    "Was wird gebraucht, für wen und bis wann? Gibt es Vorgaben, z. B. ein bestimmtes Gerät, eine Software oder einen Kostenrahmen?",
+    "Gibt es Vorgaben, z. B. ein bestimmtes Gerät, eine Software oder einen Kostenrahmen?",
 };
 
 const DESCRIPTION_PLACEHOLDER: Record<TicketType, string> = {
@@ -69,8 +69,8 @@ export function NewTicketForm({
   defaultCompanyId,
   userPhone,
   userEmail,
-  sitePhone,
-  sitePhoneHref,
+  phone,
+  phoneHref,
   uploadRules,
 }: {
   defaultType: TicketType;
@@ -79,8 +79,9 @@ export function NewTicketForm({
   defaultCompanyId: string;
   userPhone: string | null;
   userEmail: string;
-  sitePhone: string;
-  sitePhoneHref: string;
+  /** Telefon für Dringendes (null = keine echte Nummer hinterlegt, dann kein Anruf-Hinweis) */
+  phone: string | null;
+  phoneHref: string | null;
   uploadRules: UploadRules;
 }) {
   const [state, action] = useActionState(createPortalTicketAction, initialFormState);
@@ -133,7 +134,7 @@ export function NewTicketForm({
                   "flex cursor-pointer gap-3.5 rounded-2xl border p-4 transition-colors sm:p-5",
                   checked
                     ? "border-brand-400 bg-brand-50 ring-1 ring-brand-400 ring-inset"
-                    : "border-line-strong bg-white hover:border-brand-300 hover:bg-brand-50/40",
+                    : "border-line-strong bg-surface hover:border-brand-300 hover:bg-brand-50/40",
                 )}
               >
                 <input
@@ -211,9 +212,9 @@ export function NewTicketForm({
                   "flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors",
                   checked
                     ? option === "CRITICAL"
-                      ? "border-red-300 bg-red-50/60 ring-1 ring-red-300 ring-inset"
+                      ? "border-danger-solid/60 bg-danger-soft ring-1 ring-danger-solid/60 ring-inset"
                       : "border-brand-400 bg-brand-50 ring-1 ring-brand-400 ring-inset"
-                    : "border-line-strong bg-white hover:border-brand-300",
+                    : "border-line-strong bg-surface hover:border-brand-300",
                 )}
               >
                 <input
@@ -244,11 +245,11 @@ export function NewTicketForm({
         )}
       </fieldset>
 
-      {priority === "CRITICAL" ? (
-        <Alert tone="warning" title={`Bitte zusätzlich anrufen: ${sitePhone}`}>
+      {priority === "CRITICAL" && phone && phoneHref ? (
+        <Alert tone="warning" title={`Bitte zusätzlich anrufen: ${phone}`}>
           Wenn niemand arbeiten kann, zählt jede Minute. Rufen Sie uns unter{" "}
-          <a href={`tel:${sitePhoneHref}`} className="font-semibold whitespace-nowrap underline underline-offset-2">
-            {sitePhone}
+          <a href={phoneHref} className="font-semibold whitespace-nowrap underline underline-offset-2">
+            {phone}
           </a>{" "}
           an und legen Sie das Ticket trotzdem an – dann ist alles dokumentiert und wir können direkt loslegen.
         </Alert>
@@ -307,7 +308,7 @@ export function NewTicketForm({
           Ticket absenden
         </SubmitButton>
         <p className="text-sm text-ink-muted">
-          Sie bekommen sofort eine Ticketnummer und eine Bestätigung an <span className="break-all">{userEmail}</span>.
+          Sie bekommen sofort eine Ticketnummer und eine Bestätigung an <span className="[overflow-wrap:anywhere]">{userEmail}</span>.
         </p>
       </div>
     </form>

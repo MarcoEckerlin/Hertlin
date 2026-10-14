@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthCard } from "@/components/auth/auth-card";
 import { LoginForm } from "@/components/auth/login-form";
+import { portalContact } from "@/components/portal/portal-data";
 import { getPortalCompany, getPortalContext } from "@/lib/auth";
 import { mainUrl } from "@/lib/hosts";
-import { getSiteSettings } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Anmeldung" };
 
@@ -19,7 +19,8 @@ export default async function PortalLoginPage({
   const { slug } = await params;
   const { next } = await searchParams;
   const company = await getPortalCompany(slug);
-  const site = await getSiteSettings();
+  // Telefon des betreuenden Standorts; ohne echte Nummer kein Hinweis
+  const contact = await portalContact({ companyId: company?.id ?? null });
 
   return (
     <AuthCard
@@ -30,8 +31,15 @@ export default async function PortalLoginPage({
       footer={
         <>
           Noch keinen Zugang? Ihr Hauptansprechpartner kann Sie im Portal anlegen.
-          <br />
-          Dringend? <a className="font-semibold text-brand-700 hover:underline" href={`tel:${site.phoneHref}`}>{site.phone}</a>
+          {contact.phone && contact.phoneHref ? (
+            <>
+              <br />
+              Dringend?{" "}
+              <a className="font-semibold whitespace-nowrap text-brand-700 hover:underline" href={contact.phoneHref}>
+                {contact.phone}
+              </a>
+            </>
+          ) : null}
         </>
       }
     >

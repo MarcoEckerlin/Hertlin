@@ -83,7 +83,7 @@ export function LiveConversation({
     >
       <span className="inline-flex items-center gap-1.5">
         <span
-          className={cn("size-2 rounded-full", connected ? "bg-emerald-500" : "bg-slate-300")}
+          className={cn("size-2 rounded-full", connected ? "bg-success-solid" : "animate-pulse bg-neutral-solid motion-reduce:animate-none")}
           aria-hidden
         />
         {connected ? "Live" : "Verbindung wird aufgebaut …"}
