@@ -343,3 +343,28 @@ describe("Versand", () => {
     expect(invoice.sentTo).toBe("per Post");
   });
 });
+
+describe("Vorschau und Erstellen", () => {
+  it("bricht ab, wenn sich die Positionen seit der Vorschau geändert haben", async () => {
+    const id = await entry(rootTicket, "Vorschau", 9500);
+    const recipient = await recipients.resolveRecipient({ kind: "company", companyId: rootId });
+    if (!recipient) throw new Error("Empfänger fehlt");
+    // Vorschau zeigte 95,00 €, inzwischen wurde die Menge auf 2 Std. geändert
+    await db.costEntry.update({ where: { id }, data: { quantityHundredths: 200, totalCents: 19_000 } });
+    const result = await service.createInvoice({
+      recipient,
+      entryIds: [id],
+      recipientName: recipient.name,
+      recipientAddress: recipient.addressLines.join("\n"),
+      recipientEmail: recipient.email,
+      servicePeriodStart: null,
+      servicePeriodEnd: null,
+      introText: null,
+      createdById: adminId,
+      expectedNetCents: 9500,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toContain("Vorschau");
+    expect((await db.costEntry.findUniqueOrThrow({ where: { id } })).invoiceId).toBeNull();
+  });
+});

@@ -239,6 +239,11 @@ export type CreateInvoiceInput = {
   servicePeriodEnd: string | null;
   introText: string | null;
   createdById: string;
+  /**
+   * Nettosumme, die die Vorschau gezeigt hat. Weicht die Summe der Positionen beim Erstellen ab (z. B. weil jemand
+   * inzwischen eine Menge geändert hat), wird nichts erstellt – sonst stünde ein ungeprüfter Betrag auf der Rechnung.
+   */
+  expectedNetCents?: number | null;
 };
 
 function positions(count: number): string {
@@ -298,6 +303,13 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<ServiceR
         if (noPrice.length > 0) {
           throw new InvoiceError(
             `Für ${positions(noPrice.length)} fehlt noch der Preis: ${quoteList(noPrice.map((e) => e.description))}. Bitte tragen Sie ihn im Ticket ein.`,
+          );
+        }
+
+        const net = entries.reduce((sum, e) => sum + e.totalCents, 0);
+        if (typeof input.expectedNetCents === "number" && input.expectedNetCents !== net) {
+          throw new InvoiceError(
+            "Die Positionen wurden geändert, seit die Vorschau geladen wurde. Bitte prüfen Sie die Vorschau noch einmal.",
           );
         }
 
