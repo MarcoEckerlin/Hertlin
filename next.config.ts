@@ -27,7 +27,8 @@ const nextConfig: NextConfig = {
       },
     },
   },
-  serverExternalPackages: ["nodemailer"],
+  // pdfkit liest seine Schriftdateien zur Laufzeit aus node_modules (Rechnungs-PDFs)
+  serverExternalPackages: ["nodemailer", "pdfkit"],
   experimental: {
     serverActions: {
       // Ticket-Anhänge (max. 5 Dateien à 10 MB) werden per Server Action hochgeladen

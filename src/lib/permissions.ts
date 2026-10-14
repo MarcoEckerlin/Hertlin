@@ -50,3 +50,15 @@ export const customerTicketSelect = {
 
 /** Nachrichten für Kunden: nie interne Notizen. */
 export const customerMessagesWhere = { internal: false } satisfies Prisma.TicketMessageWhereInput;
+
+/**
+ * Kosten im Ticket: Alle Hertlin-Mitarbeiter erfassen Leistungen und Material (Menge, Einheit, Katalogposition).
+ * Preise, Summen, Kostenübersichten und Rechnungen sehen nur Administratoren.
+ */
+export function canRecordCosts(role: string | null | undefined): boolean {
+  return role === "ADMIN" || role === "TECHNICIAN";
+}
+
+export function canSeeCostAmounts(role: string | null | undefined): boolean {
+  return role === "ADMIN";
+}

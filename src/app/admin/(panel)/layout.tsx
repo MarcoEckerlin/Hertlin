@@ -32,14 +32,24 @@ export default async function AdminPanelLayout({ children }: { children: React.R
     },
   ];
   if (user.role === "ADMIN") {
-    groups.push({
-      label: "Nur Administratoren",
-      items: [
-        { href: "/admin/kosten", label: "Kosten pro Konto", icon: "costs" },
-        { href: "/admin/website", label: "Website", icon: "website" },
-        { href: "/admin/team", label: "Team", icon: "team" },
-      ],
-    });
+    groups.push(
+      {
+        label: "Abrechnung",
+        items: [
+          { href: "/admin/kosten", label: "Kosten pro Konto", icon: "costs" },
+          { href: "/admin/rechnungen", label: "Rechnungen", icon: "invoices" },
+          { href: "/admin/kosten/katalog", label: "Kostenkatalog", icon: "catalog" },
+        ],
+      },
+      {
+        label: "Einstellungen",
+        items: [
+          { href: "/admin/website", label: "Website", icon: "website" },
+          { href: "/admin/standorte", label: "Standorte", icon: "locations" },
+          { href: "/admin/team", label: "Team", icon: "team" },
+        ],
+      },
+    );
   }
 
   return (

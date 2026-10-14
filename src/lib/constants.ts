@@ -128,6 +128,25 @@ export const COST_KIND_DEFAULT_UNIT: Record<CostKind, string> = {
 
 export const COST_UNITS = ["Std.", "Min.", "Stk.", "km", "Pauschale"] as const;
 
+/** Rechnungen: OPEN = erstellt, noch nicht versendet */
+export const INVOICE_STATUSES = ["OPEN", "SENT", "PAID", "CANCELLED"] as const;
+export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+
+export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
+  OPEN: "Noch nicht versendet",
+  SENT: "Versendet",
+  PAID: "Bezahlt",
+  CANCELLED: "Storniert",
+};
+
+export const INVOICE_KINDS = ["INVOICE", "CANCELLATION"] as const;
+export type InvoiceKind = (typeof INVOICE_KINDS)[number];
+
+export const INVOICE_KIND_LABELS: Record<InvoiceKind, string> = {
+  INVOICE: "Rechnung",
+  CANCELLATION: "Stornorechnung",
+};
+
 export const CUSTOMER_TYPES = ["PRIVATE", "BUSINESS"] as const;
 export type CustomerType = (typeof CUSTOMER_TYPES)[number];
 

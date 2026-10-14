@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import {
+  BookOpen,
   Building2,
   ClipboardList,
   Euro,
@@ -11,10 +12,12 @@ import {
   Inbox,
   LayoutDashboard,
   LogOut,
+  MapPin,
   Menu,
   Network,
   Phone,
   Plus,
+  ReceiptText,
   Ticket,
   UserRound,
   UsersRound,
@@ -37,6 +40,9 @@ const icons = {
   profile: UserRound,
   calls: Phone,
   website: Globe,
+  invoices: ReceiptText,
+  catalog: BookOpen,
+  locations: MapPin,
 } as const;
 
 export type ShellIcon = keyof typeof icons;
