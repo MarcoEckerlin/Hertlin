@@ -1,0 +1,131 @@
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
+import { requirePortalContext } from "@/lib/auth";
+import { ROLE_DESCRIPTIONS } from "@/lib/constants";
+import { portalHost, portalUrl } from "@/lib/hosts";
+import { isLangCode } from "@/lib/languages";
+import { translationEnabled } from "@/lib/translate";
+import { RoleBadge } from "@/components/ui/badge";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
+import { PageHeader } from "@/components/ui/page-header";
+import { LanguageForm, PasswordForm, ProfileForm } from "@/components/portal/profile-forms";
+
+export const metadata: Metadata = { title: "Mein Profil" };
+
+export default async function PortalProfilePage() {
+  const ctx = await requirePortalContext();
+
+  // Frisch aus der Datenbank, damit nach dem Speichern die neuen Werte im Formular stehen
+  const user = await db.user.findUnique({
+    where: { id: ctx.user.id },
+    select: { name: true, email: true, phone: true, position: true, language: true },
+  });
+  if (!user) notFound();
+
+  const role = ctx.user.role;
+  const isSubCustomer = ctx.company.parentId !== null;
+  const address = portalHost(ctx.root.slug);
+  const addressUrl = portalUrl(ctx.root.slug, "/");
+
+  // Hauptansprechpartner einer Unterkunde verwalten nur deren Benutzer, keine weiteren Unterkunden
+  const roleDescription =
+    role === "CUSTOMER_ADMIN" && isSubCustomer
+      ? `Sieht alle Tickets von ${ctx.company.name} und verwaltet dort die Benutzer.`
+      : role === "CUSTOMER_USER"
+        ? `${ROLE_DESCRIPTIONS[role]} Zugänge verwaltet Ihr Hauptansprechpartner.`
+        : ROLE_DESCRIPTIONS[role];
+
+  // Hauptansprechpartner (auch von Unterkunden) können ihre eigene Adresse unter „Benutzer“ ändern
+  const emailHint = ctx.isAdmin
+    ? "Die Adresse ist gleichzeitig Ihr Anmeldename. Ändern können Sie sie selbst unter „Benutzer“."
+    : "Die Adresse ist gleichzeitig Ihr Anmeldename. Ändern kann sie Ihr Hauptansprechpartner oder Hertlin.";
+
+  return (
+    <>
+      <PageHeader
+        breadcrumbs={[{ label: "Übersicht", href: "/" }, { label: "Mein Profil" }]}
+        title="Mein Profil"
+        description="Kontaktdaten, Sprache für Nachrichten und Passwort."
+      />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          <Card>
+            <CardHeader
+              title="Ihre Angaben"
+              description="So sehen wir Sie in Ihren Tickets; die Telefonnummer hilft bei Rückfragen."
+            />
+            <CardBody>
+              <ProfileForm name={user.name} phone={user.phone} position={user.position} />
+            </CardBody>
+          </Card>
+
+          <Card id="sprache" className="scroll-mt-24">
+            <CardHeader
+              title="Sprache für Nachrichten"
+              description="Antworten von Hertlin werden automatisch in diese Sprache übersetzt; was Sie schreiben, sieht Hertlin auf Deutsch."
+            />
+            <CardBody>
+              <LanguageForm language={isLangCode(user.language) ? user.language : "de"} enabled={translationEnabled()} />
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Passwort ändern"
+              description="Auf anderen Geräten werden Sie danach abgemeldet."
+            />
+            <CardBody>
+              <PasswordForm email={user.email} />
+            </CardBody>
+          </Card>
+        </div>
+
+        <aside aria-label="Ihr Zugang">
+          <Card>
+            <CardHeader title="Ihr Zugang" />
+            <CardBody>
+              <dl className="space-y-5 text-sm">
+                <Item label="Firma">
+                  <span className="font-medium text-ink">{ctx.company.name}</span>
+                  {isSubCustomer ? <span className="block text-ink-muted">Unterkunde von {ctx.root.name}</span> : null}
+                </Item>
+                <Item label="Rolle">
+                  <RoleBadge role={role} />
+                  <span className="mt-1.5 block leading-relaxed text-ink-soft">{roleDescription}</span>
+                </Item>
+                <Item label="E-Mail-Adresse">
+                  <span className="block font-medium text-ink [overflow-wrap:anywhere]">{user.email}</span>
+                  <span className="mt-1 block leading-relaxed text-ink-muted">{emailHint}</span>
+                </Item>
+                <Item label="Adresse Ihres Kundenportals">
+                  <a href={addressUrl} className="block font-medium text-brand-700 [overflow-wrap:anywhere] hover:underline">
+                    {address}
+                  </a>
+                  <span className="mt-1 block leading-relaxed text-ink-muted">
+                    Am besten als Lesezeichen speichern. Kolleginnen und Kollegen melden sich hier ebenfalls an.
+                  </span>
+                  <div className="mt-2">
+                    <CopyButton value={addressUrl} label="Adresse kopieren" />
+                  </div>
+                </Item>
+              </dl>
+            </CardBody>
+          </Card>
+        </aside>
+      </div>
+    </>
+  );
+}
+
+function Item({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold text-ink-muted">{label}</dt>
+      <dd className="mt-1">{children}</dd>
+    </div>
+  );
+}

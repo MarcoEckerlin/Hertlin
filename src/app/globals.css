@@ -1,0 +1,421 @@
+@import "tailwindcss";
+
+/*
+ * Hertlin Designsystem
+ * Primärfarbe: Hellblau (primary / brand-400) · Sekundärfarbe: Weiß (surface)
+ * Text in dunklem Marineblau (ink), damit Hellblau-Flächen gut lesbar bleiben.
+ *
+ * Hell/Dunkel: Alle Farben laufen über CSS-Variablen. Hell ist Standard; Dunkel gilt bei
+ *   <html data-theme="dark"> (ausdrücklich gewählt, Cookie hertlin_theme) oder
+ *   wenn das System dunkel ist und nichts gewählt wurde.
+ * Ein Bereich mit data-theme="light" bleibt auch im Dunkelmodus hell (z. B. das hellblaue CTA-Band).
+ * In Komponenten nur diese Tokens verwenden (bg-surface, text-ink, border-line, bg-primary,
+ * bg-success-soft …) – keine festen Farben wie bg-white oder text-red-700 und kein dark:.
+ */
+@theme inline {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  /* Flächen */
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-mist: var(--mist);
+  /* Bleibt immer weiß (Hintergrund hinter hochgeladenen Bildern/Logos) */
+  --color-paper: #ffffff;
+  /* Bleibt dunkel (dunkle Bänder) */
+  --color-navy: var(--navy);
+  /* Abdunklung hinter Menüs und Dialogen (im Dunkelmodus schwärzer, nicht heller) */
+  --color-scrim: var(--scrim);
+
+  /* Text und Linien */
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+  --color-on-ink: var(--on-ink);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  /* Hauptfarbe als Fläche (Buttons, Zähler) */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
+  --color-on-primary: var(--on-primary);
+
+  /* Statusfarben: soft = Fläche, line = Rahmen, ink = Text, solid = Punkt/Balken */
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
+  --color-success-ink: var(--success-ink);
+  --color-success-solid: var(--success-solid);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-line: var(--warning-line);
+  --color-warning-ink: var(--warning-ink);
+  --color-warning-solid: var(--warning-solid);
+  --color-caution-soft: var(--caution-soft);
+  --color-caution-line: var(--caution-line);
+  --color-caution-ink: var(--caution-ink);
+  --color-caution-solid: var(--caution-solid);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-solid: var(--danger-solid);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-neutral-line: var(--neutral-line);
+  --color-neutral-ink: var(--neutral-ink);
+  --color-neutral-solid: var(--neutral-solid);
+
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  --shadow-card: 0 1px 2px var(--shadow-a), 0 1px 1px var(--shadow-b);
+  --shadow-lift: 0 10px 30px -12px var(--shadow-c);
+}
+
+/* Helle Werte (Standard) */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --brand-50: #f1f8fe;
+  --brand-100: #e0f1fc;
+  --brand-200: #c4e5fa;
+  --brand-300: #98d2f5;
+  --brand-400: #66b9ec;
+  --brand-500: #3f9fdf;
+  --brand-600: #2a83c3;
+  --brand-700: #22699e;
+  --brand-800: #1f5883;
+  --brand-900: #1d4a6c;
+
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --mist: #f6fafd;
+  --navy: #10243a;
+  --scrim: rgb(16 36 58 / 0.45);
+
+  --ink: #10243a;
+  --ink-soft: #46596e;
+  --ink-muted: #58697c;
+  --on-ink: #ffffff;
+  --line: #dde8f1;
+  --line-strong: #c5d6e4;
+
+  --primary: #66b9ec;
+  --primary-hover: #4fadea;
+  --primary-active: #3f9fdf;
+  --on-primary: #10243a;
+
+  --success-soft: #ecfdf5;
+  --success-line: #a4f4cf;
+  --success-ink: #005f46;
+  --success-solid: #00bb7f;
+  --warning-soft: #fffbeb;
+  --warning-line: #fee685;
+  --warning-ink: #7b3306;
+  --warning-solid: #f99c00;
+  --caution-soft: #fff7ed;
+  --caution-line: #ffd7a8;
+  --caution-ink: #9f2d00;
+  --caution-solid: #ff8b1a;
+  --danger-soft: #fef2f2;
+  --danger-line: #ffcaca;
+  --danger-ink: #9f0712;
+  --danger-solid: #e7000b;
+  --neutral-soft: #f1f5f9;
+  --neutral-line: #e2e8f0;
+  --neutral-ink: #314158;
+  --neutral-solid: #90a1b9;
+
+  --shadow-a: rgb(16 36 58 / 0.05);
+  --shadow-b: rgb(16 36 58 / 0.03);
+  --shadow-c: rgb(16 36 58 / 0.18);
+}
+
+/* Dunkle Werte – zweimal: ausdrücklich gewählt und „wie das System“ */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --brand-50: #13283d;
+  --brand-100: #18344f;
+  --brand-200: #1f4467;
+  --brand-300: #2a5f8a;
+  --brand-400: #4ea8e0;
+  --brand-500: #6dbcee;
+  --brand-600: #84c8f2;
+  --brand-700: #9bd3f6;
+  --brand-800: #c0e4fa;
+  --brand-900: #e0f1fc;
+
+  --surface: #101d2b;
+  --surface-raised: #172738;
+  --mist: #0a1520;
+  --navy: #15304b;
+  --scrim: rgb(0 0 0 / 0.6);
+
+  --ink: #e6eef5;
+  --ink-soft: #b4c3d1;
+  --ink-muted: #8d9fb2;
+  --on-ink: #0a1520;
+  --line: #223447;
+  --line-strong: #30475e;
+
+  --primary: #66b9ec;
+  --primary-hover: #85c8f2;
+  --primary-active: #4ea8e0;
+  --on-primary: #0b1a2a;
+
+  --success-soft: #0d2a22;
+  --success-line: #1e5643;
+  --success-ink: #7fe0b6;
+  --success-solid: #34d399;
+  --warning-soft: #2a2110;
+  --warning-line: #5f4714;
+  --warning-ink: #f9d27d;
+  --warning-solid: #f5b43a;
+  --caution-soft: #2c1a0e;
+  --caution-line: #6e3a16;
+  --caution-ink: #fdb88a;
+  --caution-solid: #fb923c;
+  --danger-soft: #2d1418;
+  --danger-line: #6f2a30;
+  --danger-ink: #fca5a5;
+  --danger-solid: #f87171;
+  --neutral-soft: #192634;
+  --neutral-line: #2e3f51;
+  --neutral-ink: #c3cfdb;
+  --neutral-solid: #64748b;
+
+  --shadow-a: rgb(0 0 0 / 0.45);
+  --shadow-b: rgb(0 0 0 / 0.3);
+  --shadow-c: rgb(0 0 0 / 0.65);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --brand-50: #13283d;
+    --brand-100: #18344f;
+    --brand-200: #1f4467;
+    --brand-300: #2a5f8a;
+    --brand-400: #4ea8e0;
+    --brand-500: #6dbcee;
+    --brand-600: #84c8f2;
+    --brand-700: #9bd3f6;
+    --brand-800: #c0e4fa;
+    --brand-900: #e0f1fc;
+
+    --surface: #101d2b;
+    --surface-raised: #172738;
+    --mist: #0a1520;
+    --navy: #15304b;
+    --scrim: rgb(0 0 0 / 0.6);
+
+    --ink: #e6eef5;
+    --ink-soft: #b4c3d1;
+    --ink-muted: #8d9fb2;
+    --on-ink: #0a1520;
+    --line: #223447;
+    --line-strong: #30475e;
+
+    --primary: #66b9ec;
+    --primary-hover: #85c8f2;
+    --primary-active: #4ea8e0;
+    --on-primary: #0b1a2a;
+
+    --success-soft: #0d2a22;
+    --success-line: #1e5643;
+    --success-ink: #7fe0b6;
+    --success-solid: #34d399;
+    --warning-soft: #2a2110;
+    --warning-line: #5f4714;
+    --warning-ink: #f9d27d;
+    --warning-solid: #f5b43a;
+    --caution-soft: #2c1a0e;
+    --caution-line: #6e3a16;
+    --caution-ink: #fdb88a;
+    --caution-solid: #fb923c;
+    --danger-soft: #2d1418;
+    --danger-line: #6f2a30;
+    --danger-ink: #fca5a5;
+    --danger-solid: #f87171;
+    --neutral-soft: #192634;
+    --neutral-line: #2e3f51;
+    --neutral-ink: #c3cfdb;
+    --neutral-solid: #64748b;
+
+    --shadow-a: rgb(0 0 0 / 0.45);
+    --shadow-b: rgb(0 0 0 / 0.3);
+    --shadow-c: rgb(0 0 0 / 0.65);
+  }
+  /* Helle Inseln (data-theme="light") innerhalb einer dunklen Seite behalten die hellen Werte von oben */
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Größen wie „auto“ animierbar (z. B. aufklappende FAQ) */
+    interpolate-size: allow-keywords;
+  }
+
+  /* Weiches Scrollen nur für Sprünge innerhalb einer Seite; Seitenwechsel springen sofort nach oben
+     (Next.js schaltet es während der Navigation ab, siehe data-scroll-behavior im Root-Layout). */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: var(--brand-200);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-600);
+    outline-offset: 2px;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+}
+
+/* Wer weniger Bewegung möchte, bekommt sie auch nicht */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Fließtext in Rechtstexten und Ticketnachrichten */
+  .prose-hertlin {
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+  .prose-hertlin h2 {
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 1.25rem;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  .prose-hertlin h3 {
+    color: var(--ink);
+    font-weight: 650;
+    font-size: 1.05rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .prose-hertlin p + p {
+    margin-top: 0.75rem;
+  }
+  .prose-hertlin ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .prose-hertlin a {
+    color: var(--brand-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Tabellen (src/components/ui/table.tsx) – bewusst ohne @layer, damit  */
+/* die Regeln die Abstands-Utilities der Zellen überschreiben          */
+/* ------------------------------------------------------------------ */
+
+/* Schatten am Rand, solange sich seitlich noch etwas scrollen lässt */
+.scroll-shadow-x {
+  background:
+    linear-gradient(to right, var(--surface) 30%, transparent) left / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--surface) 30%, transparent) right / 2.5rem 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, var(--shadow-c), transparent) left / 0.875rem 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, var(--shadow-c), transparent) right / 0.875rem 100% no-repeat scroll,
+    var(--surface);
+}
+
+/* Zeilen als Karten auf dem Handy (<Table stack>) */
+@media (max-width: 39.99rem) {
+  .table-stack table,
+  .table-stack tbody,
+  .table-stack tfoot,
+  .table-stack tr,
+  .table-stack tr > th {
+    display: block;
+    min-width: 0;
+  }
+  /* Zellen, die auf dem Handy nichts beitragen (z. B. eine Spalte, deren Inhalt schon in der Hauptzelle steht) */
+  .table-stack .stack-hide {
+    display: none;
+  }
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .table-stack tr {
+    padding: 0.75rem 1rem;
+  }
+  .table-stack td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    text-align: right;
+  }
+  .table-stack td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-align: left;
+  }
+  .table-stack td:not([data-label]) {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .table-stack td:empty {
+    display: none;
+  }
+}

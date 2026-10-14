@@ -1,0 +1,540 @@
+// Datenmodell für Website, Kundenportal und Ticketsystem von Hertlin.
+// SQLite für den Start; für größere Installationen kann der Provider auf
+// "postgresql" umgestellt werden (Status- und Rollenfelder sind bewusst Strings).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Firmenkunde (parentId = null) oder Unterkunde eines Firmenkunden (parentId gesetzt).
+/// Nur Firmenkunden haben eine eigene Subdomain (slug). Unterkunden nutzen das Portal ihres Firmenkunden.
+model Company {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String?   @unique
+  parentId String?
+  parent   Company?  @relation("SubCustomers", fields: [parentId], references: [id], onDelete: Restrict)
+  children Company[] @relation("SubCustomers")
+
+  customerNumber String?  @unique
+  street         String?
+  zip            String?
+  city           String?
+  phone          String?
+  email          String?
+  /// Nur für Hertlin-Mitarbeiter sichtbar
+  internalNote   String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  /// Zuständiger Hertlin-Standort (Vorgabe für neue Tickets)
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  /// Rechnungsversand: eigene Adresse für Rechnungen (sonst E-Mail der Firma)
+  billingEmail      String?
+  /// Abweichender Rechnungsempfänger und -anschrift (leer = Firmenname und Anschrift oben)
+  billingName       String?
+  billingStreet     String?
+  billingZip        String?
+  billingCity       String?
+  /// USt-IdNr. des Kunden (optional, erscheint auf der Rechnung)
+  vatId             String?
+  /// Nur Unterkunden: eigene Rechnung statt Abrechnung über den Firmenkunden
+  invoiceSeparately Boolean @default(false)
+
+  users      User[]
+  tickets    Ticket[]
+  inquiries  Inquiry[]
+  phoneCalls PhoneCall[]
+  invoices   Invoice[]
+
+  @@index([parentId])
+}
+
+/// role: ADMIN | TECHNICIAN (Hertlin-Mitarbeiter, companyId = null)
+///       CUSTOMER_ADMIN | CUSTOMER_USER (Kundenkonten, companyId gesetzt)
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  phone        String?
+  position     String?
+  passwordHash String?
+  role         String
+  companyId    String?
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  active       Boolean   @default(true)
+  /// Sprache, in die Chat-Nachrichten für diesen Benutzer übersetzt werden ("de" = keine Übersetzung)
+  language     String    @default("de")
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  /// Nur Mitarbeiter: Standort, an dem die Person arbeitet
+  locationId   String?
+  location     Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  sessions        Session[]
+  tokens          AuthToken[]
+  ticketsCreated  Ticket[]         @relation("TicketCreatedBy")
+  ticketsAssigned Ticket[]         @relation("TicketAssignee")
+  messages        TicketMessage[]
+  costEntries     CostEntry[]
+  costsPerformed  CostEntry[]      @relation("CostPerformedBy")
+  costPresets     CostPreset[]
+  invoicesCreated Invoice[]
+  ticketEvents    TicketEvent[]
+  inquiryMessages InquiryMessage[]
+  callsAsContact  PhoneCall[]      @relation("CallContact")
+  callsHandled    PhoneCall[]      @relation("CallHandledBy")
+
+  @@index([companyId])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Host, auf dem die Sitzung erstellt wurde (z. B. "muster.hertlin.de")
+  host       String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  userAgent  String?
+
+  @@index([userId])
+}
+
+/// purpose: INVITE | RESET
+model AuthToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// type:     STOERUNG | ANFRAGE
+/// status:   NEW | IN_PROGRESS | WAITING_CUSTOMER | RESOLVED | CLOSED
+/// priority: LOW | NORMAL | HIGH | CRITICAL
+/// source:   PORTAL | PRIVATE_FORM | STAFF
+model Ticket {
+  id       Int    @id @default(autoincrement())
+  subject  String
+  type     String @default("STOERUNG")
+  category String @default("SONSTIGES")
+  priority String @default("NORMAL")
+  status   String @default("NEW")
+  source   String @default("PORTAL")
+
+  /// Firmenkunde oder Unterkunde; null bei Privatkunden
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdById String?
+  createdBy   User?     @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assigneeId  String?
+  assignee    User?     @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  /// Zuständiger Hertlin-Standort
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  /// Kontaktdaten (Pflicht bei Privatkunden, optional abweichender Ansprechpartner sonst)
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  /// Anschrift für Vor-Ort-Termine bei Privatkunden
+  contactAddress  String?
+  /// Geheimer Schlüssel im Status-Link für Privatkunden (/status/<token>)
+  guestToken      String? @unique
+  /// Gewünschte Sprache des Privatkunden für Übersetzungen
+  contactLanguage String?
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  resolvedAt DateTime?
+  closedAt   DateTime?
+
+  messages   TicketMessage[]
+  costs      CostEntry[]
+  events     TicketEvent[]
+  phoneCalls PhoneCall[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([contactEmail])
+  @@index([locationId])
+}
+
+/// internal = true: interne Notiz, nur für Hertlin-Mitarbeiter sichtbar
+model TicketMessage {
+  id         String   @id @default(cuid())
+  ticketId   Int
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  /// Anzeigename, falls kein Benutzerkonto (Privatkunde)
+  authorName String?
+  fromStaff  Boolean  @default(false)
+  body       String
+  internal   Boolean  @default(false)
+  /// Erkannte Sprache der Nachricht (für die Chat-Übersetzung)
+  language   String?
+  createdAt  DateTime @default(now())
+
+  attachments Attachment[]
+
+  @@index([ticketId])
+}
+
+model Attachment {
+  id         String        @id @default(cuid())
+  messageId  String
+  message    TicketMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  fileName   String
+  storedName String        @unique
+  mimeType   String
+  size       Int
+  createdAt  DateTime      @default(now())
+
+  @@index([messageId])
+}
+
+/// Protokoll von Statuswechseln, Zuweisungen usw.
+/// type: CREATED | STATUS | PRIORITY | ASSIGNEE | COMPANY
+model TicketEvent {
+  id        String   @id @default(cuid())
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  type      String
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+/// Kosten zu einem Ticket. Ausschließlich für Benutzer mit Rolle ADMIN sichtbar.
+/// kind: LABOR | TRAVEL | MATERIAL | FLAT
+model CostEntry {
+  id                 String      @id @default(cuid())
+  ticketId           Int
+  ticket             Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  kind               String
+  description        String
+  /// Menge in Hundertsteln (1,25 Std. = 125), um Rundungsfehler zu vermeiden
+  quantityHundredths Int
+  unit               String
+  unitPriceCents     Int
+  totalCents         Int
+  performedAt        DateTime
+  billed             Boolean     @default(false)
+  billedAt           DateTime?
+  createdById        String?
+  createdBy          User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  /// Wer die Leistung erbracht hat (Mitarbeiter); Vorgabe: wer die Position erfasst
+  performedById      String?
+  performedBy        User?       @relation("CostPerformedBy", fields: [performedById], references: [id], onDelete: SetNull)
+  /// Herkunft aus dem Katalog (Standardposition), falls ausgewählt
+  presetId           String?
+  preset             CostPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  /// Preis fehlt noch: Techniker hat eine Position ohne Katalogpreis erfasst, ein Administrator setzt ihn
+  needsPrice         Boolean     @default(false)
+  /// Rechnung, auf der die Position abgerechnet wurde
+  invoiceId          String?
+  invoice            Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([ticketId])
+  @@index([performedAt])
+  @@index([invoiceId])
+}
+
+/// Katalog der Standardpositionen (z. B. „Anfahrt Stadtgebiet“, „Arbeitszeit Technik“).
+/// Neue Positionen aus dem Ticket landen automatisch hier.
+model CostPreset {
+  id                        String    @id @default(cuid())
+  kind                      String
+  name                      String
+  /// Kleingeschrieben und ohne doppelte Leerzeichen – verhindert Dubletten
+  nameKey                   String    @unique
+  unit                      String
+  /// Netto-Einzelpreis in Cent; null = Preis wird je Position festgelegt
+  unitPriceCents            Int?
+  defaultQuantityHundredths Int       @default(100)
+  active                    Boolean   @default(true)
+  usageCount                Int       @default(0)
+  lastUsedAt                DateTime?
+  sortOrder                 Int       @default(0)
+  createdById               String?
+  createdBy                 User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  entries CostEntry[]
+
+  @@index([active, kind])
+}
+
+/// Hertlin-Standort (Filiale/Büro)
+model Location {
+  id            String   @id @default(cuid())
+  name          String
+  street        String
+  zip           String
+  city          String
+  phone         String?
+  email         String?
+  /// Öffnungszeiten als Freitext, eine Zeile pro Eintrag (z. B. „Mo–Fr: 8–17 Uhr“)
+  openingHours  String?
+  /// Hinweis für Besucher (z. B. „Parkplätze im Hof“)
+  note          String?
+  isMain        Boolean  @default(false)
+  showOnWebsite Boolean  @default(true)
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  companies Company[]
+  users     User[]
+  tickets   Ticket[]
+}
+
+/// Rechnung oder Stornorechnung. Nach dem Erstellen unveränderlich (nur Status, Versand, Zahlung).
+model Invoice {
+  id               String   @id @default(cuid())
+  /// Fortlaufende Nummer, z. B. RE-2026-0001
+  number           String   @unique
+  year             Int
+  sequence         Int
+  /// INVOICE | CANCELLATION
+  kind             String   @default("INVOICE")
+  /// OPEN | SENT | PAID | CANCELLED
+  status           String   @default("OPEN")
+  /// Bei Stornorechnung: die stornierte Rechnung
+  cancelsInvoiceId String?  @unique
+  cancelsInvoice   Invoice? @relation("InvoiceCancellation", fields: [cancelsInvoiceId], references: [id], onDelete: Restrict)
+  cancelledBy      Invoice? @relation("InvoiceCancellation")
+
+  /// Firmenkunde/Unterkunde; null bei Privatkunden
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  /// Privatkunden: Konto-Schlüssel (E-Mail, kleingeschrieben)
+  privateEmail String?
+
+  /// Empfängerdaten zum Zeitpunkt der Rechnung (Kopie, ändert sich nicht mehr)
+  recipientName    String
+  recipientAddress String
+  recipientEmail   String?
+  recipientVatId   String?
+
+  issueDate          DateTime
+  servicePeriodStart DateTime?
+  servicePeriodEnd   DateTime?
+  dueDate            DateTime
+  netCents           Int
+  /// Steuersatz in Basispunkten (1900 = 19 %)
+  taxRateBasisPoints Int
+  taxCents           Int
+  grossCents         Int
+  /// Kleinunternehmer nach § 19 UStG: keine Umsatzsteuer ausgewiesen
+  smallBusiness      Boolean   @default(false)
+  introText          String?
+  footerText         String?
+  /// PDF relativ zu UPLOAD_DIR (wird beim Erstellen einmal erzeugt)
+  pdfPath            String?
+  /// SHA-256 des PDFs beim Erstellen (Nachweis, dass die Datei unverändert ist)
+  pdfSha256          String?
+  /// Absenderangaben (Firmendaten, Steuernummer, Bank) zum Zeitpunkt der Rechnung als JSON – ein fehlendes PDF
+  /// wird nur daraus neu erzeugt, nie aus den aktuellen Einstellungen
+  issuerSnapshot     String?
+  /// Kundennummer zum Zeitpunkt der Rechnung
+  customerNumber     String?
+
+  sentAt      DateTime?
+  sentTo      String?
+  paidAt      DateTime?
+  cancelledAt DateTime?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lines       InvoiceLine[]
+  costEntries CostEntry[]
+
+  @@unique([year, sequence])
+  @@index([companyId])
+  @@index([privateEmail])
+  @@index([status])
+}
+
+model InvoiceLine {
+  id                 String    @id @default(cuid())
+  invoiceId          String
+  invoice            Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  position           Int
+  description        String
+  /// z. B. „Ticket #1042“
+  reference          String?
+  performedAt        DateTime?
+  quantityHundredths Int
+  unit               String
+  unitPriceCents     Int
+  totalCents         Int
+  costEntryId        String?
+
+  @@index([invoiceId])
+}
+
+/// Anfrage von Interessenten (Neukunden) über die Website.
+/// customerType: PRIVATE | BUSINESS
+/// status: NEW | CONTACTED | OFFER_SENT | WON | LOST
+model Inquiry {
+  id               Int      @id @default(autoincrement())
+  customerType     String
+  name             String
+  companyName      String?
+  email            String
+  phone            String?
+  zipCity          String?
+  topic            String
+  workplaces       String?
+  message          String
+  preferredContact String?
+  status           String   @default("NEW")
+  internalNote     String?
+  companyId        String?
+  company          Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  /// Geheimer Schlüssel im persönlichen Chat-Link des Interessenten (/anfrage/<token>)
+  guestToken       String?  @unique
+  /// Gewünschte Sprache des Interessenten für Übersetzungen
+  language         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  messages InquiryMessage[]
+
+  @@index([status])
+}
+
+/// Chat zwischen Hertlin und einem Interessenten zu einer Anfrage
+model InquiryMessage {
+  id         String   @id @default(cuid())
+  inquiryId  Int
+  inquiry    Inquiry  @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName String?
+  fromStaff  Boolean  @default(false)
+  body       String
+  language   String?
+  createdAt  DateTime @default(now())
+
+  @@index([inquiryId])
+}
+
+/// Zwischenspeicher für maschinelle Übersetzungen (Chat und Website)
+model TranslationCache {
+  id         String   @id @default(cuid())
+  /// SHA-256 des Ausgangstextes
+  hash       String
+  targetLang String
+  sourceLang String?
+  text       String
+  provider   String
+  createdAt  DateTime @default(now())
+
+  @@unique([hash, targetLang])
+}
+
+/// Seite der Website, aus Modulen zusammengesetzt.
+/// blocks: veröffentlichte Module (JSON), draft: Entwurf { title, description, blocks } (JSON)
+model Page {
+  id           String    @id @default(cuid())
+  /// "" = Startseite, sonst Pfad ohne führenden Schrägstrich, z. B. "leistungen" oder "agb"
+  slug         String    @unique
+  title        String
+  description  String?
+  navLabel     String?
+  showInNav    Boolean   @default(false)
+  showInFooter Boolean   @default(false)
+  navOrder     Int       @default(100)
+  /// Kernseite (nicht löschbar, Adresse fest)
+  system       Boolean   @default(false)
+  published    Boolean   @default(true)
+  blocks       String    @default("[]")
+  draft        String?
+  updatedById  String?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+/// Einstellungen der Website (z. B. Firmendaten), value als JSON
+model SiteSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Bilder für die Website (öffentlich unter /medien/<id>)
+model MediaFile {
+  id           String   @id @default(cuid())
+  fileName     String
+  storedName   String   @unique
+  mimeType     String
+  size         Int
+  alt          String?
+  uploadedById String?
+  createdAt    DateTime @default(now())
+}
+
+/// Telefonanruf aus der Telefonanlage (Webhook).
+/// direction: IN | OUT · status: RINGING | ANSWERED | MISSED | ENDED
+model PhoneCall {
+  id          String    @id @default(cuid())
+  externalId  String?   @unique
+  provider    String    @default("generic")
+  direction   String    @default("IN")
+  fromNumber  String
+  toNumber    String?
+  status      String    @default("RINGING")
+  answeredBy  String?
+  hangupCause String?
+  /// Zugeordneter Kunde (über die Telefonnummer erkannt oder von Hand gesetzt)
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        User?     @relation("CallContact", fields: [userId], references: [id], onDelete: SetNull)
+  callerLabel String?
+  ticketId    Int?
+  ticket      Ticket?   @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  note        String?
+  handledById String?
+  handledBy   User?     @relation("CallHandledBy", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt   DateTime?
+  startedAt   DateTime  @default(now())
+  answeredAt  DateTime?
+  endedAt     DateTime?
+
+  @@index([startedAt])
+  @@index([status])
+  @@index([fromNumber])
+}
